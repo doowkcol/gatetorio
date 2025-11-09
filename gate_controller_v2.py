@@ -1835,6 +1835,7 @@ class GateController:
         # Start M1 opening at learning speed
         self.shared['state'] = 'OPENING'
         self.shared['movement_command'] = 'OPEN'
+        self.shared['movement_start_time'] = time()  # Critical for motor_manager!
         self.shared['m1_move_start'] = time()
         self.shared['m1_target'] = self.run_time
         self.shared['learning_m1_start_time'] = time()
@@ -1921,6 +1922,7 @@ class GateController:
                 # Start M2 closing at learning speed
                 self.shared['state'] = 'CLOSING'
                 self.shared['movement_command'] = 'CLOSE'
+                self.shared['movement_start_time'] = now  # Critical for motor_manager!
                 self.shared['m2_move_start'] = now
                 self.shared['m2_target'] = 0
                 self.shared['learning_m2_start_time'] = now
@@ -1956,7 +1958,8 @@ class GateController:
 
                 print("Phase 4: M1 closing slowly (recording first time)")
 
-                # Start M1 closing at learning speed
+                # Start M1 closing at learning speed (state still CLOSING from M2)
+                self.shared['movement_start_time'] = now  # Refresh timer
                 self.shared['m1_move_start'] = now
                 self.shared['m1_target'] = 0
                 self.shared['learning_m1_start_time'] = now
@@ -2009,6 +2012,7 @@ class GateController:
                 # Start opening (will use normal speed with slowdown logic)
                 self.shared['state'] = 'OPENING'
                 self.shared['movement_command'] = 'OPEN'
+                self.shared['movement_start_time'] = now  # Critical for motor_manager!
                 self.shared['m1_move_start'] = now
                 self.shared['m2_move_start'] = now + self.motor1_open_delay
                 self.shared['m1_target'] = self.run_time
@@ -2061,6 +2065,7 @@ class GateController:
                 # Start closing
                 self.shared['state'] = 'CLOSING'
                 self.shared['movement_command'] = 'CLOSE'
+                self.shared['movement_start_time'] = now  # Critical for motor_manager!
                 self.shared['m2_move_start'] = now
                 self.shared['m1_move_start'] = now + self.motor2_close_delay
                 self.shared['m2_target'] = 0
