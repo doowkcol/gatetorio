@@ -30,6 +30,9 @@ class MotorManager:
         self.motor1_learned_run_time = config.get('motor1_learned_run_time', None)
         self.motor2_learned_run_time = config.get('motor2_learned_run_time', None)
         self.limit_switch_creep_speed = config.get('limit_switch_creep_speed', 0.2)
+        self.opening_slowdown_percent = config.get('opening_slowdown_percent', 2.0)
+        self.closing_slowdown_percent = config.get('closing_slowdown_percent', 10.0)
+        self.learning_speed = config.get('learning_speed', 0.3)
 
         # Use learned run times if available, otherwise use standard run_time
         self.motor1_run_time = self.motor1_learned_run_time if self.motor1_learned_run_time else self.run_time
@@ -76,6 +79,9 @@ class MotorManager:
         self.motor1_learned_run_time = self.shared.get('config_motor1_learned_run_time', self.motor1_learned_run_time)
         self.motor2_learned_run_time = self.shared.get('config_motor2_learned_run_time', self.motor2_learned_run_time)
         self.limit_switch_creep_speed = self.shared.get('config_limit_switch_creep_speed', self.limit_switch_creep_speed)
+        self.opening_slowdown_percent = self.shared.get('config_opening_slowdown_percent', self.opening_slowdown_percent)
+        self.closing_slowdown_percent = self.shared.get('config_closing_slowdown_percent', self.closing_slowdown_percent)
+        self.learning_speed = self.shared.get('config_learning_speed', self.learning_speed)
 
         # Update individual motor run times
         self.motor1_run_time = self.motor1_learned_run_time if self.motor1_learned_run_time else self.run_time
@@ -398,17 +404,22 @@ class MotorManager:
             speed = self._calculate_ramp_speed(elapsed, remaining, ramp_time)
             speed = max(0.0, min(1.0, speed))
 
+            # Apply learning speed if in learning mode
+            if self.shared.get('learning_mode_enabled', False):
+                speed = min(speed, self.learning_speed)
             # Apply creep speed if using limit switches and near expected end of travel
-            if self.motor1_use_limit_switches and self.motor1_learned_run_time:
+            elif self.motor1_use_limit_switches and self.motor1_learned_run_time:
                 if self.shared['movement_command'] == 'OPEN':
-                    # Check if we've reached expected end of travel time
-                    if self.shared['m1_position'] >= self.motor1_learned_run_time * 0.95:
-                        # Within 95% of learned time - switch to creep speed
+                    # Check if we've reached slowdown threshold (remaining % of travel time)
+                    remaining_percent = ((self.motor1_learned_run_time - self.shared['m1_position']) / self.motor1_learned_run_time) * 100
+                    if remaining_percent <= self.opening_slowdown_percent:
+                        # Within slowdown threshold - switch to creep speed
                         speed = min(speed, self.limit_switch_creep_speed)
                 elif self.shared['movement_command'] == 'CLOSE':
-                    # Check if we've reached expected end of travel time (closing to 0)
-                    if self.shared['m1_position'] <= self.motor1_learned_run_time * 0.05:
-                        # Within 5% of fully closed - switch to creep speed
+                    # Check if we've reached slowdown threshold (remaining % of travel time)
+                    remaining_percent = (self.shared['m1_position'] / self.motor1_learned_run_time) * 100
+                    if remaining_percent <= self.closing_slowdown_percent:
+                        # Within slowdown threshold - switch to creep speed
                         speed = min(speed, self.limit_switch_creep_speed)
 
             self.shared['m1_speed'] = speed
@@ -459,17 +470,22 @@ class MotorManager:
             speed = self._calculate_ramp_speed(elapsed, remaining, ramp_time)
             speed = max(0.0, min(1.0, speed))
 
+            # Apply learning speed if in learning mode
+            if self.shared.get('learning_mode_enabled', False):
+                speed = min(speed, self.learning_speed)
             # Apply creep speed if using limit switches and near expected end of travel
-            if self.motor2_use_limit_switches and self.motor2_learned_run_time:
+            elif self.motor2_use_limit_switches and self.motor2_learned_run_time:
                 if self.shared['movement_command'] == 'OPEN':
-                    # Check if we've reached expected end of travel time
-                    if self.shared['m2_position'] >= self.motor2_learned_run_time * 0.95:
-                        # Within 95% of learned time - switch to creep speed
+                    # Check if we've reached slowdown threshold (remaining % of travel time)
+                    remaining_percent = ((self.motor2_learned_run_time - self.shared['m2_position']) / self.motor2_learned_run_time) * 100
+                    if remaining_percent <= self.opening_slowdown_percent:
+                        # Within slowdown threshold - switch to creep speed
                         speed = min(speed, self.limit_switch_creep_speed)
                 elif self.shared['movement_command'] == 'CLOSE':
-                    # Check if we've reached expected end of travel time (closing to 0)
-                    if self.shared['m2_position'] <= self.motor2_learned_run_time * 0.05:
-                        # Within 5% of fully closed - switch to creep speed
+                    # Check if we've reached slowdown threshold (remaining % of travel time)
+                    remaining_percent = (self.shared['m2_position'] / self.motor2_learned_run_time) * 100
+                    if remaining_percent <= self.closing_slowdown_percent:
+                        # Within slowdown threshold - switch to creep speed
                         speed = min(speed, self.limit_switch_creep_speed)
 
             self.shared['m2_speed'] = speed

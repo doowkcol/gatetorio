@@ -43,6 +43,10 @@ class GateController:
         self.motor2_learned_run_time = config.get('motor2_learned_run_time', None)
         self.limit_switch_creep_speed = config.get('limit_switch_creep_speed', 0.2)
         self.learning_mode_enabled = config.get('learning_mode_enabled', False)
+        self.opening_slowdown_percent = config.get('opening_slowdown_percent', 2.0)
+        self.closing_slowdown_percent = config.get('closing_slowdown_percent', 10.0)
+        self.learning_speed = config.get('learning_speed', 0.3)
+        self.engineer_mode_enabled = config.get('engineer_mode_enabled', False)
 
         # Create shared memory dict
         self.manager = multiprocessing.Manager()
@@ -64,7 +68,10 @@ class GateController:
             'motor2_use_limit_switches': self.motor2_use_limit_switches,
             'motor1_learned_run_time': self.motor1_learned_run_time,
             'motor2_learned_run_time': self.motor2_learned_run_time,
-            'limit_switch_creep_speed': self.limit_switch_creep_speed
+            'limit_switch_creep_speed': self.limit_switch_creep_speed,
+            'opening_slowdown_percent': self.opening_slowdown_percent,
+            'closing_slowdown_percent': self.closing_slowdown_percent,
+            'learning_speed': self.learning_speed
         }
         
         # Start motor manager process
@@ -135,6 +142,10 @@ class GateController:
             self.motor2_learned_run_time = config.get('motor2_learned_run_time', None)
             self.limit_switch_creep_speed = config.get('limit_switch_creep_speed', 0.2)
             self.learning_mode_enabled = config.get('learning_mode_enabled', False)
+            self.opening_slowdown_percent = config.get('opening_slowdown_percent', 2.0)
+            self.closing_slowdown_percent = config.get('closing_slowdown_percent', 10.0)
+            self.learning_speed = config.get('learning_speed', 0.3)
+            self.engineer_mode_enabled = config.get('engineer_mode_enabled', False)
 
             # Update motor manager config via shared memory
             self.shared['config_run_time'] = self.run_time
@@ -149,6 +160,9 @@ class GateController:
             self.shared['config_motor1_learned_run_time'] = self.motor1_learned_run_time
             self.shared['config_motor2_learned_run_time'] = self.motor2_learned_run_time
             self.shared['config_limit_switch_creep_speed'] = self.limit_switch_creep_speed
+            self.shared['config_opening_slowdown_percent'] = self.opening_slowdown_percent
+            self.shared['config_closing_slowdown_percent'] = self.closing_slowdown_percent
+            self.shared['config_learning_speed'] = self.learning_speed
             self.shared['config_reload_flag'] = True  # Signal motor manager to reload
             
             print(f"  Config reloaded successfully")
@@ -236,6 +250,7 @@ class GateController:
         self.shared['learning_m1_close_time'] = None
         self.shared['learning_m2_open_time'] = None
         self.shared['learning_m2_close_time'] = None
+        self.shared['engineer_mode_enabled'] = False
     
     def _control_loop(self):
         """Main control loop - decision making only (no motor control)"""
