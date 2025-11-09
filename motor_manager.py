@@ -301,23 +301,26 @@ class MotorManager:
             m2_slowdown_point = m2_expected * (1.0 - self.opening_slowdown_percent / 100.0)
 
             # M1 control
-            m1_elapsed = now - self.shared['auto_learn_m1_start']
-            if m1_elapsed < m1_slowdown_point and not self.shared.get('open_limit_m1_active', False):
-                self.motor1.forward(1.0)  # Full speed
-            elif not self.shared.get('open_limit_m1_active', False):
-                if not self.shared.get('auto_learn_slowdown_start'):
-                    print(f"M1 slowdown at {m1_elapsed:.2f}s (expected {m1_expected:.2f}s)")
-                    self.shared['auto_learn_slowdown_start'] = now
-                self.motor1.forward(self.limit_switch_creep_speed)  # Creep speed
+            if self.shared['auto_learn_m1_start'] and now >= self.shared['auto_learn_m1_start']:
+                m1_elapsed = now - self.shared['auto_learn_m1_start']
+                if m1_elapsed < m1_slowdown_point and not self.shared.get('open_limit_m1_active', False):
+                    self.motor1.forward(1.0)  # Full speed
+                elif not self.shared.get('open_limit_m1_active', False):
+                    if not self.shared.get('auto_learn_slowdown_start'):
+                        print(f"M1 slowdown at {m1_elapsed:.2f}s (expected {m1_expected:.2f}s)")
+                        self.shared['auto_learn_slowdown_start'] = now
+                    self.motor1.forward(self.limit_switch_creep_speed)  # Creep speed
+                else:
+                    if self.shared['auto_learn_m1_start']:
+                        total_time = now - self.shared['auto_learn_m1_start']
+                        print(f"M1 open limit hit at {total_time:.2f}s")
+                        # Store time
+                        times = list(self.shared.get('auto_learn_m1_times', []))
+                        times.append(total_time)
+                        self.shared['auto_learn_m1_times'] = times
+                        self.shared['auto_learn_m1_start'] = None
+                    self.motor1.stop()
             else:
-                if self.shared['auto_learn_m1_start']:
-                    total_time = now - self.shared['auto_learn_m1_start']
-                    print(f"M1 open limit hit at {total_time:.2f}s")
-                    # Store time
-                    times = list(self.shared.get('auto_learn_m1_times', []))
-                    times.append(total_time)
-                    self.shared['auto_learn_m1_times'] = times
-                    self.shared['auto_learn_m1_start'] = None
                 self.motor1.stop()
 
             # M2 control (starts after delay)
@@ -375,20 +378,23 @@ class MotorManager:
             m2_slowdown_point = m2_expected * (1.0 - self.closing_slowdown_percent / 100.0)
 
             # M2 control (closes first)
-            m2_elapsed = now - self.shared['auto_learn_m2_start']
-            if m2_elapsed < m2_slowdown_point and not self.shared.get('close_limit_m2_active', False):
-                self.motor2.backward(1.0)  # Full speed
-            elif not self.shared.get('close_limit_m2_active', False):
-                self.motor2.backward(self.limit_switch_creep_speed)  # Creep speed
+            if self.shared['auto_learn_m2_start'] and now >= self.shared['auto_learn_m2_start']:
+                m2_elapsed = now - self.shared['auto_learn_m2_start']
+                if m2_elapsed < m2_slowdown_point and not self.shared.get('close_limit_m2_active', False):
+                    self.motor2.backward(1.0)  # Full speed
+                elif not self.shared.get('close_limit_m2_active', False):
+                    self.motor2.backward(self.limit_switch_creep_speed)  # Creep speed
+                else:
+                    if self.shared['auto_learn_m2_start']:
+                        total_time = now - self.shared['auto_learn_m2_start']
+                        print(f"M2 close limit hit at {total_time:.2f}s")
+                        # Store time
+                        times = list(self.shared.get('auto_learn_m2_times', []))
+                        times.append(total_time)
+                        self.shared['auto_learn_m2_times'] = times
+                        self.shared['auto_learn_m2_start'] = None
+                    self.motor2.stop()
             else:
-                if self.shared['auto_learn_m2_start']:
-                    total_time = now - self.shared['auto_learn_m2_start']
-                    print(f"M2 close limit hit at {total_time:.2f}s")
-                    # Store time
-                    times = list(self.shared.get('auto_learn_m2_times', []))
-                    times.append(total_time)
-                    self.shared['auto_learn_m2_times'] = times
-                    self.shared['auto_learn_m2_start'] = None
                 self.motor2.stop()
 
             # M1 control (starts after delay)
