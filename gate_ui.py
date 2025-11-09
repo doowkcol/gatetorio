@@ -1265,6 +1265,55 @@ class GateUI:
             label.pack(anchor='w', padx=20)
             self.learned_times_labels[motor_label] = label
 
+        # Auto-Learn Section
+        auto_learn_frame = tk.Frame(scrollable_frame, bg='#330033', relief='ridge', bd=3)
+        auto_learn_frame.pack(fill='x', padx=10, pady=10)
+
+        tk.Label(auto_learn_frame, text="🤖 AUTOMATED LEARNING", font=('Arial', 14, 'bold'),
+                 bg='#330033', fg='magenta').pack(pady=5)
+
+        tk.Label(auto_learn_frame,
+                 text="Automatically learn gate travel times through progressive cycles.\n" +
+                      "Gates will open/close slowly, then perform multiple fast cycles,\n" +
+                      "and return to closed position when complete.",
+                 font=('Arial', 9), bg='#330033', fg='white', justify='left').pack(padx=10)
+
+        # Auto-learn status
+        self.auto_learn_status_label = tk.Label(auto_learn_frame, text="Status: Ready",
+                                                 font=('Arial', 10, 'bold'), bg='#330033', fg='yellow')
+        self.auto_learn_status_label.pack(pady=5)
+
+        # Auto-learn buttons
+        auto_learn_btn_frame = tk.Frame(auto_learn_frame, bg='#330033')
+        auto_learn_btn_frame.pack(pady=10)
+
+        self.start_auto_learn_btn = tk.Button(
+            auto_learn_btn_frame,
+            text="▶ START AUTO-LEARN",
+            font=('Arial', 12, 'bold'),
+            bg='#00AA00',
+            fg='white',
+            command=self.start_auto_learn,
+            relief='raised',
+            bd=3,
+            width=20
+        )
+        self.start_auto_learn_btn.pack(side='left', padx=5)
+
+        self.stop_auto_learn_btn = tk.Button(
+            auto_learn_btn_frame,
+            text="⬛ STOP",
+            font=('Arial', 12, 'bold'),
+            bg='#AA0000',
+            fg='white',
+            command=self.stop_auto_learn,
+            relief='raised',
+            bd=3,
+            width=10,
+            state='disabled'
+        )
+        self.stop_auto_learn_btn.pack(side='left', padx=5)
+
         # Add bottom spacing so content doesn't get cut off
         tk.Frame(scrollable_frame, bg='black', height=20).pack()
 
@@ -1621,7 +1670,10 @@ class GateUI:
         
         # Update input status displays (if on that page)
         self.update_input_displays()
-        
+
+        # Update auto-learn status (if on learning page)
+        self.update_auto_learn_status()
+
         # Schedule next update
         self.root.after(100, self.update_status)
     
@@ -1659,7 +1711,39 @@ class GateUI:
                 widgets['resistance'].config(text=f"R: {resistance/1000:.1f}k")
             else:
                 widgets['resistance'].config(text=f"R: {resistance:.0f}ohm")
-    
+
+    def update_auto_learn_status(self):
+        """Update auto-learn status display"""
+        # Only update if we have auto-learn status label initialized
+        if not hasattr(self, 'auto_learn_status_label'):
+            return
+
+        # Get auto-learn status from controller
+        auto_learn_status = self.controller.get_auto_learn_status()
+        active = auto_learn_status['active']
+        status_msg = auto_learn_status['status_msg']
+        cycle = auto_learn_status['cycle']
+
+        # Update status label
+        if active:
+            if cycle > 0:
+                self.auto_learn_status_label.config(text=f"Status: Cycle {cycle} - {status_msg}", fg='lime')
+            else:
+                self.auto_learn_status_label.config(text=f"Status: {status_msg}", fg='lime')
+        else:
+            self.auto_learn_status_label.config(text=f"Status: {status_msg}", fg='yellow')
+
+        # Update button states
+        if active:
+            self.start_auto_learn_btn.config(state='disabled')
+            self.stop_auto_learn_btn.config(state='normal')
+        else:
+            self.start_auto_learn_btn.config(state='normal')
+            self.stop_auto_learn_btn.config(state='disabled')
+
+        # Update learned times display
+        self.update_learned_times_display()
+
     def on_exit(self):
         """Handle exit - properly kill all processes"""
         print("Exit button pressed - shutting down all processes")
@@ -1748,6 +1832,32 @@ class GateUI:
             self.controller.enable_learning_mode()
         else:
             self.controller.disable_learning_mode()
+
+    def start_auto_learn(self):
+        """Start the automated learning sequence"""
+        if not self.engineer_mode_var.get():
+            print("ERROR: Engineer mode must be enabled to start auto-learn")
+            return
+
+        # Start auto-learn
+        success = self.controller.start_auto_learn()
+
+        if success:
+            # Disable start button, enable stop button
+            self.start_auto_learn_btn.config(state='disabled')
+            self.stop_auto_learn_btn.config(state='normal')
+            print("Auto-learn started - sequence will run automatically")
+        else:
+            print("Failed to start auto-learn")
+
+    def stop_auto_learn(self):
+        """Stop the automated learning sequence"""
+        self.controller.stop_auto_learn()
+
+        # Re-enable start button, disable stop button
+        self.start_auto_learn_btn.config(state='normal')
+        self.stop_auto_learn_btn.config(state='disabled')
+        print("Auto-learn stopped")
 
     def update_open_slowdown_label(self, value):
         """Update opening slowdown percentage label"""
