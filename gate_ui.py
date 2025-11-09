@@ -1879,7 +1879,8 @@ class GateUI:
             with open(config_file, 'r') as f:
                 config = json.load(f)
 
-            config['engineer_mode_enabled'] = self.engineer_mode_var.get()
+            # Engineer mode is runtime-only, never saved to config
+            # config['engineer_mode_enabled'] - not saved
             config['learning_mode_enabled'] = self.learning_mode_var.get()
             config['motor1_use_limit_switches'] = self.m1_ls_var.get()
             config['motor2_use_limit_switches'] = self.m2_ls_var.get()

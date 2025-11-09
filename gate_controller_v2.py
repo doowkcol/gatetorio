@@ -4,7 +4,7 @@ Gate Controller V2 - Multiprocessing architecture
 Step 3: Added input manager process
 """
 
-from time import time
+from time import time, sleep
 import json
 import threading
 import multiprocessing
@@ -46,7 +46,8 @@ class GateController:
         self.opening_slowdown_percent = config.get('opening_slowdown_percent', 2.0)
         self.closing_slowdown_percent = config.get('closing_slowdown_percent', 10.0)
         self.learning_speed = config.get('learning_speed', 0.3)
-        self.engineer_mode_enabled = config.get('engineer_mode_enabled', False)
+        # Engineer mode is runtime-only, never persisted - always starts disabled
+        self.engineer_mode_enabled = False
 
         # Create shared memory dict
         self.manager = multiprocessing.Manager()
@@ -145,7 +146,8 @@ class GateController:
             self.opening_slowdown_percent = config.get('opening_slowdown_percent', 2.0)
             self.closing_slowdown_percent = config.get('closing_slowdown_percent', 10.0)
             self.learning_speed = config.get('learning_speed', 0.3)
-            self.engineer_mode_enabled = config.get('engineer_mode_enabled', False)
+            # Engineer mode is runtime-only, don't change it during reload
+            # self.engineer_mode_enabled - keep current runtime value
 
             # Update motor manager config via shared memory
             self.shared['config_run_time'] = self.run_time
@@ -268,27 +270,33 @@ class GateController:
         last_auto_close_update = time()
         last_partial_1_update = time()  # Separate timer for PO1
         last_partial_2_update = time()  # Separate timer for PO2
-        
+
         while self.shared['running']:
             now = time()
-            
+
             # Update heartbeat
             self.shared['controller_heartbeat'] = now
-            
+
+            # If auto-learn is active, skip all normal controller logic
+            # Motor manager handles everything during auto-learn
+            if self.shared.get('auto_learn_active', False):
+                sleep(0.05)
+                continue
+
             # STEP 1: Evaluate commands
             self._evaluate_commands(now)
-            
+
             # STEP 2: Check safety edges
             self._process_safety_edges(now)
-            
+
             # STEP 3: Check photocell logic
             if not self.shared['safety_reversing']:
                 self._process_photocells()
-            
+
             # STEP 4: Check movement completion
             # Use small tolerance for floating point comparison
             POSITION_TOLERANCE = 0.01  # 0.01 seconds = 10ms tolerance
-            
+
             if self.shared['movement_command'] == 'OPEN':
                 # Debug: Print position check for opening
                 if self.shared['state'] == 'OPENING':
@@ -329,12 +337,8 @@ class GateController:
                 elif self.shared['m1_position'] <= POSITION_TOLERANCE and self.shared['m2_position'] <= POSITION_TOLERANCE:
                     print(f"[COMPLETION] Calling _complete_close() - M1={self.shared['m1_position']:.2f}, M2={self.shared['m2_position']:.2f}")
                     self._complete_close()
-            
-            # STEP 5: Process auto-learn state machine
-            if self.shared['auto_learn_active']:
-                self._process_auto_learn(now)
 
-            # STEP 6: Auto-close countdown
+            # STEP 5: Auto-close countdown
             if self.shared['auto_close_active'] and (now - last_auto_close_update) >= 1.0:
                 self.shared['auto_close_countdown'] -= 1
                 last_auto_close_update = now
@@ -1804,7 +1808,7 @@ class GateController:
         }
 
     def start_auto_learn(self):
-        """Start the automated learning sequence"""
+        """Start the automated learning sequence - motor_manager handles the actual learning"""
         if not self.shared.get('engineer_mode_enabled', False):
             print("ERROR: Engineer mode must be enabled to start auto-learn")
             return False
@@ -1828,31 +1832,14 @@ class GateController:
         self.shared['learning_m1_close_time'] = None
         self.shared['learning_m2_open_time'] = None
         self.shared['learning_m2_close_time'] = None
-        self.shared['auto_learn_m1_times'] = []
-        self.shared['auto_learn_m2_times'] = []
-        self.shared['auto_learn_m1_expected'] = None
-        self.shared['auto_learn_m2_expected'] = None
-        self.shared['auto_learn_cycle'] = 0
 
-        # Enable learning mode
-        self.shared['learning_mode_enabled'] = True
-
-        # Start auto-learn state machine
+        # Signal motor_manager to start auto-learn
+        # Motor manager will handle the entire sequence
         self.shared['auto_learn_active'] = True
-        self.shared['auto_learn_state'] = 'M1_OPEN_SLOW'
-        self.shared['auto_learn_phase_start'] = time()
-        self.shared['auto_learn_status_msg'] = 'Opening M1 slowly to find limit...'
+        self.shared['auto_learn_status_msg'] = 'Starting auto-learn sequence...'
 
         print("=== AUTO-LEARN STARTED ===")
-        print("Phase 1: M1 opening slowly to find limit")
-
-        # Start M1 opening at learning speed
-        self.shared['state'] = 'OPENING'
-        self.shared['movement_command'] = 'OPEN'
-        self.shared['movement_start_time'] = time()  # Critical for motor_manager!
-        self.shared['m1_move_start'] = time()
-        self.shared['m1_target'] = self.run_time
-        self.shared['learning_m1_start_time'] = time()
+        print("Motor manager will handle the learning sequence")
 
         return True
 
@@ -1863,10 +1850,7 @@ class GateController:
 
         print("=== AUTO-LEARN STOPPED ===")
         self.shared['auto_learn_active'] = False
-        self.shared['auto_learn_state'] = 'IDLE'
         self.shared['auto_learn_status_msg'] = 'Stopped by user'
-        self.shared['learning_mode_enabled'] = False
-        self.cmd_stop()
 
         return True
 
@@ -1880,285 +1864,6 @@ class GateController:
             'm1_times': list(self.shared.get('auto_learn_m1_times', [])),
             'm2_times': list(self.shared.get('auto_learn_m2_times', []))
         }
-
-    def _process_auto_learn(self, now):
-        """Process auto-learn state machine - called from control loop"""
-        state = self.shared['auto_learn_state']
-
-        # Check for limit switch hits and state transitions
-        if state == 'M1_OPEN_SLOW':
-            # Waiting for M1 to hit open limit
-            if self.shared.get('open_limit_m1_active', False):
-                # M1 hit open limit
-                learned_time = now - self.shared['learning_m1_start_time']
-                print(f"M1 open limit reached - time: {learned_time:.2f}s")
-
-                # Stop M1
-                self.shared['m1_move_start'] = None
-
-                # Move to next phase: M2 open slow
-                self.shared['auto_learn_state'] = 'M2_OPEN_SLOW'
-                self.shared['auto_learn_status_msg'] = 'Opening M2 slowly to find limit...'
-                self.shared['auto_learn_phase_start'] = now
-
-                print("Phase 2: M2 opening slowly to find limit")
-
-                # Start M2 opening at learning speed
-                self.shared['m2_move_start'] = now
-                self.shared['m2_target'] = self.run_time
-                self.shared['learning_m2_start_time'] = now
-
-        elif state == 'M2_OPEN_SLOW':
-            # Waiting for M2 to hit open limit
-            if self.shared.get('open_limit_m2_active', False):
-                # M2 hit open limit
-                learned_time = now - self.shared['learning_m2_start_time']
-                print(f"M2 open limit reached - time: {learned_time:.2f}s")
-
-                # Stop M2
-                self.shared['m2_move_start'] = None
-
-                # Brief pause before closing
-                self.shared['auto_learn_state'] = 'PAUSE_BEFORE_M2_CLOSE'
-                self.shared['auto_learn_status_msg'] = 'Pausing before M2 close...'
-                self.shared['auto_learn_phase_start'] = now
-                print("Brief pause before closing M2...")
-
-        elif state == 'PAUSE_BEFORE_M2_CLOSE':
-            # Wait 0.5 seconds before starting close
-            if now - self.shared['auto_learn_phase_start'] >= 0.5:
-                self.shared['auto_learn_state'] = 'M2_CLOSE_SLOW'
-                self.shared['auto_learn_status_msg'] = 'Closing M2 slowly (first timing)...'
-                self.shared['auto_learn_phase_start'] = now
-
-                print("Phase 3: M2 closing slowly (recording first time)")
-
-                # Start M2 closing at learning speed
-                self.shared['state'] = 'CLOSING'
-                self.shared['movement_command'] = 'CLOSE'
-                self.shared['movement_start_time'] = now  # Critical for motor_manager!
-                self.shared['m2_move_start'] = now
-                self.shared['m2_target'] = 0
-                self.shared['learning_m2_start_time'] = now
-
-        elif state == 'M2_CLOSE_SLOW':
-            # Waiting for M2 to hit close limit
-            if self.shared.get('close_limit_m2_active', False):
-                # M2 hit close limit - record first timing
-                learned_time = now - self.shared['learning_m2_start_time']
-                # Adjust for learning speed
-                adjusted_time = learned_time * (1.0 / self.learning_speed)
-                print(f"M2 close limit reached - time: {learned_time:.2f}s (adjusted: {adjusted_time:.2f}s)")
-
-                # Store first M2 time
-                self.shared['auto_learn_m2_times'].append(adjusted_time)
-                self.shared['learning_m2_close_time'] = adjusted_time
-
-                # Stop M2
-                self.shared['m2_move_start'] = None
-
-                # Brief pause before M1 close
-                self.shared['auto_learn_state'] = 'PAUSE_BEFORE_M1_CLOSE'
-                self.shared['auto_learn_status_msg'] = 'Pausing before M1 close...'
-                self.shared['auto_learn_phase_start'] = now
-                print("Brief pause before closing M1...")
-
-        elif state == 'PAUSE_BEFORE_M1_CLOSE':
-            # Wait 0.5 seconds before starting M1 close
-            if now - self.shared['auto_learn_phase_start'] >= 0.5:
-                self.shared['auto_learn_state'] = 'M1_CLOSE_SLOW'
-                self.shared['auto_learn_status_msg'] = 'Closing M1 slowly (first timing)...'
-                self.shared['auto_learn_phase_start'] = now
-
-                print("Phase 4: M1 closing slowly (recording first time)")
-
-                # Start M1 closing at learning speed (state still CLOSING from M2)
-                self.shared['movement_start_time'] = now  # Refresh timer
-                self.shared['m1_move_start'] = now
-                self.shared['m1_target'] = 0
-                self.shared['learning_m1_start_time'] = now
-
-        elif state == 'M1_CLOSE_SLOW':
-            # Waiting for M1 to hit close limit
-            if self.shared.get('close_limit_m1_active', False):
-                # M1 hit close limit - record first timing
-                learned_time = now - self.shared['learning_m1_start_time']
-                # Adjust for learning speed
-                adjusted_time = learned_time * (1.0 / self.learning_speed)
-                print(f"M1 close limit reached - time: {learned_time:.2f}s (adjusted: {adjusted_time:.2f}s)")
-
-                # Store first M1 time
-                self.shared['auto_learn_m1_times'].append(adjusted_time)
-                self.shared['learning_m1_close_time'] = adjusted_time
-
-                # Stop M1
-                self.shared['m1_move_start'] = None
-                self.shared['movement_command'] = None
-                self.shared['state'] = 'CLOSED'
-
-                # Calculate expected times for fast cycles
-                self.shared['auto_learn_m1_expected'] = adjusted_time
-                self.shared['auto_learn_m2_expected'] = self.shared['auto_learn_m2_times'][0]
-
-                print(f"First cycle complete!")
-                print(f"  M1 expected time: {self.shared['auto_learn_m1_expected']:.2f}s")
-                print(f"  M2 expected time: {self.shared['auto_learn_m2_expected']:.2f}s")
-
-                # Move to fast cycles
-                self.shared['auto_learn_cycle'] = 1
-                self.shared['auto_learn_state'] = 'PAUSE_BEFORE_FAST_OPEN'
-                self.shared['auto_learn_status_msg'] = 'Preparing for fast cycle...'
-                self.shared['auto_learn_phase_start'] = now
-                print("Preparing for fast learning cycles...")
-
-        elif state == 'PAUSE_BEFORE_FAST_OPEN':
-            # Wait 1 second before fast cycle
-            if now - self.shared['auto_learn_phase_start'] >= 1.0:
-                cycle = self.shared['auto_learn_cycle']
-                print(f"\n=== FAST CYCLE {cycle} ===")
-
-                self.shared['auto_learn_state'] = 'FAST_OPEN'
-                self.shared['auto_learn_status_msg'] = f'Fast cycle {cycle}: Opening...'
-                self.shared['auto_learn_phase_start'] = now
-
-                print(f"Phase: Opening at full speed with slowdown")
-
-                # Start opening (will use normal speed with slowdown logic)
-                self.shared['state'] = 'OPENING'
-                self.shared['movement_command'] = 'OPEN'
-                self.shared['movement_start_time'] = now  # Critical for motor_manager!
-                self.shared['m1_move_start'] = now
-                self.shared['m2_move_start'] = now + self.motor1_open_delay
-                self.shared['m1_target'] = self.run_time
-                self.shared['m2_target'] = self.run_time
-                self.shared['learning_m1_start_time'] = now
-                self.shared['learning_m2_start_time'] = now + self.motor1_open_delay
-
-        elif state == 'FAST_OPEN':
-            # Waiting for both motors to hit open limits
-            m1_done = self.shared.get('open_limit_m1_active', False)
-            m2_done = self.shared.get('open_limit_m2_active', False)
-
-            # Record times when limits are hit
-            if m1_done and self.shared.get('learning_m1_start_time') and not self.shared.get('learning_m1_open_time'):
-                m1_time = now - self.shared['learning_m1_start_time']
-                self.shared['learning_m1_open_time'] = m1_time
-                print(f"M1 open limit reached - time: {m1_time:.2f}s")
-
-            if m2_done and self.shared.get('learning_m2_start_time') and not self.shared.get('learning_m2_open_time'):
-                m2_time = now - self.shared['learning_m2_start_time']
-                self.shared['learning_m2_open_time'] = m2_time
-                print(f"M2 open limit reached - time: {m2_time:.2f}s")
-
-            # When both done, move to closing
-            if m1_done and m2_done:
-                # Record times to average
-                if self.shared.get('learning_m1_open_time'):
-                    self.shared['auto_learn_m1_times'].append(self.shared['learning_m1_open_time'])
-                if self.shared.get('learning_m2_open_time'):
-                    self.shared['auto_learn_m2_times'].append(self.shared['learning_m2_open_time'])
-
-                self.shared['auto_learn_state'] = 'PAUSE_BEFORE_FAST_CLOSE'
-                self.shared['auto_learn_status_msg'] = 'Pausing before close...'
-                self.shared['auto_learn_phase_start'] = now
-                print("Both limits reached, pausing before close...")
-
-        elif state == 'PAUSE_BEFORE_FAST_CLOSE':
-            # Wait 0.5 seconds before closing
-            if now - self.shared['auto_learn_phase_start'] >= 0.5:
-                self.shared['auto_learn_state'] = 'FAST_CLOSE'
-                self.shared['auto_learn_status_msg'] = f'Fast cycle {self.shared["auto_learn_cycle"]}: Closing...'
-                self.shared['auto_learn_phase_start'] = now
-
-                # Clear previous open times
-                self.shared['learning_m1_open_time'] = None
-                self.shared['learning_m2_open_time'] = None
-
-                print(f"Phase: Closing at full speed with slowdown")
-
-                # Start closing
-                self.shared['state'] = 'CLOSING'
-                self.shared['movement_command'] = 'CLOSE'
-                self.shared['movement_start_time'] = now  # Critical for motor_manager!
-                self.shared['m2_move_start'] = now
-                self.shared['m1_move_start'] = now + self.motor2_close_delay
-                self.shared['m2_target'] = 0
-                self.shared['m1_target'] = 0
-                self.shared['learning_m1_start_time'] = now + self.motor2_close_delay
-                self.shared['learning_m2_start_time'] = now
-
-        elif state == 'FAST_CLOSE':
-            # Waiting for both motors to hit close limits
-            m1_done = self.shared.get('close_limit_m1_active', False)
-            m2_done = self.shared.get('close_limit_m2_active', False)
-
-            # Record times when limits are hit
-            if m1_done and self.shared.get('learning_m1_start_time') and not self.shared.get('learning_m1_close_time'):
-                m1_time = now - self.shared['learning_m1_start_time']
-                self.shared['learning_m1_close_time'] = m1_time
-                print(f"M1 close limit reached - time: {m1_time:.2f}s")
-
-            if m2_done and self.shared.get('learning_m2_start_time') and not self.shared.get('learning_m2_close_time'):
-                m2_time = now - self.shared['learning_m2_start_time']
-                self.shared['learning_m2_close_time'] = m2_time
-                print(f"M2 close limit reached - time: {m2_time:.2f}s")
-
-            # When both done, decide next action
-            if m1_done and m2_done:
-                # Record times to average
-                if self.shared.get('learning_m1_close_time'):
-                    self.shared['auto_learn_m1_times'].append(self.shared['learning_m1_close_time'])
-                if self.shared.get('learning_m2_close_time'):
-                    self.shared['auto_learn_m2_times'].append(self.shared['learning_m2_close_time'])
-
-                # Clear for next cycle
-                self.shared['learning_m1_close_time'] = None
-                self.shared['learning_m2_close_time'] = None
-
-                # Check if we should do more cycles
-                cycle = self.shared['auto_learn_cycle']
-                if cycle < 3:  # Do 3 total fast cycles
-                    self.shared['auto_learn_cycle'] = cycle + 1
-                    self.shared['auto_learn_state'] = 'PAUSE_BEFORE_FAST_OPEN'
-                    self.shared['auto_learn_status_msg'] = 'Preparing for next cycle...'
-                    self.shared['auto_learn_phase_start'] = now
-                    print(f"Cycle {cycle} complete, preparing for cycle {cycle + 1}...")
-                else:
-                    # All cycles complete - calculate final averages
-                    self._complete_auto_learn()
-
-    def _complete_auto_learn(self):
-        """Complete auto-learn sequence and calculate final averages"""
-        m1_times = list(self.shared['auto_learn_m1_times'])
-        m2_times = list(self.shared['auto_learn_m2_times'])
-
-        print("\n=== AUTO-LEARN COMPLETE ===")
-        print(f"M1 times recorded: {m1_times}")
-        print(f"M2 times recorded: {m2_times}")
-
-        # Calculate averages
-        if m1_times:
-            m1_avg = sum(m1_times) / len(m1_times)
-            self.shared['learning_m1_close_time'] = m1_avg
-            print(f"M1 average time: {m1_avg:.2f}s")
-
-        if m2_times:
-            m2_avg = sum(m2_times) / len(m2_times)
-            self.shared['learning_m2_close_time'] = m2_avg
-            print(f"M2 average time: {m2_avg:.2f}s")
-
-        # Stop auto-learn
-        self.shared['auto_learn_active'] = False
-        self.shared['auto_learn_state'] = 'COMPLETE'
-        self.shared['auto_learn_status_msg'] = 'Learning complete! Gates closed. You can now save times.'
-        self.shared['learning_mode_enabled'] = False
-
-        # Ensure we're in closed state
-        self.shared['state'] = 'CLOSED'
-        self.shared['movement_command'] = None
-
-        print("Gates are now in closed position")
-        print("You can save the learned times and exit engineer mode")
 
     def get_status(self):
         """Get current status"""
