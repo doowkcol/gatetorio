@@ -424,6 +424,10 @@ class MotorManager:
 
             self.shared['m1_speed'] = speed
 
+            # Check if we're in learning mode with limit switches - if so, ignore position limits
+            learning_with_limits = (self.shared.get('learning_mode_enabled', False) and
+                                   self.motor1_use_limit_switches)
+
             if self.shared['state'] in ['OPENING', 'OPENING_TO_PARTIAL_1', 'OPENING_TO_PARTIAL_2']:
                 target_position = self.run_time
                 if self.shared['state'] == 'OPENING_TO_PARTIAL_1':
@@ -431,7 +435,8 @@ class MotorManager:
                 elif self.shared['state'] == 'OPENING_TO_PARTIAL_2':
                     target_position = self.partial_2_position
 
-                if self.shared['m1_position'] < target_position:
+                # In learning mode with limit switches, keep running regardless of position
+                if learning_with_limits or self.shared['m1_position'] < target_position:
                     self.motor1.forward(speed)
                 else:
                     self.motor1.stop()
@@ -449,8 +454,9 @@ class MotorManager:
                     target_position = self.partial_2_position
                 elif self.shared['partial_1_active'] and self.shared['returning_from_full_open']:
                     target_position = self.partial_1_position
-                
-                if self.shared['m1_position'] > target_position:
+
+                # In learning mode with limit switches, keep running regardless of position
+                if learning_with_limits or self.shared['m1_position'] > target_position:
                     self.motor1.backward(speed)
                 else:
                     self.motor1.stop()
@@ -490,8 +496,13 @@ class MotorManager:
 
             self.shared['m2_speed'] = speed
 
+            # Check if we're in learning mode with limit switches - if so, ignore position limits
+            learning_with_limits_m2 = (self.shared.get('learning_mode_enabled', False) and
+                                       self.motor2_use_limit_switches)
+
             if self.shared['movement_command'] == 'OPEN':
-                if self.shared['m2_position'] < self.run_time:
+                # In learning mode with limit switches, keep running regardless of position
+                if learning_with_limits_m2 or self.shared['m2_position'] < self.run_time:
                     self.motor2.forward(speed)
                 else:
                     self.motor2.stop()
@@ -500,7 +511,8 @@ class MotorManager:
                         print(f"[MOTOR MGR] Snapping M2: {self.shared['m2_position']:.10f} -> {self.run_time}")
                     self.shared['m2_position'] = self.run_time
             else:
-                if self.shared['m2_position'] > 0:
+                # In learning mode with limit switches, keep running regardless of position
+                if learning_with_limits_m2 or self.shared['m2_position'] > 0:
                     self.motor2.backward(speed)
                 else:
                     self.motor2.stop()
