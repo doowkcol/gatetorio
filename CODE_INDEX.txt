@@ -1,0 +1,607 @@
+GATETORIO CODE INDEX - Quick Navigation Guide
+==============================================
+Generated: 2025-11-03
+
+This index maps where each major section of code lives across the three
+main Python files. Use line numbers to quickly locate specific functionality.
+
+Total Lines: 2426 lines across 3 files
+- gate_controller_v2.py: 1392 lines (main control logic)
+- gate_ui.py: 771 lines (touchscreen interface)
+- motor_manager.py: 263 lines (motor control process)
+
+================================================================================
+FILE: gate_controller_v2.py (1392 LINES)
+================================================================================
+
+CLASS DEFINITION & INITIALIZATION
+----------------------------------
+Line 13-68: class GateController + __init__
+  - Config loading from JSON
+  - Partial position calculation
+  - Shared memory dictionary creation
+  - Motor manager process spawning
+  - Control thread startup
+
+Line 69-115: reload_config()
+  - Runtime config reload without restart
+  - Updates controller AND motor manager via shared memory
+  - UI calls this after saving settings
+
+SHARED MEMORY INITIALIZATION
+-----------------------------
+Line 116-170: _init_shared_state()
+  - Initializes ALL 59 shared dictionary keys
+  - Sets default values for states, positions, flags
+  - Critical reference for understanding shared memory structure
+
+MAIN CONTROL LOOP (20Hz CYCLE)
+-------------------------------
+Line 171-236: _control_loop()
+  - Runs at 20Hz (50ms cycle)
+  - STEP 1 (Line 181-184): Evaluate commands (_evaluate_commands)
+  - STEP 2 (Line 184-187): Check safety edges (_process_safety_edges)
+  - STEP 3 (Line 187-191): Check photocell logic (_process_photocells)
+  - STEP 4 (Line 191-212): Check movement completion (inline logic)
+  - STEP 5 (Line 213-228): Auto-close countdown timers
+  - Heartbeat update
+  - Threading.Event().wait(0.05) for timing
+
+COMMAND EVALUATION ENGINE (THE BIG ONE!)
+-----------------------------------------
+Line 237-503: _evaluate_commands(now)
+  *** THIS IS THE CORE DECISION LOGIC - 266 LINES ***
+  
+  Line 248-253: DEADMAN CONTROLS (highest priority override)
+  
+  Line 253-276: SAFETY EDGES SUSTAINED
+    - Block commands in their direction
+    - Allow _process_safety_edges to initiate reversal
+  
+  Line 278-284: SUSTAINED STOP (blocks everything)
+  
+  Line 286-327: CLOSE COMMAND ACTIVE
+    - Handles reversal from opening
+    - Special case: OPEN with sustained partial
+    - Blocks if partial sustained (except from OPEN)
+  
+  Line 329-365: OPEN COMMAND ACTIVE
+    - Handles reversal from closing
+    - Auto-close timer blocking
+    - Partial override to full open
+  
+  Line 367-379: AUTO-CLOSE START DETECTION
+    - Triggers when OPEN/TIMED_OPEN released at OPEN state
+    - Separate logic for full and partial positions
+  
+  Line 382-416: TIMED OPEN COMMAND (time clock mode)
+    - Opens while sustained
+    - Overrides sustained partials
+    - Blocks auto-close
+  
+  Line 418-428: TIMED OPEN RELEASED (falling edge)
+    - Immediate close trigger
+    - Respects sustained partials
+  
+  Line 430-453: PARTIAL 2 COMMAND (PO2 priority)
+    - Blocks if CLOSE sustained
+    - Moves from closed/stopped/P1
+    - Blocks auto-close at P2
+  
+  Line 454-476: PARTIAL 1 COMMAND
+    - Similar logic to P2
+    - Lower priority than P2
+  
+  Line 478-500: PARTIAL 2 COMMAND (duplicate section?)
+    - Note: This appears to be duplicated - potential cleanup
+
+COMMAND CONFLICT HANDLERS
+--------------------------
+Line 504-565: _check_command_conflicts() [FIRST INSTANCE]
+  - Both deadman = STOP
+  - STOP blocks auto-close
+  - Sustained OPEN resets timer
+  - PO2 priority over PO1
+  - Safety edge retry logic
+
+Line 566-582: _process_timed_open()
+  - Timed open state machine
+  - Trigger/release detection
+
+Line 664-726: _check_command_conflicts() [DUPLICATE - NOT CALLED?]
+  - Note: Duplicate function, appears unused
+
+MOVEMENT EXECUTION COMMANDS
+----------------------------
+Line 584-617: _execute_open()
+  - Starts opening operation
+  - Handles pause resume
+  - Sets movement_command = 'OPEN'
+  - Manages M1/M2 start times with delays
+
+Line 618-642: _execute_close()
+  - Starts closing operation  
+  - Sets movement_command = 'CLOSE'
+  - Manages M2/M1 start times with delays
+
+Line 643-663: _execute_stop()
+  - Stops all movement
+  - Tracks stopped_after_opening/closing for step logic
+  - Clears timers
+
+SAFETY EDGE PROCESSING
+-----------------------
+Line 727-782: _process_safety_edges(now)
+  - Checks if safety reversal in progress
+  - Completes reversal after safety_reverse_time
+  - STOP CLOSING edge logic
+  - STOP OPENING edge logic
+  - Special case: STOP OPENING + closing photocell = immediate stop
+  - Sets safety_reversing flag and state
+
+PHOTOCELL PROCESSING
+--------------------
+Line 783-881: _process_photocells()
+  *** COMPLEX PHOTOCELL LOGIC - 98 LINES ***
+  
+  Line 785-792: Reset trigger flags on release
+  
+  Line 794-831: CLOSING PHOTOCELL (CX) LOGIC
+    - Holds/resets auto-close timers at open positions
+    - Triggers reopen to last_open_position during closing
+  
+  Line 833-880: OPENING PHOTOCELL (CY) LOGIC
+    - Pauses during opening (resumes on release)
+    - Pauses during closing, then reopens on release
+    - Adjusts move_start times for pause duration
+
+MOVEMENT COMPLETION HANDLERS
+-----------------------------
+Line 882-907: _complete_open()
+  - Sets state = 'OPEN'
+  - Records last_open_position
+  - Starts auto-close if enabled
+  - Clears positions to run_time
+
+Line 908-928: _complete_close()
+  - Sets state = 'CLOSED'
+  - Clears returning_from_full_open flag
+  - Zeros positions
+  - Clears cmd_close_active
+
+Line 929-949: _complete_partial_1()
+  - Sets state = 'PARTIAL_1'
+  - Records last_open_position
+  - M1 at partial_1_position, M2 at 0
+  - Starts partial auto-close
+
+Line 950-970: _complete_partial_2()
+  - Sets state = 'PARTIAL_2'
+  - Records last_open_position
+  - M1 at partial_2_position, M2 at 0
+  - Starts partial auto-close
+
+PUBLIC COMMAND METHODS (UI INTERFACE)
+--------------------------------------
+Line 971-1030: cmd_open(sustained=False)
+  - Public method for OPEN command
+  - Handles blocking conditions
+  - Step logic 2/3/4-step behavior
+  - Calls _execute_open()
+
+Line 1031-1084: cmd_close(sustained=False)
+  - Public method for CLOSE command
+  - Handles blocking conditions
+  - Step logic behavior
+  - Calls _execute_close()
+
+Line 1085-1114: cmd_stop(sustained=False)
+  - Public method for STOP command
+  - Step logic toggle behavior
+  - Calls _execute_stop()
+
+SAFETY & PHOTOCELL COMMAND METHODS
+-----------------------------------
+Line 1115-1122: cmd_photocell_closing(active)
+Line 1123-1130: cmd_photocell_opening(active)
+Line 1131-1138: cmd_safety_stop_closing(active)
+Line 1139-1146: cmd_safety_stop_opening(active)
+
+DEADMAN CONTROL METHODS
+------------------------
+Line 1147-1154: cmd_deadman_open(active)
+Line 1155-1162: cmd_deadman_close(active)
+
+ADVANCED COMMAND METHODS
+-------------------------
+Line 1163-1170: cmd_timed_open(active)
+  - Sets timed_open_active flag
+
+Line 1171-1197: cmd_partial_1(active)
+  - Handles PO1 command
+  - Calls _move_to_partial_1()
+
+Line 1198-1230: cmd_partial_2(active)
+  - Handles PO2 command
+  - Calls _move_to_partial_2()
+
+PARTIAL MOVEMENT EXECUTORS
+---------------------------
+Line 1231-1255: _move_to_partial_1()
+  - Opens/closes to P1 position
+  - Handles transitions from P2/OPEN/CLOSED
+  - Special delay logic for M2
+
+Line 1256-1280: _move_to_partial_2()
+  - Opens/closes to P2 position
+  - Similar logic to P1
+
+STEP LOGIC IMPLEMENTATION
+--------------------------
+Line 1281-1305: cmd_step_logic(active)
+  - Detects pulse vs sustained
+  - Routes to _step_2/3/4 based on mode
+
+Line 1306-1316: _step_2()
+  - 2-step: CLOSED->OPEN, OPEN->CLOSED
+
+Line 1317-1337: _step_3()
+  - 3-step: CLOSED->OPEN, OPEN->STOP, STOP->CLOSED->OPEN cycle
+
+Line 1338-1360: _step_4()
+  - 4-step: Direction based on last stop state
+
+UTILITY METHODS
+---------------
+Line 1361-1379: get_status()
+  - Returns dict with state, positions, speeds, timers
+  - Called by UI every 100ms
+
+Line 1380-1392: cleanup()
+  - Stops motor manager process
+  - Cleanup GPIO/motors
+  - Called on exit
+
+================================================================================
+FILE: gate_ui.py (771 LINES)
+================================================================================
+
+CLASS DEFINITION & INITIALIZATION
+----------------------------------
+Line 14-41: class GateUI + __init__
+  - Creates GateController instance
+  - Creates Tkinter window (800x480)
+  - Builds main and settings frames
+  - Starts status update loop (100ms)
+
+PAGE MANAGEMENT
+---------------
+Line 42-46: show_main_page()
+Line 47-52: show_settings_page()
+
+MAIN PAGE UI BUILD
+------------------
+Line 53-301: build_main_page()
+  *** BUILDS ENTIRE MAIN CONTROL UI ***
+  
+  Line 55-62: Status label (top)
+  
+  Line 64-99: Main control buttons (OPEN/STOP/CLOSE)
+    - Creates button_frame
+    - Three large buttons with toggle states
+  
+  Line 101-149: Photocell buttons
+    - CLOSING PHOTO (yellow)
+    - OPENING PHOTO (orange)
+    - PO1 (purple)
+    - PO2 (violet)
+  
+  Line 151-192: Safety edge buttons
+    - STOP CLOSING (red)
+    - STOP OPENING (darkred)
+  
+  Line 194-239: Deadman & advanced controls
+    - DEADMAN OPEN (lightgreen)
+    - DEADMAN CLOSE (lightblue)
+    - TIMED OPEN (purple)
+    - STEP LOGIC (cyan)
+  
+  Line 241-258: Bottom buttons
+    - EXIT button (calls on_exit)
+    - SETTINGS button (shows settings page)
+
+SETTINGS PAGE UI BUILD
+-----------------------
+Line 302-427: build_settings_page()
+  - Title label
+  - Scrollable canvas for many settings
+  - Config field definitions (line 321-334):
+    * run_time, pause_time, motor delays
+    * auto_close_time, safety_reverse_time
+    * deadman_speed, step_logic_mode
+    * partial percentages and timers
+  - Creates entry widgets in loop
+  - Auto-close enabled checkbox
+  - SAVE and BACK buttons
+
+CONFIG MANAGEMENT
+-----------------
+Line 428-443: load_current_config()
+  - Reads gate_config.json
+  - Populates entry fields
+  - Called when entering settings page
+
+Line 444-487: save_config()
+  - Reads values from entry fields
+  - Stops gate first (safety!)
+  - Writes to gate_config.json
+  - Calls controller.reload_config()
+  - Shows confirmation message
+
+Line 488-502: show_save_confirmation()
+  - Temporary "SAVED!" message overlay
+  - Auto-removes after 1 second
+
+BUTTON TOGGLE HANDLERS (All similar pattern)
+---------------------------------------------
+Line 503-514: toggle_open()
+Line 515-526: toggle_stop()
+Line 527-538: toggle_close()
+Line 539-550: toggle_closing_photo()
+Line 551-562: toggle_opening_photo()
+Line 563-574: toggle_partial_1()
+Line 575-586: toggle_partial_2()
+Line 587-598: toggle_stop_closing()
+Line 599-610: toggle_stop_opening()
+Line 611-622: toggle_deadman_open()
+Line 623-634: toggle_deadman_close()
+Line 635-646: toggle_timed_open()
+
+Line 647-655: step_logic_pulse()
+  - Momentary pulse (not toggle)
+  - Sets step_logic_pulse flag
+  - Visual feedback for 200ms
+
+STATUS UPDATE LOOP
+------------------
+Line 656-720: update_status()
+  *** CRITICAL - RUNS EVERY 100ms ***
+  
+  Line 658-667: Get status from controller
+    - state, positions, speeds, timers
+  
+  Line 669-677: Build status text
+    - Shows state name
+    - Shows M1/M2 positions & speeds
+    - Shows active countdown timer
+  
+  Line 679-706: Re-assert sustained command flags
+    - CRITICAL: Maintains sustained flags every cycle
+    - Only sets True when button active
+    - Careful clearing logic for cmd_open/close_active
+  
+  Line 708-718: Re-assert all other flags
+    - Safety edges, photocells, deadman, partials, timed open
+  
+  Line 720: Schedule next update (100ms)
+
+EXIT HANDLER
+------------
+Line 721-755: on_exit()
+  - Sets running=False
+  - Terminates motor manager process
+  - Calls cleanup()
+  - Force exits Python process
+
+MAIN LOOP
+---------
+Line 756-771: run() + main block
+  - Starts Tkinter mainloop
+  - Keyboard interrupt handler
+
+================================================================================
+FILE: motor_manager.py (263 LINES)
+================================================================================
+
+CLASS DEFINITION & INITIALIZATION
+----------------------------------
+Line 11-29: class MotorManager + __init__
+  - Receives shared_dict and config
+  - Stores config values locally
+  - Initializes gpiozero Motor objects:
+    * Motor 1: forward=17, backward=18, enable=27
+    * Motor 2: forward=22, backward=23, enable=4
+
+CONFIG RELOAD
+-------------
+Line 30-40: _reload_config()
+  - Reloads config from shared memory
+  - Called when config_reload_flag set
+
+MAIN MOTOR CONTROL LOOP
+------------------------
+Line 41-74: run()
+  *** MAIN LOOP - RUNS AT 20Hz ***
+  
+  Line 49: Update motor_manager_heartbeat
+  
+  Line 52-54: Check config_reload_flag
+  
+  Line 56-58: Process deadman controls (returns bool)
+  
+  Line 60-62: Update motor positions (if moving)
+  
+  Line 64-66: Update motor speeds (ALWAYS)
+  
+  Line 68: Sleep 50ms (20Hz)
+  
+  Line 70-73: Cleanup on exit
+
+DEADMAN CONTROL HANDLER
+------------------------
+Line 75-105: _process_deadman_controls(now)
+  - Direct motor control (bypasses normal logic)
+  - Returns True if active (blocks normal control)
+  
+  Line 76-78: Both active = False (conflict)
+  
+  Line 79-90: Deadman OPEN active
+    - Forward movement at deadman_speed
+    - Updates positions directly
+    - Stops at run_time limit
+  
+  Line 91-102: Deadman CLOSE active
+    - Backward movement at deadman_speed
+    - Updates positions directly
+    - Stops at 0 position
+
+POSITION UPDATE
+---------------
+Line 106-135: _update_motor_positions(now)
+  - Updates m1_position and m2_position based on elapsed time
+  - Handles OPEN movement (Line 107-119):
+    * M1 starts immediately
+    * M2 starts after motor1_open_delay
+    * NOT for partial movements (they stop at target)
+  
+  - Handles CLOSE movement (Line 121-135):
+    * M2 starts immediately
+    * M1 starts after motor2_close_delay
+    * NOT for partial movements
+
+MOTOR SPEED CONTROL (THE BIG ONE!)
+-----------------------------------
+Line 136-245: _update_motor_speeds(now)
+  *** COMPLEX SPEED RAMPING - 109 LINES ***
+  
+  Line 138-151: SAFETY REVERSAL OVERRIDE
+    - Full speed reverse in opposite direction
+    - REVERSING_FROM_CLOSE = forward (open)
+    - REVERSING_FROM_OPEN = backward (close)
+  
+  Line 153-158: Stop motors if paused or no movement
+  
+  Line 160: Calculate ramp_time (20% of run_time)
+  
+  Line 162-166: Stop if opening_paused
+  
+  Line 168-215: MOTOR 1 SPEED LOGIC
+    - Calculate elapsed and remaining time
+    - Handle different target positions:
+      * OPENING_TO_PARTIAL_1 -> partial_1_position
+      * OPENING_TO_PARTIAL_2 -> partial_2_position
+      * CLOSING_TO_PARTIAL_1/2 -> partial positions
+      * Normal -> run_time (open) or 0 (close)
+    - Calculate ramped speed
+    - Set motor direction and speed
+    - Special handling for returning_from_full_open
+  
+  Line 217-237: MOTOR 2 SPEED LOGIC
+    - Similar to M1 but simpler
+    - No partial position logic (M2 always 0 or run_time)
+    - Ramps up/down same way
+
+RAMP CALCULATION
+----------------
+Line 246-260: _calculate_ramp_speed(elapsed, remaining, ramp_time)
+  - Special case: Resume from pause (0.5s ramp)
+  - Acceleration: elapsed < ramp_time
+  - Deceleration: remaining < ramp_time
+  - Full speed: middle of movement
+  - Returns speed 0.0 to 1.0
+
+PROCESS ENTRY POINT
+-------------------
+Line 263: motor_manager_process(shared_dict, config)
+  - Creates MotorManager instance
+  - Calls manager.run()
+  - This is what gets spawned as separate process
+
+================================================================================
+KEY INTERACTION PATTERNS
+================================================================================
+
+STARTUP SEQUENCE:
+1. gate_ui.py creates GateUI (line 15)
+2. GateUI creates GateController (line 16)
+3. GateController spawns motor_manager_process (line 54-58)
+4. Both control_loop and motor manager run() start (20Hz each)
+
+COMMAND FLOW:
+1. UI button pressed (gate_ui.py line 503-646)
+2. Sets shared['cmd_xxx_active'] flag
+3. update_status() re-asserts flag every 100ms (line 679-718)
+4. _evaluate_commands() reads flag every 50ms (line 237-503)
+5. Calls _execute_open/close/stop()
+6. Sets movement_command and motor start times
+7. motor_manager._update_motor_positions() moves motors (line 106-135)
+8. motor_manager._update_motor_speeds() sets PWM (line 136-245)
+
+SAFETY FLOW:
+1. Safety edge activated (UI sets shared['safety_stop_xxx_active'])
+2. _process_safety_edges() detects (line 727-782)
+3. Sets safety_reversing=True and state='REVERSING_FROM_xxx'
+4. motor_manager._update_motor_speeds() sees safety_reversing (line 138-151)
+5. Applies full reverse for safety_reverse_time
+6. _process_safety_edges() completes and calls _execute_stop()
+
+CONFIG RELOAD FLOW:
+1. User edits settings and clicks SAVE (gate_ui.py line 444)
+2. save_config() stops gate and writes JSON (line 451-467)
+3. Calls controller.reload_config() (line 472)
+4. reload_config() updates controller vars and shared memory (line 69-115)
+5. Sets shared['config_reload_flag']=True (line 107)
+6. motor_manager.run() sees flag (line 52)
+7. Calls _reload_config() (line 30-40)
+
+================================================================================
+COMMON DEBUGGING LOCATIONS
+================================================================================
+
+Gate won't move:
+- Check _evaluate_commands() blocking logic (line 248-276)
+- Check safety_stop_xxx_active flags
+- Check if deadman controls interfering
+
+Gate moves wrong direction:
+- Check motor wiring in motor_manager.__init__ (line 27-28)
+- Check forward/backward calls in _update_motor_speeds() (line 194-211, 228-233)
+
+Auto-close not working:
+- Check _evaluate_commands() auto-close start logic (line 367-379)
+- Check _complete_open() starts timer (line 895-900)
+- Check _control_loop() countdown (line 213-228)
+
+Partial open issues:
+- Check _move_to_partial_1/2() target calculations (line 1231-1280)
+- Check motor_manager target positions (line 173-184)
+- Check OPENING_TO_PARTIAL state in speeds (line 173-176)
+
+Safety reversal not working:
+- Check _process_safety_edges() trigger logic (line 727-782)
+- Check motor_manager safety_reversing override (line 138-151)
+- Verify safety_reverse_time is reasonable (config)
+
+Photocell pause issues:
+- Check _process_photocells() pause/resume logic (line 783-881)
+- Check opening_paused flag in speeds (line 162-166)
+- Verify move_start time adjustments (line 869-873)
+
+UI not responding:
+- Check update_status() is running (line 656-720)
+- Verify controller.get_status() returns data (line 1361-1379)
+- Check for exceptions in control_loop
+
+Motor speeds jerky:
+- Check _calculate_ramp_speed() logic (line 246-260)
+- Verify ramp_time calculation (line 160)
+- Check resume from pause ramping (line 248-250)
+
+Command conflicts:
+- Review _evaluate_commands() priority order (line 237-503)
+- Check _check_command_conflicts() (line 504-565)
+- Verify sustained vs momentary flag behavior
+
+================================================================================
+END OF CODE INDEX
+================================================================================

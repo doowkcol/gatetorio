@@ -1,0 +1,32 @@
+{
+  "inputs": {
+    "IN1": {
+      "channel": 0,
+      "enabled": true,
+      "type": "NO",
+      "function": null,
+      "description": "Open command button"
+    },
+    "IN2": {
+      "channel": 1,
+      "enabled": true,
+      "type": "NO",
+      "function": "cmd_close",
+      "description": "Close command button"
+    },
+    "IN3": {
+      "channel": 2,
+      "enabled": true,
+      "type": "NO",
+      "function": null,
+      "description": "Stop command button"
+    },
+    "IN4": {
+      "channel": 3,
+      "enabled": true,
+      "type": "NO",
+      "function": "cmd_open",
+      "description": "Spare input"
+    }
+  }
+}

@@ -1,0 +1,199 @@
+SHARED DICTIONARY COMMANDS - Gatetorio Gate Controller
+========================================================
+Generated: 2025-11-03
+
+This file lists all commands/keys used in the shared dictionary for 
+inter-process communication between the main controller and motor manager.
+
+TOTAL COMMANDS: 59
+
+---
+
+STATE MANAGEMENT
+================
+state                           - Current gate state (CLOSED, OPENING, OPEN, CLOSING, STOPPED, PARTIAL_1, PARTIAL_2, etc.)
+running                         - Main control flag - set to False to stop all processes
+
+MOTOR POSITIONS & SPEEDS
+========================
+m1_position                     - Motor 1 current position (0 to run_time seconds)
+m2_position                     - Motor 2 current position (0 to run_time seconds)
+m1_speed                        - Motor 1 current speed (0.0 to 1.0)
+m2_speed                        - Motor 2 current speed (0.0 to 1.0)
+
+MOTOR MOVEMENT TRACKING
+========================
+m1_move_start                   - Timestamp when Motor 1 started moving
+m2_move_start                   - Timestamp when Motor 2 started moving
+m1_target                       - Motor 1 target position for current move
+m2_target                       - Motor 2 target position for current move
+movement_start_time             - Timestamp when overall movement command started
+movement_command                - Current movement command ('OPEN' or 'CLOSE')
+
+BASIC COMMANDS (UI Control)
+============================
+cmd_open_active                 - OPEN button/command sustained flag
+cmd_close_active                - CLOSE button/command sustained flag
+cmd_stop_active                 - STOP button/command sustained flag
+
+DEADMAN CONTROLS
+================
+deadman_open_active             - Deadman OPEN control sustained flag
+deadman_close_active            - Deadman CLOSE control sustained flag
+
+SAFETY EDGES
+============
+safety_stop_closing_active      - Safety edge that blocks/reverses CLOSING sustained flag
+safety_stop_opening_active      - Safety edge that blocks/reverses OPENING sustained flag
+safety_stop_closing_triggered   - Flag indicating STOP CLOSING safety was triggered (edge detected)
+safety_stop_opening_triggered   - Flag indicating STOP OPENING safety was triggered (edge detected)
+safety_reversing                - Flag indicating safety reversal in progress
+safety_reverse_start            - Timestamp when safety reversal started
+safety_reverse_direction        - Direction of safety reversal ('OPEN' or 'CLOSE')
+safety_reverse_start_time       - Timestamp for safety reversal (alternative)
+execute_safety_reverse          - Command flag for motor manager to execute reversal
+
+PHOTOCELLS
+==========
+photocell_closing_active        - Closing photocell (CX) blocked/active flag
+photocell_opening_active        - Opening photocell (CY) blocked/active flag
+photocell_closing_triggered     - Flag indicating closing photocell triggered action (edge detected)
+photocell_opening_triggered     - Flag indicating opening photocell triggered action (edge detected)
+
+PAUSE/RESUME CONTROL
+====================
+opening_paused                  - Flag indicating movement is paused (photocell hold)
+pause_time                      - Timestamp when pause started
+resume_time                     - Timestamp when resumed from pause
+
+PARTIAL OPEN POSITIONS
+======================
+partial_1_active                - Partial Open 1 (PO1) command sustained flag
+partial_2_active                - Partial Open 2 (PO2) command sustained flag
+last_open_position              - Last peak position reached ('OPEN', 'PARTIAL_1', or 'PARTIAL_2')
+returning_from_full_open        - Flag indicating closing from full OPEN to partial position
+closing_from_partial            - Which partial position we're closing from ('P1' or 'P2')
+
+AUTO-CLOSE TIMERS
+=================
+auto_close_enabled              - NOT IN SHARED DICT (in controller config only)
+auto_close_active               - Auto-close timer active flag
+auto_close_countdown            - Auto-close countdown (seconds remaining)
+partial_auto_close_active       - Partial position auto-close timer active flag
+partial_auto_close_countdown    - Partial auto-close countdown (seconds remaining)
+
+TIMED OPEN CONTROL
+==================
+timed_open_active               - Timed open command sustained flag (time clock mode)
+timed_open_triggered            - Flag indicating timed open was triggered (edge detected)
+
+STEP LOGIC (Classic Gate Control)
+==================================
+step_logic_pulse                - Momentary pulse flag for step logic input
+step_command_active             - Step logic command processing active
+step_last_state                 - Last state for step logic direction logic
+stopped_after_opening           - Flag indicating gate was stopped after opening (for 3/4-step logic)
+stopped_after_closing           - Flag indicating gate was stopped after closing (for 3/4-step logic)
+
+CONFIG RELOAD MECHANISM
+=======================
+config_run_time                 - Reloaded run_time value for motor manager
+config_motor1_open_delay        - Reloaded motor 1 open delay
+config_motor2_close_delay       - Reloaded motor 2 close delay
+config_partial_1_position       - Reloaded partial 1 target position
+config_partial_2_position       - Reloaded partial 2 target position
+config_deadman_speed            - Reloaded deadman control speed
+config_reload_flag              - Flag to trigger motor manager config reload
+
+PROCESS HEALTH MONITORING
+==========================
+motor_manager_heartbeat         - Motor manager process heartbeat timestamp
+controller_heartbeat            - Main controller heartbeat timestamp
+
+---
+
+COMMAND CATEGORIES SUMMARY
+===========================
+
+CONTROL COMMANDS (3):
+- cmd_open_active, cmd_close_active, cmd_stop_active
+
+POSITION TRACKING (8):
+- m1_position, m2_position, m1_speed, m2_speed
+- m1_move_start, m2_move_start, m1_target, m2_target
+
+SAFETY SYSTEMS (9):
+- safety_stop_closing_active, safety_stop_opening_active
+- safety_stop_closing_triggered, safety_stop_opening_triggered
+- safety_reversing, safety_reverse_start, safety_reverse_direction
+- execute_safety_reverse, safety_reverse_start_time
+
+PHOTOCELLS (4):
+- photocell_closing_active, photocell_opening_active
+- photocell_closing_triggered, photocell_opening_triggered
+
+PARTIAL OPEN (5):
+- partial_1_active, partial_2_active, last_open_position
+- returning_from_full_open, closing_from_partial
+
+AUTO-CLOSE (4):
+- auto_close_active, auto_close_countdown
+- partial_auto_close_active, partial_auto_close_countdown
+
+ADVANCED FEATURES (8):
+- deadman_open_active, deadman_close_active
+- timed_open_active, timed_open_triggered
+- step_logic_pulse, step_command_active, step_last_state
+- stopped_after_opening, stopped_after_closing
+
+PAUSE/RESUME (3):
+- opening_paused, pause_time, resume_time
+
+MOVEMENT STATE (3):
+- state, movement_start_time, movement_command
+
+CONFIG RELOAD (7):
+- config_run_time, config_motor1_open_delay, config_motor2_close_delay
+- config_partial_1_position, config_partial_2_position
+- config_deadman_speed, config_reload_flag
+
+SYSTEM CONTROL (3):
+- running, motor_manager_heartbeat, controller_heartbeat
+
+---
+
+USAGE NOTES
+===========
+
+SUSTAINED vs TRIGGERED FLAGS:
+- *_active flags are SUSTAINED (held high while input active)
+- *_triggered flags are EDGE DETECTED (set on rising edge, cleared on falling edge)
+
+COMMAND PRIORITY:
+1. Safety edges (highest priority)
+2. Deadman controls
+3. STOP command
+4. CLOSE command
+5. OPEN command
+6. Timed open
+7. Partial open commands
+8. Auto-close timers
+
+SAFETY SYSTEM BEHAVIOR:
+- safety_stop_closing_active blocks CLOSE commands while sustained
+- safety_stop_opening_active blocks OPEN commands while sustained
+- On first activation, triggers reversal for safety_reverse_time
+- After reversal completes, acts like directional STOP while sustained
+
+PHOTOCELL BEHAVIOR:
+- Closing photocell (CX): Holds/resets auto-close timers, triggers reopen during closing
+- Opening photocell (CY): Pauses during opening, pauses then reopens during closing
+
+PARTIAL OPEN PRIORITY:
+- PO2 has priority over PO1
+- Sustained partial commands block normal CLOSE (but allow OPEN to full)
+- Timed open overrides sustained partial commands
+
+---
+
+End of Shared Dictionary Command Reference
