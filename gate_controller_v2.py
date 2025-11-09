@@ -34,7 +34,16 @@ class GateController:
         self.partial_return_pause = config.get('partial_return_pause', 2)
         self.partial_1_position = (self.partial_1_percent / 100.0) * self.run_time
         self.partial_2_position = (self.partial_2_percent / 100.0) * self.run_time
-        
+
+        # Limit switch configuration
+        self.limit_switches_enabled = config.get('limit_switches_enabled', False)
+        self.motor1_use_limit_switches = config.get('motor1_use_limit_switches', False)
+        self.motor2_use_limit_switches = config.get('motor2_use_limit_switches', False)
+        self.motor1_learned_run_time = config.get('motor1_learned_run_time', None)
+        self.motor2_learned_run_time = config.get('motor2_learned_run_time', None)
+        self.limit_switch_creep_speed = config.get('limit_switch_creep_speed', 0.2)
+        self.learning_mode_enabled = config.get('learning_mode_enabled', False)
+
         # Create shared memory dict
         self.manager = multiprocessing.Manager()
         self.shared = self.manager.dict()
@@ -49,7 +58,13 @@ class GateController:
             'motor2_close_delay': self.motor2_close_delay,
             'partial_1_position': self.partial_1_position,
             'partial_2_position': self.partial_2_position,
-            'deadman_speed': self.deadman_speed
+            'deadman_speed': self.deadman_speed,
+            'limit_switches_enabled': self.limit_switches_enabled,
+            'motor1_use_limit_switches': self.motor1_use_limit_switches,
+            'motor2_use_limit_switches': self.motor2_use_limit_switches,
+            'motor1_learned_run_time': self.motor1_learned_run_time,
+            'motor2_learned_run_time': self.motor2_learned_run_time,
+            'limit_switch_creep_speed': self.limit_switch_creep_speed
         }
         
         # Start motor manager process
@@ -111,7 +126,16 @@ class GateController:
             self.partial_return_pause = config.get('partial_return_pause', 2)
             self.partial_1_position = (self.partial_1_percent / 100.0) * self.run_time
             self.partial_2_position = (self.partial_2_percent / 100.0) * self.run_time
-            
+
+            # Limit switch configuration
+            self.limit_switches_enabled = config.get('limit_switches_enabled', False)
+            self.motor1_use_limit_switches = config.get('motor1_use_limit_switches', False)
+            self.motor2_use_limit_switches = config.get('motor2_use_limit_switches', False)
+            self.motor1_learned_run_time = config.get('motor1_learned_run_time', None)
+            self.motor2_learned_run_time = config.get('motor2_learned_run_time', None)
+            self.limit_switch_creep_speed = config.get('limit_switch_creep_speed', 0.2)
+            self.learning_mode_enabled = config.get('learning_mode_enabled', False)
+
             # Update motor manager config via shared memory
             self.shared['config_run_time'] = self.run_time
             self.shared['config_motor1_open_delay'] = self.motor1_open_delay
@@ -119,6 +143,12 @@ class GateController:
             self.shared['config_partial_1_position'] = self.partial_1_position
             self.shared['config_partial_2_position'] = self.partial_2_position
             self.shared['config_deadman_speed'] = self.deadman_speed
+            self.shared['config_limit_switches_enabled'] = self.limit_switches_enabled
+            self.shared['config_motor1_use_limit_switches'] = self.motor1_use_limit_switches
+            self.shared['config_motor2_use_limit_switches'] = self.motor2_use_limit_switches
+            self.shared['config_motor1_learned_run_time'] = self.motor1_learned_run_time
+            self.shared['config_motor2_learned_run_time'] = self.motor2_learned_run_time
+            self.shared['config_limit_switch_creep_speed'] = self.limit_switch_creep_speed
             self.shared['config_reload_flag'] = True  # Signal motor manager to reload
             
             print(f"  Config reloaded successfully")
@@ -186,11 +216,26 @@ class GateController:
         self.shared['running'] = True
         self.shared['motor_manager_heartbeat'] = time()
         self.shared['controller_heartbeat'] = time()
-        
+
         # Safety reversal command flags (for motor manager)
         self.shared['execute_safety_reverse'] = False
         self.shared['safety_reverse_direction'] = None  # 'OPEN' or 'CLOSE'
         self.shared['safety_reverse_start_time'] = None
+
+        # Limit switch flags
+        self.shared['open_limit_m1_active'] = False
+        self.shared['close_limit_m1_active'] = False
+        self.shared['open_limit_m2_active'] = False
+        self.shared['close_limit_m2_active'] = False
+
+        # Learning mode flags
+        self.shared['learning_mode_enabled'] = False
+        self.shared['learning_m1_start_time'] = None
+        self.shared['learning_m2_start_time'] = None
+        self.shared['learning_m1_open_time'] = None
+        self.shared['learning_m1_close_time'] = None
+        self.shared['learning_m2_open_time'] = None
+        self.shared['learning_m2_close_time'] = None
     
     def _control_loop(self):
         """Main control loop - decision making only (no motor control)"""
@@ -1647,6 +1692,80 @@ class GateController:
                 # Default to opening if unknown
                 self.cmd_open()
     
+    def enable_learning_mode(self):
+        """Enable learning mode to record motor travel times"""
+        self.shared['learning_mode_enabled'] = True
+        print("Learning mode ENABLED - motor travel times will be recorded")
+
+    def disable_learning_mode(self):
+        """Disable learning mode"""
+        self.shared['learning_mode_enabled'] = False
+        print("Learning mode DISABLED")
+
+    def save_learned_times(self, config_file='/home/doowkcol/Gatetorio_Code/gate_config.json'):
+        """Save learned motor run times to config file"""
+        try:
+            # Get learned times from shared memory
+            m1_open_time = self.shared.get('learning_m1_open_time')
+            m1_close_time = self.shared.get('learning_m1_close_time')
+            m2_open_time = self.shared.get('learning_m2_open_time')
+            m2_close_time = self.shared.get('learning_m2_close_time')
+
+            # Average open and close times for each motor
+            m1_learned = None
+            if m1_open_time and m1_close_time:
+                m1_learned = (m1_open_time + m1_close_time) / 2.0
+            elif m1_open_time:
+                m1_learned = m1_open_time
+            elif m1_close_time:
+                m1_learned = m1_close_time
+
+            m2_learned = None
+            if m2_open_time and m2_close_time:
+                m2_learned = (m2_open_time + m2_close_time) / 2.0
+            elif m2_open_time:
+                m2_learned = m2_open_time
+            elif m2_close_time:
+                m2_learned = m2_close_time
+
+            if not m1_learned and not m2_learned:
+                print("No learned times to save - complete a full open/close cycle first")
+                return False
+
+            # Load current config
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+
+            # Update learned times
+            if m1_learned:
+                config['motor1_learned_run_time'] = m1_learned
+                print(f"Learned M1 run time: {m1_learned:.2f}s")
+
+            if m2_learned:
+                config['motor2_learned_run_time'] = m2_learned
+                print(f"Learned M2 run time: {m2_learned:.2f}s")
+
+            # Save config
+            with open(config_file, 'w') as f:
+                json.dump(config, f, indent=2)
+
+            print("Learned times saved to config - reload config to apply")
+            return True
+
+        except Exception as e:
+            print(f"Error saving learned times: {e}")
+            return False
+
+    def get_learning_status(self):
+        """Get current learning mode status and recorded times"""
+        return {
+            'learning_mode_enabled': self.shared.get('learning_mode_enabled', False),
+            'm1_open_time': self.shared.get('learning_m1_open_time'),
+            'm1_close_time': self.shared.get('learning_m1_close_time'),
+            'm2_open_time': self.shared.get('learning_m2_open_time'),
+            'm2_close_time': self.shared.get('learning_m2_close_time')
+        }
+
     def get_status(self):
         """Get current status"""
         avg_pos = (self.shared['m1_position'] + self.shared['m2_position']) / 2

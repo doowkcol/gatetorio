@@ -22,6 +22,18 @@ class MotorManager:
         self.partial_2_position = config['partial_2_position']
         self.deadman_speed = config['deadman_speed']
         self.ramp_time = config.get('ramp_time', 0.5)  # Default 0.5s if not in config
+
+        # Limit switch configuration
+        self.limit_switches_enabled = config.get('limit_switches_enabled', False)
+        self.motor1_use_limit_switches = config.get('motor1_use_limit_switches', False)
+        self.motor2_use_limit_switches = config.get('motor2_use_limit_switches', False)
+        self.motor1_learned_run_time = config.get('motor1_learned_run_time', None)
+        self.motor2_learned_run_time = config.get('motor2_learned_run_time', None)
+        self.limit_switch_creep_speed = config.get('limit_switch_creep_speed', 0.2)
+
+        # Use learned run times if available, otherwise use standard run_time
+        self.motor1_run_time = self.motor1_learned_run_time if self.motor1_learned_run_time else self.run_time
+        self.motor2_run_time = self.motor2_learned_run_time if self.motor2_learned_run_time else self.run_time
         
         # Force release ALL GPIO at system level before initializing motors
         # This fixes "GPIO busy" error from crashed previous sessions
@@ -58,7 +70,17 @@ class MotorManager:
         self.partial_2_position = self.shared.get('config_partial_2_position', self.partial_2_position)
         self.deadman_speed = self.shared.get('config_deadman_speed', self.deadman_speed)
         self.ramp_time = self.shared.get('config_ramp_time', self.ramp_time)
-        print(f"Motor Manager: Config reloaded - run_time={self.run_time}s, ramp_time={self.ramp_time}s")
+        self.limit_switches_enabled = self.shared.get('config_limit_switches_enabled', self.limit_switches_enabled)
+        self.motor1_use_limit_switches = self.shared.get('config_motor1_use_limit_switches', self.motor1_use_limit_switches)
+        self.motor2_use_limit_switches = self.shared.get('config_motor2_use_limit_switches', self.motor2_use_limit_switches)
+        self.motor1_learned_run_time = self.shared.get('config_motor1_learned_run_time', self.motor1_learned_run_time)
+        self.motor2_learned_run_time = self.shared.get('config_motor2_learned_run_time', self.motor2_learned_run_time)
+        self.limit_switch_creep_speed = self.shared.get('config_limit_switch_creep_speed', self.limit_switch_creep_speed)
+
+        # Update individual motor run times
+        self.motor1_run_time = self.motor1_learned_run_time if self.motor1_learned_run_time else self.run_time
+        self.motor2_run_time = self.motor2_learned_run_time if self.motor2_learned_run_time else self.run_time
+        print(f"Motor Manager: Config reloaded - run_time={self.run_time}s, ramp_time={self.ramp_time}s, limit_switches={self.limit_switches_enabled}")
     
     def run(self):
         """Main motor control loop - runs at 20Hz"""
@@ -77,11 +99,15 @@ class MotorManager:
             
             # Check deadman controls (direct motor control)
             deadman_active = self._process_deadman_controls(now)
-            
+
+            # Process limit switches (detection and learning mode)
+            if self.limit_switches_enabled:
+                self._process_limit_switches(now)
+
             # Update motor positions if moving (but not during safety reversal)
             if self.shared['movement_start_time'] and not self.shared['opening_paused'] and not self.shared['safety_reversing'] and not deadman_active:
                 self._update_motor_positions(now)
-            
+
             # Update motor speeds (ALWAYS - handles safety reversal, deadman, and normal movement)
             if not deadman_active:
                 self._update_motor_speeds(now)
@@ -93,7 +119,97 @@ class MotorManager:
         self.motor1.stop()
         self.motor2.stop()
         print("Motor Manager process stopped")
-    
+
+    def _process_limit_switches(self, now):
+        """Process limit switches - handle detection, learning mode, and position correction"""
+        learning_mode = self.shared.get('learning_mode_enabled', False)
+
+        # Check Motor 1 OPEN limit switch
+        if self.motor1_use_limit_switches and self.shared.get('open_limit_m1_active', False):
+            if self.shared['movement_command'] == 'OPEN' and self.shared['m1_move_start']:
+                # Limit switch triggered - stop motor and set position
+                if learning_mode:
+                    # Record learned run time for M1 opening
+                    if self.shared.get('learning_m1_start_time'):
+                        learned_time = now - self.shared['learning_m1_start_time']
+                        self.shared['learning_m1_open_time'] = learned_time
+                        print(f"[LEARNING] M1 open time recorded: {learned_time:.2f}s")
+                        self.shared['learning_m1_start_time'] = None
+
+                # Stop motor and set to full open position
+                self.motor1.stop()
+                self.shared['m1_position'] = self.motor1_run_time
+                self.shared['m1_speed'] = 0.0
+                print(f"[LIMIT SWITCH] M1 OPEN limit reached - position set to {self.motor1_run_time:.2f}s")
+
+        # Check Motor 1 CLOSE limit switch
+        if self.motor1_use_limit_switches and self.shared.get('close_limit_m1_active', False):
+            if self.shared['movement_command'] == 'CLOSE' and self.shared['m1_move_start']:
+                # Limit switch triggered - stop motor and set position
+                if learning_mode:
+                    # Record learned run time for M1 closing
+                    if self.shared.get('learning_m1_start_time'):
+                        learned_time = now - self.shared['learning_m1_start_time']
+                        self.shared['learning_m1_close_time'] = learned_time
+                        print(f"[LEARNING] M1 close time recorded: {learned_time:.2f}s")
+                        self.shared['learning_m1_start_time'] = None
+
+                # Stop motor and set to fully closed position
+                self.motor1.stop()
+                self.shared['m1_position'] = 0.0
+                self.shared['m1_speed'] = 0.0
+                print(f"[LIMIT SWITCH] M1 CLOSE limit reached - position set to 0.0s")
+
+        # Check Motor 2 OPEN limit switch
+        if self.motor2_use_limit_switches and self.shared.get('open_limit_m2_active', False):
+            if self.shared['movement_command'] == 'OPEN' and self.shared['m2_move_start']:
+                # Limit switch triggered - stop motor and set position
+                if learning_mode:
+                    # Record learned run time for M2 opening
+                    if self.shared.get('learning_m2_start_time'):
+                        learned_time = now - self.shared['learning_m2_start_time']
+                        self.shared['learning_m2_open_time'] = learned_time
+                        print(f"[LEARNING] M2 open time recorded: {learned_time:.2f}s")
+                        self.shared['learning_m2_start_time'] = None
+
+                # Stop motor and set to full open position
+                self.motor2.stop()
+                self.shared['m2_position'] = self.motor2_run_time
+                self.shared['m2_speed'] = 0.0
+                print(f"[LIMIT SWITCH] M2 OPEN limit reached - position set to {self.motor2_run_time:.2f}s")
+
+        # Check Motor 2 CLOSE limit switch
+        if self.motor2_use_limit_switches and self.shared.get('close_limit_m2_active', False):
+            if self.shared['movement_command'] == 'CLOSE' and self.shared['m2_move_start']:
+                # Limit switch triggered - stop motor and set position
+                if learning_mode:
+                    # Record learned run time for M2 closing
+                    if self.shared.get('learning_m2_start_time'):
+                        learned_time = now - self.shared['learning_m2_start_time']
+                        self.shared['learning_m2_close_time'] = learned_time
+                        print(f"[LEARNING] M2 close time recorded: {learned_time:.2f}s")
+                        self.shared['learning_m2_start_time'] = None
+
+                # Stop motor and set to fully closed position
+                self.motor2.stop()
+                self.shared['m2_position'] = 0.0
+                self.shared['m2_speed'] = 0.0
+                print(f"[LIMIT SWITCH] M2 CLOSE limit reached - position set to 0.0s")
+
+        # Start learning timers when movement begins
+        if learning_mode:
+            # Motor 1 learning
+            if self.motor1_use_limit_switches and self.shared['m1_move_start']:
+                if not self.shared.get('learning_m1_start_time'):
+                    self.shared['learning_m1_start_time'] = now
+                    print(f"[LEARNING] M1 learning timer started")
+
+            # Motor 2 learning
+            if self.motor2_use_limit_switches and self.shared['m2_move_start']:
+                if not self.shared.get('learning_m2_start_time'):
+                    self.shared['learning_m2_start_time'] = now
+                    print(f"[LEARNING] M2 learning timer started")
+
     def _process_deadman_controls(self, now):
         """Handle deadman controls - direct motor operation"""
         if self.shared['deadman_open_active'] and self.shared['deadman_close_active']:
@@ -281,15 +397,29 @@ class MotorManager:
             remaining = max(0, remaining)
             speed = self._calculate_ramp_speed(elapsed, remaining, ramp_time)
             speed = max(0.0, min(1.0, speed))
+
+            # Apply creep speed if using limit switches and near expected end of travel
+            if self.motor1_use_limit_switches and self.motor1_learned_run_time:
+                if self.shared['movement_command'] == 'OPEN':
+                    # Check if we've reached expected end of travel time
+                    if self.shared['m1_position'] >= self.motor1_learned_run_time * 0.95:
+                        # Within 95% of learned time - switch to creep speed
+                        speed = min(speed, self.limit_switch_creep_speed)
+                elif self.shared['movement_command'] == 'CLOSE':
+                    # Check if we've reached expected end of travel time (closing to 0)
+                    if self.shared['m1_position'] <= self.motor1_learned_run_time * 0.05:
+                        # Within 5% of fully closed - switch to creep speed
+                        speed = min(speed, self.limit_switch_creep_speed)
+
             self.shared['m1_speed'] = speed
-            
+
             if self.shared['state'] in ['OPENING', 'OPENING_TO_PARTIAL_1', 'OPENING_TO_PARTIAL_2']:
                 target_position = self.run_time
                 if self.shared['state'] == 'OPENING_TO_PARTIAL_1':
                     target_position = self.partial_1_position
                 elif self.shared['state'] == 'OPENING_TO_PARTIAL_2':
                     target_position = self.partial_2_position
-                
+
                 if self.shared['m1_position'] < target_position:
                     self.motor1.forward(speed)
                 else:
@@ -328,8 +458,22 @@ class MotorManager:
             
             speed = self._calculate_ramp_speed(elapsed, remaining, ramp_time)
             speed = max(0.0, min(1.0, speed))
+
+            # Apply creep speed if using limit switches and near expected end of travel
+            if self.motor2_use_limit_switches and self.motor2_learned_run_time:
+                if self.shared['movement_command'] == 'OPEN':
+                    # Check if we've reached expected end of travel time
+                    if self.shared['m2_position'] >= self.motor2_learned_run_time * 0.95:
+                        # Within 95% of learned time - switch to creep speed
+                        speed = min(speed, self.limit_switch_creep_speed)
+                elif self.shared['movement_command'] == 'CLOSE':
+                    # Check if we've reached expected end of travel time (closing to 0)
+                    if self.shared['m2_position'] <= self.motor2_learned_run_time * 0.05:
+                        # Within 5% of fully closed - switch to creep speed
+                        speed = min(speed, self.limit_switch_creep_speed)
+
             self.shared['m2_speed'] = speed
-            
+
             if self.shared['movement_command'] == 'OPEN':
                 if self.shared['m2_position'] < self.run_time:
                     self.motor2.forward(speed)

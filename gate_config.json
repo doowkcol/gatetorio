@@ -10,5 +10,12 @@
   "partial_1_percent": 35,
   "partial_2_percent": 70,
   "partial_return_pause": 2.0,
-  "auto_close_enabled": true
+  "auto_close_enabled": true,
+  "limit_switches_enabled": false,
+  "motor1_use_limit_switches": false,
+  "motor2_use_limit_switches": false,
+  "motor1_learned_run_time": null,
+  "motor2_learned_run_time": null,
+  "limit_switch_creep_speed": 0.2,
+  "learning_mode_enabled": false
 }

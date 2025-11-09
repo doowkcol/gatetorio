@@ -327,7 +327,12 @@ class InputManager:
             'timed_open': 'timed_open_active',
             'partial_1': 'partial_1_active',
             'partial_2': 'partial_2_active',
-            'step_logic': 'step_command_active'
+            'step_logic': 'step_command_active',
+            # Limit switches for Motor 1 and Motor 2
+            'open_limit_m1': 'open_limit_m1_active',
+            'close_limit_m1': 'close_limit_m1_active',
+            'open_limit_m2': 'open_limit_m2_active',
+            'close_limit_m2': 'close_limit_m2_active'
         }
         
         # Update shared memory flag
