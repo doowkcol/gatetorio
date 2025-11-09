@@ -926,10 +926,15 @@ class GateController:
                 self.shared['safety_reversing'] = False
                 self.shared['execute_safety_reverse'] = False
                 # Mark that this edge has completed reversal (becomes full STOP)
-                if self.shared['safety_stop_closing_active']:
+                # Use state to determine which edge triggered reversal (more reliable than checking if still active)
+                if self.shared['state'] == 'REVERSING_FROM_CLOSE':
+                    # Was reversing from closing, so STOP CLOSING edge triggered it
                     self.shared['safety_stop_closing_reversed'] = True
-                if self.shared['safety_stop_opening_active']:
+                    print(f"  Marked STOP CLOSING as reversed (edge still active: {self.shared['safety_stop_closing_active']})")
+                elif self.shared['state'] == 'REVERSING_FROM_OPEN':
+                    # Was reversing from opening, so STOP OPENING edge triggered it
                     self.shared['safety_stop_opening_reversed'] = True
+                    print(f"  Marked STOP OPENING as reversed (edge still active: {self.shared['safety_stop_opening_active']})")
                 self.cmd_stop()
             # Motor manager handles the actual reversal via shared memory flags
             return
