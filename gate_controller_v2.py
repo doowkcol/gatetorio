@@ -1407,14 +1407,14 @@ class GateController:
         # Set sustained flag
         if sustained:
             self.shared['cmd_stop_active'] = True
-        
+
         # Deadman controls override STOP (not blocked)
         if self.shared['deadman_open_active'] or self.shared['deadman_close_active']:
             # Allow deadman to override, don't print block message
             return
-        
+
         print(f"\n>>> STOP command - M1:{self.shared['m1_position']:.1f}s M2:{self.shared['m2_position']:.1f}s")
-        
+
         # Remember what we were doing for 3/4-step logic
         if self.shared['state'] == 'OPENING':
             self.shared['stopped_after_opening'] = True
@@ -1422,7 +1422,7 @@ class GateController:
         elif self.shared['state'] == 'CLOSING':
             self.shared['stopped_after_closing'] = True
             self.shared['stopped_after_opening'] = False
-        
+
         # Stop movement
         self.shared['state'] = 'STOPPED'
         self.shared['movement_start_time'] = None
@@ -1431,6 +1431,13 @@ class GateController:
         self.shared['m2_move_start'] = None
         self.shared['auto_close_active'] = False
         self.shared['opening_paused'] = False
+
+        # Stop auto-learn if active
+        if self.shared.get('auto_learn_active', False):
+            print("Stopping auto-learn sequence...")
+            self.shared['auto_learn_active'] = False
+            self.shared['auto_learn_state'] = 'IDLE'
+            self.shared['learning_mode_enabled'] = False
     
     def cmd_photocell_closing(self, active):
         """Set closing photocell state"""
@@ -1804,6 +1811,13 @@ class GateController:
 
         if self.shared['auto_learn_active']:
             print("Auto-learn already running")
+            return False
+
+        # Check that limit switches are enabled
+        if not self.motor1_use_limit_switches or not self.motor2_use_limit_switches:
+            print("ERROR: Auto-learn requires limit switches to be enabled for both motors")
+            print("Please enable M1 and M2 limit switches in the learning configuration")
+            self.shared['auto_learn_status_msg'] = 'Error: Limit switches not enabled'
             return False
 
         # Stop any current movement
