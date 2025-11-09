@@ -1265,51 +1265,55 @@ class GateUI:
             label.pack(anchor='w', padx=20)
             self.learned_times_labels[motor_label] = label
 
-        canvas.pack(side="left", fill="both", expand=True, padx=10)
-        scrollbar.pack(side="right", fill="y")
+        # Add bottom spacing so content doesn't get cut off
+        tk.Frame(scrollable_frame, bg='black', height=20).pack()
 
-        # Button frame at bottom
+        canvas.pack(side="left", fill="both", expand=True, pady=(0, 10))
+        scrollbar.pack(side="right", fill="y", pady=(0, 10))
+
+        # Button frame at bottom - reorganized for better visibility
         button_frame = tk.Frame(self.learning_frame, bg='black')
-        button_frame.pack(fill='x', padx=20, pady=10)
+        button_frame.pack(fill='x', padx=10, pady=5, side='bottom')
 
-        # Save config button
-        save_btn = tk.Button(
-            button_frame,
-            text="SAVE CONFIG",
-            font=('Arial', 14, 'bold'),
-            bg='green',
-            fg='white',
-            command=self.save_learning_config,
-            relief='raised',
-            bd=5
-        )
-        save_btn.pack(side='left', expand=True, fill='both', padx=5)
-
-        # Save learned times button
-        save_times_btn = tk.Button(
-            button_frame,
-            text="SAVE LEARNED TIMES",
-            font=('Arial', 14, 'bold'),
-            bg='orange',
-            fg='white',
-            command=self.save_learned_times,
-            relief='raised',
-            bd=5
-        )
-        save_times_btn.pack(side='left', expand=True, fill='both', padx=5)
-
-        # Back button
+        # Back button (left side)
         back_btn = tk.Button(
             button_frame,
-            text="BACK",
-            font=('Arial', 14, 'bold'),
+            text="◄ BACK",
+            font=('Arial', 12, 'bold'),
             bg='blue',
             fg='white',
             command=self.show_main_page,
             relief='raised',
-            bd=5
+            bd=3,
+            width=10
         )
-        back_btn.pack(side='left', expand=True, fill='both', padx=5)
+        back_btn.pack(side='left', padx=5)
+
+        # Save config button (center)
+        save_btn = tk.Button(
+            button_frame,
+            text="SAVE CONFIG",
+            font=('Arial', 12, 'bold'),
+            bg='green',
+            fg='white',
+            command=self.save_learning_config,
+            relief='raised',
+            bd=3
+        )
+        save_btn.pack(side='left', expand=True, fill='x', padx=5)
+
+        # Save learned times button (right)
+        save_times_btn = tk.Button(
+            button_frame,
+            text="SAVE LEARNED TIMES",
+            font=('Arial', 12, 'bold'),
+            bg='orange',
+            fg='white',
+            command=self.save_learned_times,
+            relief='raised',
+            bd=3
+        )
+        save_times_btn.pack(side='left', expand=True, fill='x', padx=5)
 
     def load_current_config(self):
         """Load current config values into the entry fields"""
