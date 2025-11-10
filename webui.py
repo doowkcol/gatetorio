@@ -690,6 +690,13 @@ def get_inputs():
             if len(inputs) == 0:  # Only print once
                 print(f"Sample keys in controller.shared: {list(controller.shared.keys())[:10]}")
 
+            # Get resistance and handle inf/nan values (not JSON compliant)
+            resistance = controller.shared.get(resistance_key, None)
+            if resistance is not None:
+                import math
+                if math.isinf(resistance) or math.isnan(resistance):
+                    resistance = None  # Convert inf/nan to null for JSON
+
             inputs[name] = {
                 'channel': cfg['channel'],
                 'type': cfg.get('type', 'NO'),
@@ -697,7 +704,7 @@ def get_inputs():
                 'description': cfg.get('description', ''),
                 'state': controller.shared.get(state_key, False),
                 'voltage': controller.shared.get(voltage_key, 0.0),
-                'resistance': controller.shared.get(resistance_key, None),
+                'resistance': resistance,
             }
         print(f"Returning {len(inputs)} inputs")
         return JSONResponse(inputs)
