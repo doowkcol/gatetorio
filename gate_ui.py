@@ -1283,6 +1283,38 @@ class GateUI:
                                                  font=('Arial', 10, 'bold'), bg='#330033', fg='yellow')
         self.auto_learn_status_label.pack(pady=5)
 
+        # Limit switch indicators
+        limit_frame = tk.Frame(auto_learn_frame, bg='#330033')
+        limit_frame.pack(pady=5)
+
+        tk.Label(limit_frame, text="Limit Switches:", font=('Arial', 9, 'bold'),
+                 bg='#330033', fg='white').pack()
+
+        limit_indicators_frame = tk.Frame(limit_frame, bg='#330033')
+        limit_indicators_frame.pack(pady=5)
+
+        # Create 4 limit switch indicators
+        self.limit_indicators = {}
+        limit_configs = [
+            ('M1 Open', 'open_limit_m1_active'),
+            ('M1 Close', 'close_limit_m1_active'),
+            ('M2 Open', 'open_limit_m2_active'),
+            ('M2 Close', 'close_limit_m2_active')
+        ]
+
+        for i, (label_text, key) in enumerate(limit_configs):
+            indicator_frame = tk.Frame(limit_indicators_frame, bg='#330033')
+            indicator_frame.pack(side='left', padx=5)
+
+            tk.Label(indicator_frame, text=label_text, font=('Arial', 8),
+                     bg='#330033', fg='white').pack()
+
+            indicator = tk.Label(indicator_frame, text="●", font=('Arial', 16),
+                                bg='#330033', fg='gray')
+            indicator.pack()
+
+            self.limit_indicators[key] = indicator
+
         # Auto-learn buttons
         auto_learn_btn_frame = tk.Frame(auto_learn_frame, bg='#330033')
         auto_learn_btn_frame.pack(pady=10)
@@ -1740,6 +1772,15 @@ class GateUI:
         else:
             self.start_auto_learn_btn.config(state='normal')
             self.stop_auto_learn_btn.config(state='disabled')
+
+        # Update limit switch indicators
+        if hasattr(self, 'limit_indicators'):
+            for key, indicator in self.limit_indicators.items():
+                is_active = self.controller.shared.get(key, False)
+                if is_active:
+                    indicator.config(fg='lime')  # Green when active
+                else:
+                    indicator.config(fg='gray')  # Gray when inactive
 
         # Update learned times display
         self.update_learned_times_display()

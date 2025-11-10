@@ -133,332 +133,490 @@ class MotorManager:
         print("Motor Manager process stopped")
 
     def _process_auto_learn(self, now):
-        """Process auto-learn state machine - progressive learning with slow discovery then full-speed cycles"""
+        """Process auto-learn state machine - progressive learning: 0.25 -> 0.5 -> full speed"""
         # Initialize state on first call
         if not self.shared.get('auto_learn_state'):
             self.shared['auto_learn_state'] = 'IDLE'
             self.shared['auto_learn_phase_start'] = now
             self.shared['auto_learn_m1_start'] = None
             self.shared['auto_learn_m2_start'] = None
-            self.shared['auto_learn_m1_open_slow'] = None
-            self.shared['auto_learn_m2_open_slow'] = None
-            self.shared['auto_learn_m1_close_slow'] = None
-            self.shared['auto_learn_m2_close_slow'] = None
-            self.shared['auto_learn_m1_expected'] = None
-            self.shared['auto_learn_m2_expected'] = None
-            self.shared['auto_learn_m1_times'] = []
-            self.shared['auto_learn_m2_times'] = []
+            # Running averages for each motor and direction
+            self.shared['auto_learn_m1_open_avg'] = 0.0
+            self.shared['auto_learn_m1_close_avg'] = 0.0
+            self.shared['auto_learn_m2_open_avg'] = 0.0
+            self.shared['auto_learn_m2_close_avg'] = 0.0
+            # Counts for averaging
+            self.shared['auto_learn_m1_open_count'] = 0
+            self.shared['auto_learn_m1_close_count'] = 0
+            self.shared['auto_learn_m2_open_count'] = 0
+            self.shared['auto_learn_m2_close_count'] = 0
+            # Full-speed cycle counter
             self.shared['auto_learn_cycle'] = 0
-            self.shared['auto_learn_slowdown_start'] = None
 
         state = self.shared['auto_learn_state']
 
-        # State: IDLE - Initialize and start M1 opening
+        # State: IDLE - Initialize and start M1 opening at 0.25 speed
         if state == 'IDLE':
-            print("\n=== AUTO-LEARN: PHASE 1 - SLOW DISCOVERY ===")
-            print("Opening M1 slowly to find open limit...")
-            self.shared['auto_learn_state'] = 'M1_OPEN_SLOW'
-            self.shared['auto_learn_status_msg'] = 'Phase 1: Opening M1 slowly...'
+            print("\n=== AUTO-LEARN: PROGRESSIVE SEQUENCE ===")
+            print("Step 1: Opening M1 at 0.25 speed to find open limit...")
+            self.shared['auto_learn_state'] = 'M1_OPEN_025'
+            self.shared['auto_learn_status_msg'] = 'Opening M1 at 0.25 speed...'
             self.shared['auto_learn_m1_start'] = now
             self.shared['m1_position'] = 0.0
             self.shared['m2_position'] = 0.0
 
-        # State: M1_OPEN_SLOW - M1 opening slowly, record time
-        elif state == 'M1_OPEN_SLOW':
-            self.motor1.forward(self.learning_speed)
+        # State: M1_OPEN_025 - M1 opening at 0.25 speed to find limit
+        elif state == 'M1_OPEN_025':
+            self.motor1.forward(0.25)
             self.motor2.stop()
-
             if self.shared.get('open_limit_m1_active', False):
-                learned_time = now - self.shared['auto_learn_m1_start']
-                self.shared['auto_learn_m1_open_slow'] = learned_time
-                print(f"M1 open limit: {learned_time:.2f}s at {self.learning_speed*100:.0f}% speed")
+                time_taken = now - self.shared['auto_learn_m1_start']
+                # Convert to full-speed equivalent: time * speed
+                full_speed_time = time_taken * 0.25
+                # Update running average
+                count = self.shared['auto_learn_m1_open_count']
+                if count == 0:
+                    self.shared['auto_learn_m1_open_avg'] = full_speed_time
+                else:
+                    avg = self.shared['auto_learn_m1_open_avg']
+                    self.shared['auto_learn_m1_open_avg'] = (avg * count + full_speed_time) / (count + 1)
+                self.shared['auto_learn_m1_open_count'] = count + 1
+                print(f"M1 open: {time_taken:.2f}s at 0.25 speed = {full_speed_time:.2f}s full speed")
+                print(f"  M1 open average: {self.shared['auto_learn_m1_open_avg']:.2f}s ({self.shared['auto_learn_m1_open_count']} samples)")
                 self.motor1.stop()
 
-                self.shared['auto_learn_state'] = 'M2_OPEN_SLOW'
-                self.shared['auto_learn_status_msg'] = 'Phase 1: Opening M2 slowly...'
-                self.shared['auto_learn_m2_start'] = now
-                print("Opening M2 slowly to find open limit...")
+                self.shared['auto_learn_state'] = 'PAUSE_1'
+                self.shared['auto_learn_phase_start'] = now
 
-        # State: M2_OPEN_SLOW - M2 opening slowly, record time
-        elif state == 'M2_OPEN_SLOW':
+        # State: PAUSE_1 - Brief pause before M2 opens
+        elif state == 'PAUSE_1':
             self.motor1.stop()
-            self.motor2.forward(self.learning_speed)
+            self.motor2.stop()
+            if now - self.shared['auto_learn_phase_start'] >= 0.5:
+                print("Step 2: Opening M2 at 0.25 speed to find open limit...")
+                self.shared['auto_learn_state'] = 'M2_OPEN_025'
+                self.shared['auto_learn_status_msg'] = 'Opening M2 at 0.25 speed...'
+                self.shared['auto_learn_m2_start'] = now
 
+        # State: M2_OPEN_025 - M2 opening at 0.25 speed to find limit
+        elif state == 'M2_OPEN_025':
+            self.motor1.stop()
+            self.motor2.forward(0.25)
             if self.shared.get('open_limit_m2_active', False):
-                learned_time = now - self.shared['auto_learn_m2_start']
-                self.shared['auto_learn_m2_open_slow'] = learned_time
-                print(f"M2 open limit: {learned_time:.2f}s at {self.learning_speed*100:.0f}% speed")
+                time_taken = now - self.shared['auto_learn_m2_start']
+                full_speed_time = time_taken * 0.25
+                count = self.shared['auto_learn_m2_open_count']
+                if count == 0:
+                    self.shared['auto_learn_m2_open_avg'] = full_speed_time
+                else:
+                    avg = self.shared['auto_learn_m2_open_avg']
+                    self.shared['auto_learn_m2_open_avg'] = (avg * count + full_speed_time) / (count + 1)
+                self.shared['auto_learn_m2_open_count'] = count + 1
+                print(f"M2 open: {time_taken:.2f}s at 0.25 speed = {full_speed_time:.2f}s full speed")
+                print(f"  M2 open average: {self.shared['auto_learn_m2_open_avg']:.2f}s ({self.shared['auto_learn_m2_open_count']} samples)")
                 self.motor2.stop()
 
-                self.shared['auto_learn_state'] = 'PAUSE_BEFORE_M2_CLOSE'
-                self.shared['auto_learn_status_msg'] = 'Pausing...'
+                self.shared['auto_learn_state'] = 'PAUSE_2'
                 self.shared['auto_learn_phase_start'] = now
-                print("Pausing before M2 close...")
 
-        # State: PAUSE_BEFORE_M2_CLOSE
-        elif state == 'PAUSE_BEFORE_M2_CLOSE':
+        # State: PAUSE_2 - Brief pause before M2 closes
+        elif state == 'PAUSE_2':
             self.motor1.stop()
             self.motor2.stop()
-
             if now - self.shared['auto_learn_phase_start'] >= 0.5:
-                self.shared['auto_learn_state'] = 'M2_CLOSE_SLOW'
-                self.shared['auto_learn_status_msg'] = 'Phase 1: Closing M2 slowly...'
+                print("Step 3: Closing M2 at 0.25 speed to record close time...")
+                self.shared['auto_learn_state'] = 'M2_CLOSE_025'
+                self.shared['auto_learn_status_msg'] = 'Closing M2 at 0.25 speed...'
                 self.shared['auto_learn_m2_start'] = now
-                print("Closing M2 slowly to record close time...")
 
-        # State: M2_CLOSE_SLOW - M2 closing slowly, record time
-        elif state == 'M2_CLOSE_SLOW':
+        # State: M2_CLOSE_025 - M2 closing at 0.25 speed, record time
+        elif state == 'M2_CLOSE_025':
             self.motor1.stop()
-            self.motor2.backward(self.learning_speed)
-
+            self.motor2.backward(0.25)
             if self.shared.get('close_limit_m2_active', False):
-                learned_time = now - self.shared['auto_learn_m2_start']
-                self.shared['auto_learn_m2_close_slow'] = learned_time
-                print(f"M2 close limit: {learned_time:.2f}s at {self.learning_speed*100:.0f}% speed")
+                time_taken = now - self.shared['auto_learn_m2_start']
+                full_speed_time = time_taken * 0.25
+                count = self.shared['auto_learn_m2_close_count']
+                if count == 0:
+                    self.shared['auto_learn_m2_close_avg'] = full_speed_time
+                else:
+                    avg = self.shared['auto_learn_m2_close_avg']
+                    self.shared['auto_learn_m2_close_avg'] = (avg * count + full_speed_time) / (count + 1)
+                self.shared['auto_learn_m2_close_count'] = count + 1
+                print(f"M2 close: {time_taken:.2f}s at 0.25 speed = {full_speed_time:.2f}s full speed")
+                print(f"  M2 close average: {self.shared['auto_learn_m2_close_avg']:.2f}s ({self.shared['auto_learn_m2_close_count']} samples)")
                 self.motor2.stop()
 
-                self.shared['auto_learn_state'] = 'PAUSE_BEFORE_M1_CLOSE'
-                self.shared['auto_learn_status_msg'] = 'Pausing...'
+                self.shared['auto_learn_state'] = 'PAUSE_3'
                 self.shared['auto_learn_phase_start'] = now
-                print("Pausing before M1 close...")
 
-        # State: PAUSE_BEFORE_M1_CLOSE
-        elif state == 'PAUSE_BEFORE_M1_CLOSE':
+        # State: PAUSE_3 - Brief pause before M1 closes
+        elif state == 'PAUSE_3':
             self.motor1.stop()
             self.motor2.stop()
-
             if now - self.shared['auto_learn_phase_start'] >= 0.5:
-                self.shared['auto_learn_state'] = 'M1_CLOSE_SLOW'
-                self.shared['auto_learn_status_msg'] = 'Phase 1: Closing M1 slowly...'
+                print("Step 4: Closing M1 at 0.25 speed to record close time...")
+                self.shared['auto_learn_state'] = 'M1_CLOSE_025'
+                self.shared['auto_learn_status_msg'] = 'Closing M1 at 0.25 speed...'
                 self.shared['auto_learn_m1_start'] = now
-                print("Closing M1 slowly to record close time...")
 
-        # State: M1_CLOSE_SLOW - M1 closing slowly, record time
-        elif state == 'M1_CLOSE_SLOW':
-            self.motor1.backward(self.learning_speed)
+        # State: M1_CLOSE_025 - M1 closing at 0.25 speed, record time
+        elif state == 'M1_CLOSE_025':
+            self.motor1.backward(0.25)
             self.motor2.stop()
-
             if self.shared.get('close_limit_m1_active', False):
-                learned_time = now - self.shared['auto_learn_m1_start']
-                self.shared['auto_learn_m1_close_slow'] = learned_time
-                print(f"M1 close limit: {learned_time:.2f}s at {self.learning_speed*100:.0f}% speed")
+                time_taken = now - self.shared['auto_learn_m1_start']
+                full_speed_time = time_taken * 0.25
+                count = self.shared['auto_learn_m1_close_count']
+                if count == 0:
+                    self.shared['auto_learn_m1_close_avg'] = full_speed_time
+                else:
+                    avg = self.shared['auto_learn_m1_close_avg']
+                    self.shared['auto_learn_m1_close_avg'] = (avg * count + full_speed_time) / (count + 1)
+                self.shared['auto_learn_m1_close_count'] = count + 1
+                print(f"M1 close: {time_taken:.2f}s at 0.25 speed = {full_speed_time:.2f}s full speed")
+                print(f"  M1 close average: {self.shared['auto_learn_m1_close_avg']:.2f}s ({self.shared['auto_learn_m1_close_count']} samples)")
                 self.motor1.stop()
 
-                # Move to calculate expected times
-                self.shared['auto_learn_state'] = 'CALCULATE_EXPECTED'
-                print("\n=== Slow discovery complete ===")
+                self.shared['auto_learn_state'] = 'PAUSE_4'
+                self.shared['auto_learn_phase_start'] = now
 
-        # State: CALCULATE_EXPECTED - Calculate full-speed estimates
-        elif state == 'CALCULATE_EXPECTED':
+        # State: PAUSE_4 - Brief pause before 0.5 speed cycles
+        elif state == 'PAUSE_4':
             self.motor1.stop()
             self.motor2.stop()
-
-            # Calculate expected full-speed times: slow_time * learning_speed
-            m1_open = self.shared.get('auto_learn_m1_open_slow')
-            m2_open = self.shared.get('auto_learn_m2_open_slow')
-            m1_close = self.shared.get('auto_learn_m1_close_slow')
-            m2_close = self.shared.get('auto_learn_m2_close_slow')
-
-            if m1_open and m1_close:
-                m1_expected = ((m1_open + m1_close) / 2.0) * self.learning_speed
-                self.shared['auto_learn_m1_expected'] = m1_expected
-                print(f"M1 expected full-speed time: {m1_expected:.2f}s")
-
-            if m2_open and m2_close:
-                m2_expected = ((m2_open + m2_close) / 2.0) * self.learning_speed
-                self.shared['auto_learn_m2_expected'] = m2_expected
-                print(f"M2 expected full-speed time: {m2_expected:.2f}s")
-
-            # Start fast learning cycles
-            self.shared['auto_learn_cycle'] = 1
-            self.shared['auto_learn_state'] = 'PAUSE_BEFORE_FAST_OPEN'
-            self.shared['auto_learn_phase_start'] = now
-            self.shared['auto_learn_status_msg'] = 'Preparing fast cycle 1...'
-            print("\n=== AUTO-LEARN: PHASE 2 - FULL SPEED CYCLES ===")
-            print("Starting fast learning cycles with slowdown...")
-
-        # State: PAUSE_BEFORE_FAST_OPEN
-        elif state == 'PAUSE_BEFORE_FAST_OPEN':
-            self.motor1.stop()
-            self.motor2.stop()
-
             if now - self.shared['auto_learn_phase_start'] >= 1.0:
-                cycle = self.shared['auto_learn_cycle']
-                self.shared['auto_learn_state'] = 'FAST_OPEN'
-                self.shared['auto_learn_status_msg'] = f'Cycle {cycle}: Opening full speed...'
+                print("\n=== Phase 2: 0.5 Speed Cycles ===")
+                print("Step 5: Opening M1 at 0.5 speed...")
+                self.shared['auto_learn_state'] = 'M1_OPEN_05'
+                self.shared['auto_learn_status_msg'] = 'Opening M1 at 0.5 speed...'
                 self.shared['auto_learn_m1_start'] = now
-                self.shared['auto_learn_m2_start'] = now + self.motor1_open_delay
-                self.shared['auto_learn_slowdown_start'] = None
-                print(f"\nCycle {cycle}: Opening at full speed with {self.opening_slowdown_percent}% slowdown...")
 
-        # State: FAST_OPEN - Full speed opening with slowdown
-        elif state == 'FAST_OPEN':
-            m1_expected = self.shared.get('auto_learn_m1_expected', 10.0)
-            m2_expected = self.shared.get('auto_learn_m2_expected', 10.0)
+        # State: M1_OPEN_05 - M1 opening at 0.5 speed
+        elif state == 'M1_OPEN_05':
+            self.motor1.forward(0.5)
+            self.motor2.stop()
+            if self.shared.get('open_limit_m1_active', False):
+                time_taken = now - self.shared['auto_learn_m1_start']
+                full_speed_time = time_taken * 0.5
+                count = self.shared['auto_learn_m1_open_count']
+                avg = self.shared['auto_learn_m1_open_avg']
+                self.shared['auto_learn_m1_open_avg'] = (avg * count + full_speed_time) / (count + 1)
+                self.shared['auto_learn_m1_open_count'] = count + 1
+                print(f"M1 open: {time_taken:.2f}s at 0.5 speed = {full_speed_time:.2f}s full speed")
+                print(f"  M1 open average: {self.shared['auto_learn_m1_open_avg']:.2f}s ({self.shared['auto_learn_m1_open_count']} samples)")
+                self.motor1.stop()
 
-            # Calculate slowdown points (percentage of expected time)
-            m1_slowdown_point = m1_expected * (1.0 - self.opening_slowdown_percent / 100.0)
-            m2_slowdown_point = m2_expected * (1.0 - self.opening_slowdown_percent / 100.0)
+                self.shared['auto_learn_state'] = 'PAUSE_5'
+                self.shared['auto_learn_phase_start'] = now
+
+        # State: PAUSE_5 - Brief pause before M2 opens at 0.5
+        elif state == 'PAUSE_5':
+            self.motor1.stop()
+            self.motor2.stop()
+            if now - self.shared['auto_learn_phase_start'] >= 0.5:
+                print("Step 6: Opening M2 at 0.5 speed...")
+                self.shared['auto_learn_state'] = 'M2_OPEN_05'
+                self.shared['auto_learn_status_msg'] = 'Opening M2 at 0.5 speed...'
+                self.shared['auto_learn_m2_start'] = now
+
+        # State: M2_OPEN_05 - M2 opening at 0.5 speed
+        elif state == 'M2_OPEN_05':
+            self.motor1.stop()
+            self.motor2.forward(0.5)
+            if self.shared.get('open_limit_m2_active', False):
+                time_taken = now - self.shared['auto_learn_m2_start']
+                full_speed_time = time_taken * 0.5
+                count = self.shared['auto_learn_m2_open_count']
+                avg = self.shared['auto_learn_m2_open_avg']
+                self.shared['auto_learn_m2_open_avg'] = (avg * count + full_speed_time) / (count + 1)
+                self.shared['auto_learn_m2_open_count'] = count + 1
+                print(f"M2 open: {time_taken:.2f}s at 0.5 speed = {full_speed_time:.2f}s full speed")
+                print(f"  M2 open average: {self.shared['auto_learn_m2_open_avg']:.2f}s ({self.shared['auto_learn_m2_open_count']} samples)")
+                self.motor2.stop()
+
+                self.shared['auto_learn_state'] = 'PAUSE_6'
+                self.shared['auto_learn_phase_start'] = now
+
+        # State: PAUSE_6 - Brief pause before M2 closes at 0.5
+        elif state == 'PAUSE_6':
+            self.motor1.stop()
+            self.motor2.stop()
+            if now - self.shared['auto_learn_phase_start'] >= 0.5:
+                print("Step 7: Closing M2 at 0.5 speed...")
+                self.shared['auto_learn_state'] = 'M2_CLOSE_05'
+                self.shared['auto_learn_status_msg'] = 'Closing M2 at 0.5 speed...'
+                self.shared['auto_learn_m2_start'] = now
+
+        # State: M2_CLOSE_05 - M2 closing at 0.5 speed
+        elif state == 'M2_CLOSE_05':
+            self.motor1.stop()
+            self.motor2.backward(0.5)
+            if self.shared.get('close_limit_m2_active', False):
+                time_taken = now - self.shared['auto_learn_m2_start']
+                full_speed_time = time_taken * 0.5
+                count = self.shared['auto_learn_m2_close_count']
+                avg = self.shared['auto_learn_m2_close_avg']
+                self.shared['auto_learn_m2_close_avg'] = (avg * count + full_speed_time) / (count + 1)
+                self.shared['auto_learn_m2_close_count'] = count + 1
+                print(f"M2 close: {time_taken:.2f}s at 0.5 speed = {full_speed_time:.2f}s full speed")
+                print(f"  M2 close average: {self.shared['auto_learn_m2_close_avg']:.2f}s ({self.shared['auto_learn_m2_close_count']} samples)")
+                self.motor2.stop()
+
+                self.shared['auto_learn_state'] = 'PAUSE_7'
+                self.shared['auto_learn_phase_start'] = now
+
+        # State: PAUSE_7 - Brief pause before M1 closes at 0.5
+        elif state == 'PAUSE_7':
+            self.motor1.stop()
+            self.motor2.stop()
+            if now - self.shared['auto_learn_phase_start'] >= 0.5:
+                print("Step 8: Closing M1 at 0.5 speed...")
+                self.shared['auto_learn_state'] = 'M1_CLOSE_05'
+                self.shared['auto_learn_status_msg'] = 'Closing M1 at 0.5 speed...'
+                self.shared['auto_learn_m1_start'] = now
+
+        # State: M1_CLOSE_05 - M1 closing at 0.5 speed
+        elif state == 'M1_CLOSE_05':
+            self.motor1.backward(0.5)
+            self.motor2.stop()
+            if self.shared.get('close_limit_m1_active', False):
+                time_taken = now - self.shared['auto_learn_m1_start']
+                full_speed_time = time_taken * 0.5
+                count = self.shared['auto_learn_m1_close_count']
+                avg = self.shared['auto_learn_m1_close_avg']
+                self.shared['auto_learn_m1_close_avg'] = (avg * count + full_speed_time) / (count + 1)
+                self.shared['auto_learn_m1_close_count'] = count + 1
+                print(f"M1 close: {time_taken:.2f}s at 0.5 speed = {full_speed_time:.2f}s full speed")
+                print(f"  M1 close average: {self.shared['auto_learn_m1_close_avg']:.2f}s ({self.shared['auto_learn_m1_close_count']} samples)")
+                self.motor1.stop()
+
+                self.shared['auto_learn_state'] = 'PAUSE_8'
+                self.shared['auto_learn_phase_start'] = now
+                self.shared['auto_learn_cycle'] = 0
+
+        # State: PAUSE_8 - Prepare for full-speed cycles
+        elif state == 'PAUSE_8':
+            self.motor1.stop()
+            self.motor2.stop()
+            if now - self.shared['auto_learn_phase_start'] >= 1.0:
+                print("\n=== Phase 3: Full-Speed Cycles with Minimal Slowdown ===")
+                self.shared['auto_learn_cycle'] = 1
+                self.shared['auto_learn_state'] = 'FULL_OPEN_START'
+                self.shared['auto_learn_status_msg'] = 'Full-speed cycle 1: Opening...'
+
+        # State: FULL_OPEN_START - Start full-speed opening (M1 then M2 with delay)
+        elif state == 'FULL_OPEN_START':
+            cycle = self.shared['auto_learn_cycle']
+            print(f"\nCycle {cycle}: Opening at full speed (M1 then M2 with {self.motor1_open_delay}s delay)...")
+            self.shared['auto_learn_state'] = 'FULL_OPEN'
+            self.shared['auto_learn_m1_start'] = now
+            self.shared['auto_learn_m2_start'] = now + self.motor1_open_delay
+            self.shared['auto_learn_m1_slowdown'] = False
+            self.shared['auto_learn_m2_slowdown'] = False
+
+        # State: FULL_OPEN - Both motors opening at full speed with minimal slowdown
+        elif state == 'FULL_OPEN':
+            # Get expected times for slowdown calculation
+            m1_expected = self.shared.get('auto_learn_m1_open_avg', 10.0)
+            m2_expected = self.shared.get('auto_learn_m2_open_avg', 10.0)
+
+            # Very short slowdown zone (2% of expected time)
+            m1_slowdown_point = m1_expected * 0.98
+            m2_slowdown_point = m2_expected * 0.98
 
             # M1 control
+            m1_done = False
             if self.shared['auto_learn_m1_start'] and now >= self.shared['auto_learn_m1_start']:
                 m1_elapsed = now - self.shared['auto_learn_m1_start']
-                if m1_elapsed < m1_slowdown_point and not self.shared.get('open_limit_m1_active', False):
-                    self.motor1.forward(1.0)  # Full speed
-                elif not self.shared.get('open_limit_m1_active', False):
-                    if not self.shared.get('auto_learn_slowdown_start'):
-                        print(f"M1 slowdown at {m1_elapsed:.2f}s (expected {m1_expected:.2f}s)")
-                        self.shared['auto_learn_slowdown_start'] = now
-                    self.motor1.forward(self.limit_switch_creep_speed)  # Creep speed
+                if not self.shared.get('open_limit_m1_active', False):
+                    # Not at limit yet - keep moving
+                    if m1_elapsed < m1_slowdown_point:
+                        self.motor1.forward(1.0)  # Full speed
+                    else:
+                        # In slowdown zone - creep to limit
+                        if not self.shared.get('auto_learn_m1_slowdown'):
+                            print(f"  M1 slowdown at {m1_elapsed:.2f}s (expected {m1_expected:.2f}s)")
+                            self.shared['auto_learn_m1_slowdown'] = True
+                        self.motor1.forward(self.limit_switch_creep_speed)
                 else:
+                    # Hit limit!
                     if self.shared['auto_learn_m1_start']:
                         total_time = now - self.shared['auto_learn_m1_start']
-                        print(f"M1 open limit hit at {total_time:.2f}s")
-                        # Store time
-                        times = list(self.shared.get('auto_learn_m1_times', []))
-                        times.append(total_time)
-                        self.shared['auto_learn_m1_times'] = times
+                        count = self.shared['auto_learn_m1_open_count']
+                        avg = self.shared['auto_learn_m1_open_avg']
+                        self.shared['auto_learn_m1_open_avg'] = (avg * count + total_time) / (count + 1)
+                        self.shared['auto_learn_m1_open_count'] = count + 1
+                        print(f"  M1 open limit: {total_time:.2f}s at full speed")
+                        print(f"    M1 open average: {self.shared['auto_learn_m1_open_avg']:.2f}s ({self.shared['auto_learn_m1_open_count']} samples)")
                         self.shared['auto_learn_m1_start'] = None
                     self.motor1.stop()
+                    m1_done = True
             else:
                 self.motor1.stop()
+                m1_done = True
 
             # M2 control (starts after delay)
+            m2_done = False
             if self.shared['auto_learn_m2_start'] and now >= self.shared['auto_learn_m2_start']:
                 m2_elapsed = now - self.shared['auto_learn_m2_start']
-                if m2_elapsed < m2_slowdown_point and not self.shared.get('open_limit_m2_active', False):
-                    self.motor2.forward(1.0)  # Full speed
-                elif not self.shared.get('open_limit_m2_active', False):
-                    self.motor2.forward(self.limit_switch_creep_speed)  # Creep speed
+                if not self.shared.get('open_limit_m2_active', False):
+                    if m2_elapsed < m2_slowdown_point:
+                        self.motor2.forward(1.0)  # Full speed
+                    else:
+                        if not self.shared.get('auto_learn_m2_slowdown'):
+                            print(f"  M2 slowdown at {m2_elapsed:.2f}s (expected {m2_expected:.2f}s)")
+                            self.shared['auto_learn_m2_slowdown'] = True
+                        self.motor2.forward(self.limit_switch_creep_speed)
                 else:
                     if self.shared['auto_learn_m2_start']:
                         total_time = now - self.shared['auto_learn_m2_start']
-                        print(f"M2 open limit hit at {total_time:.2f}s")
-                        # Store time
-                        times = list(self.shared.get('auto_learn_m2_times', []))
-                        times.append(total_time)
-                        self.shared['auto_learn_m2_times'] = times
+                        count = self.shared['auto_learn_m2_open_count']
+                        avg = self.shared['auto_learn_m2_open_avg']
+                        self.shared['auto_learn_m2_open_avg'] = (avg * count + total_time) / (count + 1)
+                        self.shared['auto_learn_m2_open_count'] = count + 1
+                        print(f"  M2 open limit: {total_time:.2f}s at full speed")
+                        print(f"    M2 open average: {self.shared['auto_learn_m2_open_avg']:.2f}s ({self.shared['auto_learn_m2_open_count']} samples)")
                         self.shared['auto_learn_m2_start'] = None
                     self.motor2.stop()
+                    m2_done = True
             else:
                 self.motor2.stop()
+                m2_done = True
 
-            # When both done, move to close
-            if (self.shared.get('open_limit_m1_active', False) and
-                self.shared.get('open_limit_m2_active', False) and
-                not self.shared['auto_learn_m1_start'] and
-                not self.shared['auto_learn_m2_start']):
-
-                self.shared['auto_learn_state'] = 'PAUSE_BEFORE_FAST_CLOSE'
+            # When both motors at open limit, pause before close
+            if m1_done and m2_done:
+                self.shared['auto_learn_state'] = 'PAUSE_BEFORE_FULL_CLOSE'
                 self.shared['auto_learn_phase_start'] = now
-                self.shared['auto_learn_status_msg'] = f'Cycle {self.shared["auto_learn_cycle"]}: Pausing...'
-                print("Both motors at open limit, pausing...")
 
-        # State: PAUSE_BEFORE_FAST_CLOSE
-        elif state == 'PAUSE_BEFORE_FAST_CLOSE':
+        # State: PAUSE_BEFORE_FULL_CLOSE
+        elif state == 'PAUSE_BEFORE_FULL_CLOSE':
             self.motor1.stop()
             self.motor2.stop()
-
             if now - self.shared['auto_learn_phase_start'] >= 0.5:
                 cycle = self.shared['auto_learn_cycle']
-                self.shared['auto_learn_state'] = 'FAST_CLOSE'
-                self.shared['auto_learn_status_msg'] = f'Cycle {cycle}: Closing full speed...'
+                print(f"Cycle {cycle}: Closing at full speed (M2 then M1 with {self.motor2_close_delay}s delay)...")
+                self.shared['auto_learn_state'] = 'FULL_CLOSE'
+                self.shared['auto_learn_status_msg'] = f'Cycle {cycle}: Closing...'
                 self.shared['auto_learn_m2_start'] = now
                 self.shared['auto_learn_m1_start'] = now + self.motor2_close_delay
-                self.shared['auto_learn_slowdown_start'] = None
-                print(f"Cycle {cycle}: Closing at full speed with {self.closing_slowdown_percent}% slowdown...")
+                self.shared['auto_learn_m1_slowdown'] = False
+                self.shared['auto_learn_m2_slowdown'] = False
 
-        # State: FAST_CLOSE - Full speed closing with slowdown
-        elif state == 'FAST_CLOSE':
-            m1_expected = self.shared.get('auto_learn_m1_expected', 10.0)
-            m2_expected = self.shared.get('auto_learn_m2_expected', 10.0)
+        # State: FULL_CLOSE - Both motors closing at full speed with minimal slowdown
+        elif state == 'FULL_CLOSE':
+            # Get expected times for slowdown calculation
+            m1_expected = self.shared.get('auto_learn_m1_close_avg', 10.0)
+            m2_expected = self.shared.get('auto_learn_m2_close_avg', 10.0)
 
-            # Calculate slowdown points
-            m1_slowdown_point = m1_expected * (1.0 - self.closing_slowdown_percent / 100.0)
-            m2_slowdown_point = m2_expected * (1.0 - self.closing_slowdown_percent / 100.0)
+            # Very short slowdown zone
+            m1_slowdown_point = m1_expected * 0.98
+            m2_slowdown_point = m2_expected * 0.98
 
             # M2 control (closes first)
+            m2_done = False
             if self.shared['auto_learn_m2_start'] and now >= self.shared['auto_learn_m2_start']:
                 m2_elapsed = now - self.shared['auto_learn_m2_start']
-                if m2_elapsed < m2_slowdown_point and not self.shared.get('close_limit_m2_active', False):
-                    self.motor2.backward(1.0)  # Full speed
-                elif not self.shared.get('close_limit_m2_active', False):
-                    self.motor2.backward(self.limit_switch_creep_speed)  # Creep speed
+                if not self.shared.get('close_limit_m2_active', False):
+                    if m2_elapsed < m2_slowdown_point:
+                        self.motor2.backward(1.0)  # Full speed
+                    else:
+                        if not self.shared.get('auto_learn_m2_slowdown'):
+                            print(f"  M2 slowdown at {m2_elapsed:.2f}s (expected {m2_expected:.2f}s)")
+                            self.shared['auto_learn_m2_slowdown'] = True
+                        self.motor2.backward(self.limit_switch_creep_speed)
                 else:
                     if self.shared['auto_learn_m2_start']:
                         total_time = now - self.shared['auto_learn_m2_start']
-                        print(f"M2 close limit hit at {total_time:.2f}s")
-                        # Store time
-                        times = list(self.shared.get('auto_learn_m2_times', []))
-                        times.append(total_time)
-                        self.shared['auto_learn_m2_times'] = times
+                        count = self.shared['auto_learn_m2_close_count']
+                        avg = self.shared['auto_learn_m2_close_avg']
+                        self.shared['auto_learn_m2_close_avg'] = (avg * count + total_time) / (count + 1)
+                        self.shared['auto_learn_m2_close_count'] = count + 1
+                        print(f"  M2 close limit: {total_time:.2f}s at full speed")
+                        print(f"    M2 close average: {self.shared['auto_learn_m2_close_avg']:.2f}s ({self.shared['auto_learn_m2_close_count']} samples)")
                         self.shared['auto_learn_m2_start'] = None
                     self.motor2.stop()
+                    m2_done = True
             else:
                 self.motor2.stop()
+                m2_done = True
 
             # M1 control (starts after delay)
+            m1_done = False
             if self.shared['auto_learn_m1_start'] and now >= self.shared['auto_learn_m1_start']:
                 m1_elapsed = now - self.shared['auto_learn_m1_start']
-                if m1_elapsed < m1_slowdown_point and not self.shared.get('close_limit_m1_active', False):
-                    self.motor1.backward(1.0)  # Full speed
-                elif not self.shared.get('close_limit_m1_active', False):
-                    self.motor1.backward(self.limit_switch_creep_speed)  # Creep speed
+                if not self.shared.get('close_limit_m1_active', False):
+                    if m1_elapsed < m1_slowdown_point:
+                        self.motor1.backward(1.0)  # Full speed
+                    else:
+                        if not self.shared.get('auto_learn_m1_slowdown'):
+                            print(f"  M1 slowdown at {m1_elapsed:.2f}s (expected {m1_expected:.2f}s)")
+                            self.shared['auto_learn_m1_slowdown'] = True
+                        self.motor1.backward(self.limit_switch_creep_speed)
                 else:
                     if self.shared['auto_learn_m1_start']:
                         total_time = now - self.shared['auto_learn_m1_start']
-                        print(f"M1 close limit hit at {total_time:.2f}s")
-                        # Store time
-                        times = list(self.shared.get('auto_learn_m1_times', []))
-                        times.append(total_time)
-                        self.shared['auto_learn_m1_times'] = times
+                        count = self.shared['auto_learn_m1_close_count']
+                        avg = self.shared['auto_learn_m1_close_avg']
+                        self.shared['auto_learn_m1_close_avg'] = (avg * count + total_time) / (count + 1)
+                        self.shared['auto_learn_m1_close_count'] = count + 1
+                        print(f"  M1 close limit: {total_time:.2f}s at full speed")
+                        print(f"    M1 close average: {self.shared['auto_learn_m1_close_avg']:.2f}s ({self.shared['auto_learn_m1_close_count']} samples)")
                         self.shared['auto_learn_m1_start'] = None
                     self.motor1.stop()
+                    m1_done = True
             else:
                 self.motor1.stop()
+                m1_done = True
 
-            # When both done, check if need more cycles
-            if (self.shared.get('close_limit_m1_active', False) and
-                self.shared.get('close_limit_m2_active', False) and
-                not self.shared['auto_learn_m1_start'] and
-                not self.shared['auto_learn_m2_start']):
-
+            # When both motors at close limit, check if need more cycles
+            if m1_done and m2_done:
                 cycle = self.shared['auto_learn_cycle']
                 print(f"Cycle {cycle} complete")
 
-                if cycle < 2:  # Do 2 full-speed cycles
+                if cycle < 3:  # Do 3 full-speed cycles
                     self.shared['auto_learn_cycle'] = cycle + 1
-                    self.shared['auto_learn_state'] = 'PAUSE_BEFORE_FAST_OPEN'
+                    self.shared['auto_learn_state'] = 'PAUSE_BEFORE_NEXT_CYCLE'
                     self.shared['auto_learn_phase_start'] = now
-                    print(f"Preparing for cycle {cycle + 1}...")
                 else:
-                    # All cycles done
+                    # All cycles done - move to final calculations
                     self.shared['auto_learn_state'] = 'COMPLETE'
-                    print("\n=== All cycles complete ===")
 
-        # State: COMPLETE - Calculate final averages
+        # State: PAUSE_BEFORE_NEXT_CYCLE
+        elif state == 'PAUSE_BEFORE_NEXT_CYCLE':
+            self.motor1.stop()
+            self.motor2.stop()
+            if now - self.shared['auto_learn_phase_start'] >= 1.0:
+                self.shared['auto_learn_state'] = 'FULL_OPEN_START'
+
+        # State: COMPLETE - Calculate final averages and overall work time
         elif state == 'COMPLETE':
             self.motor1.stop()
             self.motor2.stop()
 
-            m1_times = list(self.shared.get('auto_learn_m1_times', []))
-            m2_times = list(self.shared.get('auto_learn_m2_times', []))
-
             print("\n=== AUTO-LEARN COMPLETE ===")
-            print(f"M1 times recorded: {m1_times}")
-            print(f"M2 times recorded: {m2_times}")
 
-            if m1_times:
-                m1_avg = sum(m1_times) / len(m1_times)
-                self.shared['learning_m1_close_time'] = m1_avg
-                self.shared['learning_m1_open_time'] = m1_avg
-                print(f"M1 average time: {m1_avg:.2f}s")
+            # Display individual averages
+            m1_open_avg = self.shared.get('auto_learn_m1_open_avg', 0.0)
+            m1_close_avg = self.shared.get('auto_learn_m1_close_avg', 0.0)
+            m2_open_avg = self.shared.get('auto_learn_m2_open_avg', 0.0)
+            m2_close_avg = self.shared.get('auto_learn_m2_close_avg', 0.0)
 
-            if m2_times:
-                m2_avg = sum(m2_times) / len(m2_times)
-                self.shared['learning_m2_close_time'] = m2_avg
-                self.shared['learning_m2_open_time'] = m2_avg
-                print(f"M2 average time: {m2_avg:.2f}s")
+            print(f"M1 open average: {m1_open_avg:.2f}s ({self.shared['auto_learn_m1_open_count']} samples)")
+            print(f"M1 close average: {m1_close_avg:.2f}s ({self.shared['auto_learn_m1_close_count']} samples)")
+            print(f"M2 open average: {m2_open_avg:.2f}s ({self.shared['auto_learn_m2_open_count']} samples)")
+            print(f"M2 close average: {m2_close_avg:.2f}s ({self.shared['auto_learn_m2_close_count']} samples)")
+
+            # Calculate single averaged work time (average of all four values)
+            overall_avg = (m1_open_avg + m1_close_avg + m2_open_avg + m2_close_avg) / 4.0
+            print(f"\nSingle averaged work time: {overall_avg:.2f}s")
+
+            # Store results in shared memory for UI to save
+            self.shared['learning_m1_open_time'] = m1_open_avg
+            self.shared['learning_m1_close_time'] = m1_close_avg
+            self.shared['learning_m2_open_time'] = m2_open_avg
+            self.shared['learning_m2_close_time'] = m2_close_avg
+            self.shared['learning_overall_avg_time'] = overall_avg
 
             # Clear flags
             self.shared['auto_learn_active'] = False
