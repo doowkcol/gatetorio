@@ -876,7 +876,13 @@ class GateController:
             # Block if CLOSE sustained
             if self.shared['cmd_close_active']:
                 return
-            
+
+            # If closing from PO1, reverse back to PO1
+            if self.shared['state'] == 'CLOSING_TO_PARTIAL_1':
+                print("PO1 command while closing from PO1 - reversing M1 back to PO1")
+                self._move_to_partial_1()
+                return
+
             # If at closed, stopped, or other partial, move to partial 1
             if self.shared['state'] == 'CLOSED':
                 self._move_to_partial_1()
@@ -887,12 +893,12 @@ class GateController:
             elif self.shared['state'] == 'PARTIAL_2':
                 self._move_to_partial_1()
                 return
-            
+
             # If at partial 1, block auto-close
             if self.shared['state'] == 'PARTIAL_1':
                 self.shared['partial_auto_close_active'] = False
                 return
-            
+
             return
         
         # PARTIAL 2 COMMAND ACTIVE
@@ -900,7 +906,13 @@ class GateController:
             # Block if CLOSE sustained
             if self.shared['cmd_close_active']:
                 return
-            
+
+            # If closing from PO2, reverse back to PO2
+            if self.shared['state'] == 'CLOSING_TO_PARTIAL_2':
+                print("PO2 command while closing from PO2 - reversing M1 back to PO2")
+                self._move_to_partial_2()
+                return
+
             # If at closed, stopped, or other partial, move to partial 2
             if self.shared['state'] == 'CLOSED':
                 self._move_to_partial_2()
@@ -911,12 +923,12 @@ class GateController:
             elif self.shared['state'] == 'PARTIAL_1':
                 self._move_to_partial_2()
                 return
-            
+
             # If at partial 2, block auto-close
             if self.shared['state'] == 'PARTIAL_2':
                 self.shared['partial_auto_close_active'] = False
                 return
-            
+
             return
         
     
@@ -1716,13 +1728,21 @@ class GateController:
         if self.shared['m1_position'] >= self.partial_1_position:
             # Already past partial 1, need to close to it
             print(f"Moving to PARTIAL_1 ({self.partial_1_percent}%)")
+            # Preserve M2's movement if already closing (e.g. when PO1 pressed during CLOSING_TO_PARTIAL_1)
+            preserve_m2 = (self.shared['state'] == 'CLOSING_TO_PARTIAL_1' and
+                          self.shared.get('m2_move_start') is not None and
+                          self.shared['m2_position'] > 0)
+
             self.shared['state'] = 'CLOSING_TO_PARTIAL_1'
             self.shared['movement_start_time'] = time()
             self.shared['movement_command'] = 'CLOSE'
             self.shared['m1_move_start'] = time()
             self.shared['m1_target'] = self.shared['m1_position']
-            # M2 doesn't move for partials
-            self.shared['m2_move_start'] = None
+
+            # M2 doesn't move for partials UNLESS already closing to 0
+            if not preserve_m2:
+                self.shared['m2_move_start'] = None
+
             self.shared['partial_auto_close_active'] = False
         else:
             # Below partial 1, need to open to it
@@ -1741,13 +1761,21 @@ class GateController:
         if self.shared['m1_position'] >= self.partial_2_position:
             # Already past partial 2, need to close to it
             print(f"Moving to PARTIAL_2 ({self.partial_2_percent}%)")
+            # Preserve M2's movement if already closing (e.g. when PO2 pressed during CLOSING_TO_PARTIAL_2)
+            preserve_m2 = (self.shared['state'] == 'CLOSING_TO_PARTIAL_2' and
+                          self.shared.get('m2_move_start') is not None and
+                          self.shared['m2_position'] > 0)
+
             self.shared['state'] = 'CLOSING_TO_PARTIAL_2'
             self.shared['movement_start_time'] = time()
             self.shared['movement_command'] = 'CLOSE'
             self.shared['m1_move_start'] = time()
             self.shared['m1_target'] = self.shared['m1_position']
-            # M2 doesn't move for partials
-            self.shared['m2_move_start'] = None
+
+            # M2 doesn't move for partials UNLESS already closing to 0
+            if not preserve_m2:
+                self.shared['m2_move_start'] = None
+
             self.shared['partial_auto_close_active'] = False
         else:
             # Below partial 2, need to open to it
