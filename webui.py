@@ -790,7 +790,8 @@ async def ws(ws: WebSocket):
             await ws.send_text(msg)
             await asyncio.sleep(1.0)
     except Exception:
-        await ws.close()
+        # Connection closed by client - don't try to close again
+        pass
 
 if __name__ == "__main__":
     import threading
