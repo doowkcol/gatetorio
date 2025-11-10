@@ -1727,7 +1727,7 @@ class GateController:
         """Move M1 to partial position 1"""
         if self.shared['m1_position'] >= self.partial_1_position:
             # Already past partial 1, need to close to it
-            print(f"Moving to PARTIAL_1 ({self.partial_1_percent}%)")
+            print(f"Moving to PARTIAL_1 ({self.partial_1_percent}%) - M1 position START={self.shared['m1_position']:.2f}s TARGET={self.partial_1_position:.2f}s")
             # Preserve M2's movement if already closing (e.g. when PO1 pressed during CLOSING_TO_PARTIAL_1)
             preserve_m2 = (self.shared['state'] == 'CLOSING_TO_PARTIAL_1' and
                           self.shared.get('m2_move_start') is not None and
@@ -1746,7 +1746,7 @@ class GateController:
             self.shared['partial_auto_close_active'] = False
         else:
             # Below partial 1, need to open to it
-            print(f"Opening to PARTIAL_1 ({self.partial_1_percent}%)")
+            print(f"Opening to PARTIAL_1 ({self.partial_1_percent}%) - M1 position START={self.shared['m1_position']:.2f}s TARGET={self.partial_1_position:.2f}s")
             self.shared['state'] = 'OPENING_TO_PARTIAL_1'
             self.shared['movement_start_time'] = time()
             self.shared['movement_command'] = 'OPEN'
@@ -1791,7 +1791,7 @@ class GateController:
     
     def _move_to_partial_1_from_open(self):
         """Close from OPEN to PARTIAL_1 (M2 closes fully, M1 stops at PO1)"""
-        print(f"Closing from OPEN to PARTIAL_1 ({self.partial_1_percent}%)")
+        print(f"Closing from OPEN to PARTIAL_1 ({self.partial_1_percent}%) - M1 position START={self.shared['m1_position']:.2f}s TARGET={self.partial_1_position:.2f}s")
         self.shared['state'] = 'CLOSING_TO_PARTIAL_1'
         self.shared['movement_start_time'] = time()
         self.shared['movement_command'] = 'CLOSE'
