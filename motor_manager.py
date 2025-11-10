@@ -155,15 +155,62 @@ class MotorManager:
 
         state = self.shared['auto_learn_state']
 
-        # State: IDLE - Initialize and start M1 opening at 0.25 speed
+        # State: IDLE - Check initial position and decide where to start
         if state == 'IDLE':
             print("\n=== AUTO-LEARN: PROGRESSIVE SEQUENCE ===")
-            print("Step 1: Opening M1 at 0.25 speed to find open limit...")
-            self.shared['auto_learn_state'] = 'M1_OPEN_025'
-            self.shared['auto_learn_status_msg'] = 'Opening M1 at 0.25 speed...'
-            self.shared['auto_learn_m1_start'] = now
-            self.shared['m1_position'] = 0.0
-            self.shared['m2_position'] = 0.0
+
+            # Check if we're already at open limits
+            m1_at_open = self.shared.get('open_limit_m1_active', False)
+            m2_at_open = self.shared.get('open_limit_m2_active', False)
+
+            if m1_at_open or m2_at_open:
+                # Already at open position - need to close first to get to known state
+                print("Detected motors at open limits - closing to starting position first...")
+                self.shared['auto_learn_state'] = 'INITIAL_CLOSE_M2'
+                self.shared['auto_learn_status_msg'] = 'Closing to start position...'
+                self.shared['auto_learn_m2_start'] = now
+            else:
+                # Start normal sequence - open M1 first
+                print("Step 1: Opening M1 at 0.25 speed to find open limit...")
+                self.shared['auto_learn_state'] = 'M1_OPEN_025'
+                self.shared['auto_learn_status_msg'] = 'Opening M1 at 0.25 speed...'
+                self.shared['auto_learn_m1_start'] = now
+                self.shared['m1_position'] = 0.0
+                self.shared['m2_position'] = 0.0
+
+        # State: INITIAL_CLOSE_M2 - Close M2 to get to starting position
+        elif state == 'INITIAL_CLOSE_M2':
+            self.motor1.stop()
+            self.motor2.backward(0.25)
+            if self.shared.get('close_limit_m2_active', False):
+                print("M2 at close limit")
+                self.motor2.stop()
+                self.shared['auto_learn_state'] = 'INITIAL_CLOSE_M1'
+                self.shared['auto_learn_m1_start'] = now
+
+        # State: INITIAL_CLOSE_M1 - Close M1 to get to starting position
+        elif state == 'INITIAL_CLOSE_M1':
+            self.motor1.backward(0.25)
+            self.motor2.stop()
+            if self.shared.get('close_limit_m1_active', False):
+                print("M1 at close limit - ready to start learning sequence")
+                self.motor1.stop()
+                # Reset positions and start the normal sequence
+                self.shared['m1_position'] = 0.0
+                self.shared['m2_position'] = 0.0
+                self.shared['auto_learn_state'] = 'PAUSE_BEFORE_START'
+                self.shared['auto_learn_phase_start'] = now
+
+        # State: PAUSE_BEFORE_START - Brief pause before starting learning sequence
+        elif state == 'PAUSE_BEFORE_START':
+            self.motor1.stop()
+            self.motor2.stop()
+            if now - self.shared['auto_learn_phase_start'] >= 1.0:
+                print("\nStarting learning sequence from closed position...")
+                print("Step 1: Opening M1 at 0.25 speed to find open limit...")
+                self.shared['auto_learn_state'] = 'M1_OPEN_025'
+                self.shared['auto_learn_status_msg'] = 'Opening M1 at 0.25 speed...'
+                self.shared['auto_learn_m1_start'] = now
 
         # State: M1_OPEN_025 - M1 opening at 0.25 speed to find limit
         elif state == 'M1_OPEN_025':

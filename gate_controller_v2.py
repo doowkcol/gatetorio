@@ -100,12 +100,16 @@ class GateController:
         # Start control thread (decision making only)
         self.control_thread = threading.Thread(target=self._control_loop, daemon=True)
         self.control_thread.start()
-        
+
         print(f"Gate Controller V2 (Step 3 - Three Processes) initialized")
         print(f"  Full travel time: {self.run_time}s")
         print(f"  Motor Manager PID: {self.motor_process.pid}")
         print(f"  Input Manager PID: {self.input_process.pid}")
         print(f"  Auto-close: {'ENABLED' if self.auto_close_enabled else 'DISABLED'} ({self.auto_close_time}s)")
+
+        # Wait briefly for input manager to read limit switches, then detect initial position
+        sleep(0.5)
+        self._detect_initial_position()
     
     def reload_config(self, config_file='/home/doowkcol/Gatetorio_Code/gate_config.json'):
         """Reload configuration from file - updates runtime parameters
@@ -264,7 +268,53 @@ class GateController:
         self.shared['auto_learn_m2_expected'] = None
         self.shared['auto_learn_phase_start'] = None
         self.shared['auto_learn_status_msg'] = 'Ready'
-    
+
+    def _detect_initial_position(self):
+        """Detect initial gate position based on limit switch states at startup"""
+        if not self.limit_switches_enabled:
+            return  # No limit switches, stick with default CLOSED state
+
+        # Check limit switch states
+        m1_open = self.shared.get('open_limit_m1_active', False)
+        m2_open = self.shared.get('open_limit_m2_active', False)
+        m1_close = self.shared.get('close_limit_m1_active', False)
+        m2_close = self.shared.get('close_limit_m2_active', False)
+
+        # Determine initial state based on limit switches
+        if m1_open and m2_open:
+            # Both motors at open limits
+            self.shared['state'] = 'OPEN'
+            # Set positions based on learned or configured run times
+            if self.motor1_learned_run_time:
+                self.shared['m1_position'] = self.motor1_learned_run_time
+            else:
+                self.shared['m1_position'] = self.run_time
+
+            if self.motor2_learned_run_time:
+                self.shared['m2_position'] = self.motor2_learned_run_time
+            else:
+                self.shared['m2_position'] = self.run_time
+
+            print("[STARTUP] Detected gate at OPEN position (both open limits active)")
+        elif m1_close and m2_close:
+            # Both motors at close limits (or default)
+            self.shared['state'] = 'CLOSED'
+            self.shared['m1_position'] = 0.0
+            self.shared['m2_position'] = 0.0
+            print("[STARTUP] Detected gate at CLOSED position (both close limits active)")
+        elif not m1_open and not m2_open and not m1_close and not m2_close:
+            # No limits active - assume closed (default)
+            self.shared['state'] = 'CLOSED'
+            self.shared['m1_position'] = 0.0
+            self.shared['m2_position'] = 0.0
+            print("[STARTUP] No limits active - defaulting to CLOSED position")
+        else:
+            # Partial position or inconsistent state - keep default but warn
+            print(f"[STARTUP] WARNING: Inconsistent limit switch state detected:")
+            print(f"  M1: open={m1_open}, close={m1_close}")
+            print(f"  M2: open={m2_open}, close={m2_close}")
+            print(f"  Defaulting to CLOSED position")
+
     def _control_loop(self):
         """Main control loop - decision making only (no motor control)"""
         last_auto_close_update = time()
