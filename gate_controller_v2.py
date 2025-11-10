@@ -95,7 +95,7 @@ class GateController:
         
         # Prepare config for input manager
         input_config = {
-            'num_inputs': 4,  # ADS1115 has 4 channels
+            'num_inputs': 8,  # Dual ADS1115 = 8 channels
             'input_sample_rate': 0.1  # 10Hz sampling
         }
         

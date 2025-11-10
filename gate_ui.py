@@ -561,9 +561,16 @@ class GateUI:
             input_frame.pack(fill='x', padx=10, pady=5)
             
             # Input name header with channel
+            # Determine which ADC and physical channel (channels 0-3 = ADC1, channels 4-7 = ADC2)
+            channel_num = input_cfg['channel']
+            if channel_num < 4:
+                adc_label = f"ADC1 CH{channel_num}"
+            else:
+                adc_label = f"ADC2 CH{channel_num - 4}"
+
             name_label = tk.Label(
                 input_frame,
-                text=f"{input_name} (ADC CH{input_cfg['channel']})",
+                text=f"{input_name} ({adc_label})",
                 font=('Arial', 14, 'bold'),
                 bg='#222222',
                 fg='cyan',

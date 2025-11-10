@@ -44,66 +44,99 @@ def check_adc_hardware():
 class InputManager:
     def __init__(self, shared_dict, config):
         """Initialize input manager
-        
+
         Args:
             shared_dict: Multiprocessing shared dictionary
             config: Configuration dict with:
-                - num_inputs: Number of analog inputs (4 for ADS1115)
+                - num_inputs: Number of analog inputs (8 for dual ADS1115)
                 - input_sample_rate: Sampling rate in seconds (default 0.1 = 10Hz)
         """
         self.shared = shared_dict
         self.config = config
-        self.num_inputs = config.get('num_inputs', 4)
+        self.num_inputs = config.get('num_inputs', 8)
         self.sample_rate = config.get('input_sample_rate', 0.1)
-        
-        # Initialize ADC if available
-        self.adc = None
+
+        # Initialize ADCs if available
+        self.adc1 = None  # First ADC at 0x48 (ADDR->GND, default)
+        self.adc2 = None  # Second ADC at 0x49 (ADDR->VDD)
         self.analog_inputs = []
-        
+
         # Check if ADC hardware is actually available and working
         self.adc_available = check_adc_hardware()
-        
+
         # ONLY try to initialize I2C/ADC if hardware check passed
         if self.adc_available:
             try:
                 from adafruit_ads1x15.ads1x15 import Pin
-                
+
                 i2c = busio.I2C(board.SCL, board.SDA)
-                self.adc = ADS.ADS1115(i2c)
-                
-                # Create analog input objects for all 4 channels
-                # Using Pin.A0, Pin.A1, Pin.A2, Pin.A3 (not P0, P1, P2, P3)
-                self.analog_inputs = [
-                    AnalogIn(self.adc, Pin.A0),
-                    AnalogIn(self.adc, Pin.A1),
-                    AnalogIn(self.adc, Pin.A2),
-                    AnalogIn(self.adc, Pin.A3)
-                ]
-                
-                print("Input Manager: ADC initialized successfully")
+
+                # Initialize first ADC at default address 0x48 (ADDR->GND)
+                try:
+                    self.adc1 = ADS.ADS1115(i2c, address=0x48)
+                    print("Input Manager: ADC1 initialized at address 0x48 (ADDR->GND)")
+                except Exception as e:
+                    print(f"Input Manager: Failed to initialize ADC1 at 0x48: {e}")
+
+                # Initialize second ADC at address 0x49 (ADDR->VDD)
+                try:
+                    self.adc2 = ADS.ADS1115(i2c, address=0x49)
+                    print("Input Manager: ADC2 initialized at address 0x49 (ADDR->VDD)")
+                except Exception as e:
+                    print(f"Input Manager: Failed to initialize ADC2 at 0x49: {e}")
+
+                # Create analog input objects for all 8 channels
+                # Channels 0-3: ADC1 (address 0x48)
+                # Channels 4-7: ADC2 (address 0x49)
+                if self.adc1:
+                    self.analog_inputs.extend([
+                        AnalogIn(self.adc1, Pin.A0),  # Channel 0
+                        AnalogIn(self.adc1, Pin.A1),  # Channel 1
+                        AnalogIn(self.adc1, Pin.A2),  # Channel 2
+                        AnalogIn(self.adc1, Pin.A3)   # Channel 3
+                    ])
+                else:
+                    # Add None placeholders if ADC1 failed
+                    self.analog_inputs.extend([None, None, None, None])
+
+                if self.adc2:
+                    self.analog_inputs.extend([
+                        AnalogIn(self.adc2, Pin.A0),  # Channel 4
+                        AnalogIn(self.adc2, Pin.A1),  # Channel 5
+                        AnalogIn(self.adc2, Pin.A2),  # Channel 6
+                        AnalogIn(self.adc2, Pin.A3)   # Channel 7
+                    ])
+                else:
+                    # Add None placeholders if ADC2 failed
+                    self.analog_inputs.extend([None, None, None, None])
+
+                adc_count = (1 if self.adc1 else 0) + (1 if self.adc2 else 0)
+                print(f"Input Manager: {adc_count} ADC(s) initialized successfully ({len([a for a in self.analog_inputs if a is not None])} channels available)")
+
             except Exception as e:
-                print(f"Input Manager: Failed to initialize ADC: {e}")
+                print(f"Input Manager: Failed to initialize ADC system: {e}")
                 print("Running in simulation mode")
                 self.adc_available = False
         else:
             print("Input Manager: ADC hardware not available, running in simulation mode")
-        
+
         # Load input configuration
         self.input_config = self._load_input_config()
-        
+
         # Initialize shared memory for input states
         self._init_shared_inputs()
-        
+
         # Resistance history for trending (used for 8.2k detection over time)
         # Store last 10 samples per input for stability checks
         self.resistance_history = {}
         for input_name in self.input_config.keys():
             self.resistance_history[input_name] = deque(maxlen=10)
-        
+
         print(f"Input Manager initialized:")
-        print(f"  Inputs: {self.num_inputs}")
+        print(f"  Inputs configured: {len(self.input_config)}")
         print(f"  Sample rate: {self.sample_rate}s ({1.0/self.sample_rate:.1f}Hz)")
         print(f"  ADC available: {self.adc_available}")
+        print(f"  Channels available: {len([a for a in self.analog_inputs if a is not None])}")
     
     def _load_input_config(self):
         """Load input configuration from JSON file"""
@@ -164,13 +197,17 @@ class InputManager:
     def _sample_all_inputs(self):
         """Sample all configured inputs and update shared memory"""
         now = time.time()
-        
+
         for input_name, input_cfg in self.input_config.items():
+            # Skip disabled inputs
+            if not input_cfg.get('enabled', True):
+                continue
+
             channel = input_cfg['channel']
             input_type = input_cfg.get('type', 'NO')  # NO or NC or 8K2
             
             # Read ADC value
-            if self.adc_available and channel < len(self.analog_inputs):
+            if self.adc_available and channel < len(self.analog_inputs) and self.analog_inputs[channel] is not None:
                 voltage = self.analog_inputs[channel].voltage
                 value = self.analog_inputs[channel].value
             else:

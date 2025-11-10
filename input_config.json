@@ -27,6 +27,34 @@
       "type": "NO",
       "function": "cmd_open",
       "description": "Spare input"
+    },
+    "IN5": {
+      "channel": 4,
+      "enabled": false,
+      "type": "NO",
+      "function": null,
+      "description": "ADC2 Channel 0 - Unassigned"
+    },
+    "IN6": {
+      "channel": 5,
+      "enabled": false,
+      "type": "NO",
+      "function": null,
+      "description": "ADC2 Channel 1 - Unassigned"
+    },
+    "IN7": {
+      "channel": 6,
+      "enabled": false,
+      "type": "NO",
+      "function": null,
+      "description": "ADC2 Channel 2 - Unassigned"
+    },
+    "IN8": {
+      "channel": 7,
+      "enabled": false,
+      "type": "NO",
+      "function": null,
+      "description": "ADC2 Channel 3 - Unassigned"
     }
   }
 }
