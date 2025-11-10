@@ -49,7 +49,10 @@ class GateController:
         self.learning_mode_enabled = config.get('learning_mode_enabled', False)
         self.opening_slowdown_percent = config.get('opening_slowdown_percent', 2.0)
         self.closing_slowdown_percent = config.get('closing_slowdown_percent', 10.0)
+        self.slowdown_distance = config.get('slowdown_distance', 2.0)  # Seconds for gradual slowdown
         self.learning_speed = config.get('learning_speed', 0.3)
+        self.open_speed = config.get('open_speed', 1.0)  # User-configurable open speed (0.1-1.0)
+        self.close_speed = config.get('close_speed', 1.0)  # User-configurable close speed (0.1-1.0)
         # Engineer mode is runtime-only, never persisted - always starts disabled
         self.engineer_mode_enabled = False
 
@@ -76,7 +79,10 @@ class GateController:
             'limit_switch_creep_speed': self.limit_switch_creep_speed,
             'opening_slowdown_percent': self.opening_slowdown_percent,
             'closing_slowdown_percent': self.closing_slowdown_percent,
-            'learning_speed': self.learning_speed
+            'slowdown_distance': self.slowdown_distance,
+            'learning_speed': self.learning_speed,
+            'open_speed': self.open_speed,
+            'close_speed': self.close_speed
         }
         
         # Start motor manager process
@@ -157,7 +163,10 @@ class GateController:
             self.learning_mode_enabled = config.get('learning_mode_enabled', False)
             self.opening_slowdown_percent = config.get('opening_slowdown_percent', 2.0)
             self.closing_slowdown_percent = config.get('closing_slowdown_percent', 10.0)
+            self.slowdown_distance = config.get('slowdown_distance', 2.0)
             self.learning_speed = config.get('learning_speed', 0.3)
+            self.open_speed = config.get('open_speed', 1.0)
+            self.close_speed = config.get('close_speed', 1.0)
             # Engineer mode is runtime-only, don't change it during reload
             # self.engineer_mode_enabled - keep current runtime value
 
@@ -176,7 +185,10 @@ class GateController:
             self.shared['config_limit_switch_creep_speed'] = self.limit_switch_creep_speed
             self.shared['config_opening_slowdown_percent'] = self.opening_slowdown_percent
             self.shared['config_closing_slowdown_percent'] = self.closing_slowdown_percent
+            self.shared['config_slowdown_distance'] = self.slowdown_distance
             self.shared['config_learning_speed'] = self.learning_speed
+            self.shared['config_open_speed'] = self.open_speed
+            self.shared['config_close_speed'] = self.close_speed
             self.shared['config_reload_flag'] = True  # Signal motor manager to reload
             
             print(f"  Config reloaded successfully")

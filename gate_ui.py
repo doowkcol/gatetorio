@@ -1251,6 +1251,42 @@ class GateUI:
                                           fg='white', highlightthickness=0)
         learning_speed_slider.pack(side='right', expand=True, fill='x', padx=5)
 
+        # Open Speed
+        open_speed_frame = tk.Frame(slowdown_frame, bg='#222222')
+        open_speed_frame.pack(fill='x', padx=10, pady=5)
+
+        tk.Label(open_speed_frame, text="Open Speed:", font=('Arial', 10),
+                 bg='#222222', fg='white').pack(side='left', padx=5)
+
+        self.open_speed_var = tk.DoubleVar(value=1.0)
+        self.open_speed_label = tk.Label(open_speed_frame, text="100%", font=('Arial', 10, 'bold'),
+                                          bg='#222222', fg='lime', width=8)
+        self.open_speed_label.pack(side='right', padx=5)
+
+        open_speed_slider = tk.Scale(open_speed_frame, from_=0.1, to=1.0, resolution=0.05,
+                                      variable=self.open_speed_var, orient='horizontal',
+                                      command=self.update_open_speed_label, bg='#222222',
+                                      fg='white', highlightthickness=0)
+        open_speed_slider.pack(side='right', expand=True, fill='x', padx=5)
+
+        # Close Speed
+        close_speed_frame = tk.Frame(slowdown_frame, bg='#222222')
+        close_speed_frame.pack(fill='x', padx=10, pady=5)
+
+        tk.Label(close_speed_frame, text="Close Speed:", font=('Arial', 10),
+                 bg='#222222', fg='white').pack(side='left', padx=5)
+
+        self.close_speed_var = tk.DoubleVar(value=1.0)
+        self.close_speed_label = tk.Label(close_speed_frame, text="100%", font=('Arial', 10, 'bold'),
+                                           bg='#222222', fg='orange', width=8)
+        self.close_speed_label.pack(side='right', padx=5)
+
+        close_speed_slider = tk.Scale(close_speed_frame, from_=0.1, to=1.0, resolution=0.05,
+                                       variable=self.close_speed_var, orient='horizontal',
+                                       command=self.update_close_speed_label, bg='#222222',
+                                       fg='white', highlightthickness=0)
+        close_speed_slider.pack(side='right', expand=True, fill='x', padx=5)
+
         # Learned Times Display
         times_frame = tk.Frame(scrollable_frame, bg='#001133', relief='ridge', bd=2)
         times_frame.pack(fill='x', padx=10, pady=5)
@@ -1834,11 +1870,15 @@ class GateUI:
             self.open_slowdown_var.set(config.get('opening_slowdown_percent', 2.0))
             self.close_slowdown_var.set(config.get('closing_slowdown_percent', 10.0))
             self.learning_speed_var.set(config.get('learning_speed', 0.3))
+            self.open_speed_var.set(config.get('open_speed', 1.0))
+            self.close_speed_var.set(config.get('close_speed', 1.0))
 
             # Update labels
             self.update_open_slowdown_label(None)
             self.update_close_slowdown_label(None)
             self.update_learning_speed_label(None)
+            self.update_open_speed_label(None)
+            self.update_close_speed_label(None)
 
             # Update engineer mode state
             if self.engineer_mode_var.get():
@@ -1913,6 +1953,16 @@ class GateUI:
         speed_percent = self.learning_speed_var.get() * 100
         self.learning_speed_label.config(text=f"{speed_percent:.0f}%")
 
+    def update_open_speed_label(self, value):
+        """Update open speed label"""
+        speed_percent = self.open_speed_var.get() * 100
+        self.open_speed_label.config(text=f"{speed_percent:.0f}%")
+
+    def update_close_speed_label(self, value):
+        """Update close speed label"""
+        speed_percent = self.close_speed_var.get() * 100
+        self.close_speed_label.config(text=f"{speed_percent:.0f}%")
+
     def save_learning_config(self):
         """Save learning configuration to file"""
         config_file = '/home/doowkcol/Gatetorio_Code/gate_config.json'
@@ -1929,6 +1979,8 @@ class GateUI:
             config['opening_slowdown_percent'] = self.open_slowdown_var.get()
             config['closing_slowdown_percent'] = self.close_slowdown_var.get()
             config['learning_speed'] = self.learning_speed_var.get()
+            config['open_speed'] = self.open_speed_var.get()
+            config['close_speed'] = self.close_speed_var.get()
 
             with open(config_file, 'w') as f:
                 json.dump(config, f, indent=2)

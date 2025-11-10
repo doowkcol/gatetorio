@@ -32,7 +32,10 @@ class MotorManager:
         self.limit_switch_creep_speed = config.get('limit_switch_creep_speed', 0.2)
         self.opening_slowdown_percent = config.get('opening_slowdown_percent', 2.0)
         self.closing_slowdown_percent = config.get('closing_slowdown_percent', 10.0)
+        self.slowdown_distance = config.get('slowdown_distance', 2.0)  # Seconds for gradual slowdown
         self.learning_speed = config.get('learning_speed', 0.3)
+        self.open_speed = config.get('open_speed', 1.0)  # User-configurable open speed (0.1-1.0)
+        self.close_speed = config.get('close_speed', 1.0)  # User-configurable close speed (0.1-1.0)
 
         # Use learned run times if available, otherwise use standard run_time
         self.motor1_run_time = self.motor1_learned_run_time if self.motor1_learned_run_time else self.run_time
@@ -81,12 +84,15 @@ class MotorManager:
         self.limit_switch_creep_speed = self.shared.get('config_limit_switch_creep_speed', self.limit_switch_creep_speed)
         self.opening_slowdown_percent = self.shared.get('config_opening_slowdown_percent', self.opening_slowdown_percent)
         self.closing_slowdown_percent = self.shared.get('config_closing_slowdown_percent', self.closing_slowdown_percent)
+        self.slowdown_distance = self.shared.get('config_slowdown_distance', self.slowdown_distance)
         self.learning_speed = self.shared.get('config_learning_speed', self.learning_speed)
+        self.open_speed = self.shared.get('config_open_speed', self.open_speed)
+        self.close_speed = self.shared.get('config_close_speed', self.close_speed)
 
         # Update individual motor run times
         self.motor1_run_time = self.motor1_learned_run_time if self.motor1_learned_run_time else self.run_time
         self.motor2_run_time = self.motor2_learned_run_time if self.motor2_learned_run_time else self.run_time
-        print(f"Motor Manager: Config reloaded - run_time={self.run_time}s, ramp_time={self.ramp_time}s, limit_switches={self.limit_switches_enabled}")
+        print(f"Motor Manager: Config reloaded - run_time={self.run_time}s, open_speed={self.open_speed}, close_speed={self.close_speed}")
     
     def run(self):
         """Main motor control loop - runs at 20Hz"""
@@ -989,20 +995,27 @@ class MotorManager:
             # Apply learning speed if in learning mode
             if self.shared.get('learning_mode_enabled', False):
                 speed = min(speed, self.learning_speed)
-            # Apply creep speed if using limit switches and near expected end of travel
-            elif self.motor1_use_limit_switches and self.motor1_run_time:
+            else:
+                # Apply user-configurable speed and gradual slowdown for limit switches
                 if self.shared['movement_command'] == 'OPEN':
-                    # Check if we've reached slowdown threshold (remaining % of travel time)
-                    remaining_percent = ((self.motor1_run_time - self.shared['m1_position']) / self.motor1_run_time) * 100
-                    if remaining_percent <= self.opening_slowdown_percent:
-                        # Within slowdown threshold - switch to creep speed
-                        speed = min(speed, self.limit_switch_creep_speed)
+                    # Apply user's open speed
+                    max_speed = self.open_speed
+                    speed = speed * max_speed
+
+                    # Apply gradual slowdown when approaching open limit
+                    if self.motor1_use_limit_switches and self.motor1_run_time:
+                        remaining_distance = self.motor1_run_time - self.shared['m1_position']
+                        speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True)
+
                 elif self.shared['movement_command'] == 'CLOSE':
-                    # Check if we've reached slowdown threshold (remaining % of travel time)
-                    remaining_percent = (self.shared['m1_position'] / self.motor1_run_time) * 100
-                    if remaining_percent <= self.closing_slowdown_percent:
-                        # Within slowdown threshold - switch to creep speed
-                        speed = min(speed, self.limit_switch_creep_speed)
+                    # Apply user's close speed
+                    max_speed = self.close_speed
+                    speed = speed * max_speed
+
+                    # Apply gradual slowdown when approaching close limit
+                    if self.motor1_use_limit_switches and self.motor1_run_time:
+                        remaining_distance = self.shared['m1_position']
+                        speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True)
 
             self.shared['m1_speed'] = speed
 
@@ -1102,20 +1115,27 @@ class MotorManager:
             # Apply learning speed if in learning mode
             if self.shared.get('learning_mode_enabled', False):
                 speed = min(speed, self.learning_speed)
-            # Apply creep speed if using limit switches and near expected end of travel
-            elif self.motor2_use_limit_switches and self.motor2_run_time:
+            else:
+                # Apply user-configurable speed and gradual slowdown for limit switches
                 if self.shared['movement_command'] == 'OPEN':
-                    # Check if we've reached slowdown threshold (remaining % of travel time)
-                    remaining_percent = ((self.motor2_run_time - self.shared['m2_position']) / self.motor2_run_time) * 100
-                    if remaining_percent <= self.opening_slowdown_percent:
-                        # Within slowdown threshold - switch to creep speed
-                        speed = min(speed, self.limit_switch_creep_speed)
+                    # Apply user's open speed
+                    max_speed = self.open_speed
+                    speed = speed * max_speed
+
+                    # Apply gradual slowdown when approaching open limit
+                    if self.motor2_use_limit_switches and self.motor2_run_time:
+                        remaining_distance = self.motor2_run_time - self.shared['m2_position']
+                        speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True)
+
                 elif self.shared['movement_command'] == 'CLOSE':
-                    # Check if we've reached slowdown threshold (remaining % of travel time)
-                    remaining_percent = (self.shared['m2_position'] / self.motor2_run_time) * 100
-                    if remaining_percent <= self.closing_slowdown_percent:
-                        # Within slowdown threshold - switch to creep speed
-                        speed = min(speed, self.limit_switch_creep_speed)
+                    # Apply user's close speed
+                    max_speed = self.close_speed
+                    speed = speed * max_speed
+
+                    # Apply gradual slowdown when approaching close limit
+                    if self.motor2_use_limit_switches and self.motor2_run_time:
+                        remaining_distance = self.shared['m2_position']
+                        speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True)
 
             self.shared['m2_speed'] = speed
 
@@ -1169,13 +1189,48 @@ class MotorManager:
         if self.shared['resume_time'] and (time() - self.shared['resume_time']) < 0.5:
             time_since_resume = time() - self.shared['resume_time']
             return max(0.0, min(1.0, time_since_resume / 0.5))
-        
+
         if elapsed < ramp_time:
             return min(1.0, elapsed / ramp_time)
         elif remaining < ramp_time:
             return max(0.0, min(1.0, remaining / ramp_time))
         else:
             return 1.0
+
+    def _apply_gradual_slowdown(self, speed, remaining_distance, max_speed, use_limit_switches):
+        """
+        Apply gradual slowdown when approaching limit switches.
+
+        Instead of abrupt switch to creep speed, this creates a smooth deceleration
+        zone that transitions from max_speed down to creep_speed over slowdown_distance.
+
+        Args:
+            speed: Current calculated speed from ramp
+            remaining_distance: Distance to target in seconds
+            max_speed: Maximum speed for this movement (open_speed or close_speed)
+            use_limit_switches: Whether limit switches are enabled for this motor
+
+        Returns:
+            Adjusted speed with gradual slowdown applied
+        """
+        if not use_limit_switches:
+            # No limit switches, no special slowdown
+            return speed
+
+        if remaining_distance >= self.slowdown_distance:
+            # Outside slowdown zone, use normal speed
+            return speed
+
+        # Inside slowdown zone - gradual deceleration from max_speed to creep_speed
+        # Formula: speed = creep + (max_speed - creep) * (remaining / slowdown_distance)
+        # At remaining = slowdown_distance: speed = max_speed
+        # At remaining = 0: speed = creep_speed
+        speed_range = max_speed - self.limit_switch_creep_speed
+        target_speed = self.limit_switch_creep_speed + (speed_range * (remaining_distance / self.slowdown_distance))
+
+        # Use minimum of ramp speed and slowdown target
+        # This ensures we don't speed up during slowdown
+        return min(speed, target_speed)
 
 
 def motor_manager_process(shared_dict, config):

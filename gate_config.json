@@ -20,6 +20,9 @@
   "learning_mode_enabled": false,
   "opening_slowdown_percent": 2.0,
   "closing_slowdown_percent": 10.0,
+  "slowdown_distance": 2.0,
   "learning_speed": 0.3,
+  "open_speed": 1.0,
+  "close_speed": 1.0,
   "engineer_mode_enabled": false
 }
