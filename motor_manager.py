@@ -991,9 +991,12 @@ class MotorManager:
 
             self.shared['m1_speed'] = speed
 
-            # Check if we're in learning mode with limit switches - if so, ignore position limits
-            learning_with_limits = (self.shared.get('learning_mode_enabled', False) and
-                                   self.motor1_use_limit_switches)
+            # Check if we should ignore position limits and keep running until limit switch
+            # This applies in two cases:
+            # 1. Learning mode with limit switches enabled
+            # 2. Normal mode with limit switches enabled (must creep to find limits!)
+            ignore_position_limits = (self.shared.get('learning_mode_enabled', False) and
+                                     self.motor1_use_limit_switches) or self.motor1_use_limit_switches
 
             if self.shared['state'] in ['OPENING', 'OPENING_TO_PARTIAL_1', 'OPENING_TO_PARTIAL_2']:
                 target_position = self.run_time
@@ -1002,15 +1005,27 @@ class MotorManager:
                 elif self.shared['state'] == 'OPENING_TO_PARTIAL_2':
                     target_position = self.partial_2_position
 
-                # In learning mode with limit switches, keep running regardless of position
-                if learning_with_limits or self.shared['m1_position'] < target_position:
-                    self.motor1.forward(speed)
+                # When limit switches enabled, keep running until limit triggers (with safety margin)
+                # Safety margin prevents infinite running if limit switch fails
+                safety_margin = 1.2  # Allow 20% overshoot before emergency stop
+                if ignore_position_limits:
+                    # Keep running until limit switch OR position exceeds safety margin
+                    if not self.shared.get('open_limit_m1_active', False) and self.shared['m1_position'] < target_position * safety_margin:
+                        self.motor1.forward(speed)
+                    else:
+                        self.motor1.stop()
+                        if not self.shared.get('open_limit_m1_active', False):
+                            print(f"[MOTOR MGR] M1 EMERGENCY STOP: Exceeded safety margin without hitting limit!")
                 else:
-                    self.motor1.stop()
-                    # Snap to exact target when stopped
-                    if self.shared['m1_position'] != target_position:
-                        print(f"[MOTOR MGR] Snapping M1: {self.shared['m1_position']:.10f} -> {target_position}")
-                    self.shared['m1_position'] = target_position
+                    # Normal position-based stopping
+                    if self.shared['m1_position'] < target_position:
+                        self.motor1.forward(speed)
+                    else:
+                        self.motor1.stop()
+                        # Snap to exact target when stopped
+                        if self.shared['m1_position'] != target_position:
+                            print(f"[MOTOR MGR] Snapping M1: {self.shared['m1_position']:.10f} -> {target_position}")
+                        self.shared['m1_position'] = target_position
             else:
                 target_position = 0
                 if self.shared['state'] == 'CLOSING_TO_PARTIAL_1':
@@ -1022,13 +1037,24 @@ class MotorManager:
                 elif self.shared['partial_1_active'] and self.shared['returning_from_full_open']:
                     target_position = self.partial_1_position
 
-                # In learning mode with limit switches, keep running regardless of position
-                if learning_with_limits or self.shared['m1_position'] > target_position:
-                    self.motor1.backward(speed)
+                # When limit switches enabled, keep running until limit triggers (with safety margin)
+                safety_margin_low = -0.2  # Allow some negative overshoot for closing (position can go slightly negative)
+                if ignore_position_limits:
+                    # Keep running until limit switch OR position goes too negative
+                    if not self.shared.get('close_limit_m1_active', False) and self.shared['m1_position'] > target_position + safety_margin_low:
+                        self.motor1.backward(speed)
+                    else:
+                        self.motor1.stop()
+                        if not self.shared.get('close_limit_m1_active', False):
+                            print(f"[MOTOR MGR] M1 EMERGENCY STOP: Exceeded safety margin without hitting limit!")
                 else:
-                    self.motor1.stop()
-                    # Snap to exact target when stopped
-                    self.shared['m1_position'] = target_position
+                    # Normal position-based stopping
+                    if self.shared['m1_position'] > target_position:
+                        self.motor1.backward(speed)
+                    else:
+                        self.motor1.stop()
+                        # Snap to exact target when stopped
+                        self.shared['m1_position'] = target_position
         else:
             # No move command - ensure motor is stopped
             self.motor1.stop()
@@ -1063,28 +1089,50 @@ class MotorManager:
 
             self.shared['m2_speed'] = speed
 
-            # Check if we're in learning mode with limit switches - if so, ignore position limits
-            learning_with_limits_m2 = (self.shared.get('learning_mode_enabled', False) and
-                                       self.motor2_use_limit_switches)
+            # Check if we should ignore position limits and keep running until limit switch
+            ignore_position_limits_m2 = (self.shared.get('learning_mode_enabled', False) and
+                                        self.motor2_use_limit_switches) or self.motor2_use_limit_switches
 
             if self.shared['movement_command'] == 'OPEN':
-                # In learning mode with limit switches, keep running regardless of position
-                if learning_with_limits_m2 or self.shared['m2_position'] < self.run_time:
-                    self.motor2.forward(speed)
+                # When limit switches enabled, keep running until limit triggers (with safety margin)
+                safety_margin = 1.2  # Allow 20% overshoot before emergency stop
+                if ignore_position_limits_m2:
+                    # Keep running until limit switch OR position exceeds safety margin
+                    if not self.shared.get('open_limit_m2_active', False) and self.shared['m2_position'] < self.run_time * safety_margin:
+                        self.motor2.forward(speed)
+                    else:
+                        self.motor2.stop()
+                        if not self.shared.get('open_limit_m2_active', False):
+                            print(f"[MOTOR MGR] M2 EMERGENCY STOP: Exceeded safety margin without hitting limit!")
                 else:
-                    self.motor2.stop()
-                    # Snap to exact target when stopped
-                    if self.shared['m2_position'] != self.run_time:
-                        print(f"[MOTOR MGR] Snapping M2: {self.shared['m2_position']:.10f} -> {self.run_time}")
-                    self.shared['m2_position'] = self.run_time
+                    # Normal position-based stopping
+                    if self.shared['m2_position'] < self.run_time:
+                        self.motor2.forward(speed)
+                    else:
+                        self.motor2.stop()
+                        # Snap to exact target when stopped
+                        if self.shared['m2_position'] != self.run_time:
+                            print(f"[MOTOR MGR] Snapping M2: {self.shared['m2_position']:.10f} -> {self.run_time}")
+                        self.shared['m2_position'] = self.run_time
             else:
-                # In learning mode with limit switches, keep running regardless of position
-                if learning_with_limits_m2 or self.shared['m2_position'] > 0:
-                    self.motor2.backward(speed)
+                # When limit switches enabled, keep running until limit triggers
+                safety_margin_low = -0.2  # Allow some negative overshoot for closing
+                if ignore_position_limits_m2:
+                    # Keep running until limit switch OR position goes too negative
+                    if not self.shared.get('close_limit_m2_active', False) and self.shared['m2_position'] > safety_margin_low:
+                        self.motor2.backward(speed)
+                    else:
+                        self.motor2.stop()
+                        if not self.shared.get('close_limit_m2_active', False):
+                            print(f"[MOTOR MGR] M2 EMERGENCY STOP: Exceeded safety margin without hitting limit!")
                 else:
-                    self.motor2.stop()
-                    # Snap to exact target when stopped
-                    self.shared['m2_position'] = 0
+                    # Normal position-based stopping
+                    if self.shared['m2_position'] > 0:
+                        self.motor2.backward(speed)
+                    else:
+                        self.motor2.stop()
+                        # Snap to exact target when stopped
+                        self.shared['m2_position'] = 0
         else:
             # No move command - ensure motor is stopped
             self.motor2.stop()

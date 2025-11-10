@@ -359,9 +359,25 @@ class GateController:
                     self._complete_partial_1()
                 elif self.shared['state'] == 'OPENING_TO_PARTIAL_2' and self.shared['m1_position'] >= (self.partial_2_position - POSITION_TOLERANCE):
                     self._complete_partial_2()
-                elif self.shared['m1_position'] >= (self.run_time - POSITION_TOLERANCE) and self.shared['m2_position'] >= (self.run_time - POSITION_TOLERANCE):
-                    print(f"[COMPLETION] Calling _complete_open() - M1={self.shared['m1_position']:.2f}, M2={self.shared['m2_position']:.2f}")
-                    self._complete_open()
+                else:
+                    # Check for full open - use limit switches if enabled, otherwise use position
+                    open_complete = False
+                    if self.limit_switches_enabled and (self.motor1_use_limit_switches or self.motor2_use_limit_switches):
+                        # With limit switches: BOTH must trigger to be fully open
+                        m1_at_limit = self.shared.get('open_limit_m1_active', False) if self.motor1_use_limit_switches else self.shared['m1_position'] >= (self.run_time - POSITION_TOLERANCE)
+                        m2_at_limit = self.shared.get('open_limit_m2_active', False) if self.motor2_use_limit_switches else self.shared['m2_position'] >= (self.run_time - POSITION_TOLERANCE)
+                        open_complete = m1_at_limit and m2_at_limit
+                        if open_complete:
+                            print(f"[COMPLETION] Limit switches triggered - M1={m1_at_limit}, M2={m2_at_limit}")
+                    else:
+                        # Without limit switches: use position
+                        open_complete = (self.shared['m1_position'] >= (self.run_time - POSITION_TOLERANCE) and
+                                       self.shared['m2_position'] >= (self.run_time - POSITION_TOLERANCE))
+                        if open_complete:
+                            print(f"[COMPLETION] Position reached - M1={self.shared['m1_position']:.2f}, M2={self.shared['m2_position']:.2f}")
+
+                    if open_complete:
+                        self._complete_open()
             elif self.shared['movement_command'] == 'CLOSE':
                 # Debug: Print position check for closing
                 if self.shared['state'] == 'CLOSING':
@@ -384,9 +400,25 @@ class GateController:
                 elif self.shared['partial_1_active'] and self.shared['m1_position'] <= (self.partial_1_position + POSITION_TOLERANCE) and self.shared['returning_from_full_open']:
                     if self.shared['m2_position'] <= POSITION_TOLERANCE:
                         self._complete_partial_1()
-                elif self.shared['m1_position'] <= POSITION_TOLERANCE and self.shared['m2_position'] <= POSITION_TOLERANCE:
-                    print(f"[COMPLETION] Calling _complete_close() - M1={self.shared['m1_position']:.2f}, M2={self.shared['m2_position']:.2f}")
-                    self._complete_close()
+                else:
+                    # Check for full close - use limit switches if enabled, otherwise use position
+                    close_complete = False
+                    if self.limit_switches_enabled and (self.motor1_use_limit_switches or self.motor2_use_limit_switches):
+                        # With limit switches: BOTH must trigger to be fully closed
+                        m1_at_limit = self.shared.get('close_limit_m1_active', False) if self.motor1_use_limit_switches else self.shared['m1_position'] <= POSITION_TOLERANCE
+                        m2_at_limit = self.shared.get('close_limit_m2_active', False) if self.motor2_use_limit_switches else self.shared['m2_position'] <= POSITION_TOLERANCE
+                        close_complete = m1_at_limit and m2_at_limit
+                        if close_complete:
+                            print(f"[COMPLETION] Limit switches triggered - M1={m1_at_limit}, M2={m2_at_limit}")
+                    else:
+                        # Without limit switches: use position
+                        close_complete = (self.shared['m1_position'] <= POSITION_TOLERANCE and
+                                        self.shared['m2_position'] <= POSITION_TOLERANCE)
+                        if close_complete:
+                            print(f"[COMPLETION] Position reached - M1={self.shared['m1_position']:.2f}, M2={self.shared['m2_position']:.2f}")
+
+                    if close_complete:
+                        self._complete_close()
 
             # STEP 5: Auto-close countdown
             if self.shared['auto_close_active'] and (now - last_auto_close_update) >= 1.0:
