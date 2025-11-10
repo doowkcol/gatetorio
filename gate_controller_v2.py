@@ -1164,6 +1164,16 @@ class GateController:
         """Handle safety edge logic - highest priority"""
         # Check if currently doing safety reversal
         if self.shared['safety_reversing']:
+            # CRITICAL SAFETY: If reversing from opening and closing photocell becomes active,
+            # ABORT reversal immediately to prevent closing onto obstruction in beam
+            if self.shared['state'] == 'REVERSING_FROM_OPEN' and self.shared['photocell_closing_active']:
+                print("[SAFETY ABORT] Closing photocell active during reversal from opening - ABORTING reversal, immediate STOP")
+                self.shared['safety_reversing'] = False
+                self.shared['execute_safety_reverse'] = False
+                self.shared['safety_stop_opening_reversed'] = True
+                self.cmd_stop()
+                return
+
             elapsed = now - self.shared['safety_reverse_start']
             if elapsed >= self.safety_reverse_time:
                 # Reversal complete - STOP and mark as reversed
