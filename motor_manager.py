@@ -789,11 +789,12 @@ class MotorManager:
             return False
         
         if self.shared['deadman_open_active']:
-            if self.shared['m1_position'] < self.run_time or self.shared['m2_position'] < self.run_time:
+            # Use each motor's actual run time (learned if available, else configured)
+            if self.shared['m1_position'] < self.motor1_run_time or self.shared['m2_position'] < self.motor2_run_time:
                 self.motor1.forward(self.deadman_speed)
                 self.motor2.forward(self.deadman_speed)
-                self.shared['m1_position'] = min(self.run_time, self.shared['m1_position'] + 0.05 * self.deadman_speed)
-                self.shared['m2_position'] = min(self.run_time, self.shared['m2_position'] + 0.05 * self.deadman_speed)
+                self.shared['m1_position'] = min(self.motor1_run_time, self.shared['m1_position'] + 0.05 * self.deadman_speed)
+                self.shared['m2_position'] = min(self.motor2_run_time, self.shared['m2_position'] + 0.05 * self.deadman_speed)
             else:
                 self.motor1.stop()
                 self.motor2.stop()
@@ -829,7 +830,8 @@ class MotorManager:
                 elif self.shared['state'] == 'OPENING_TO_PARTIAL_2':
                     target_position = self.partial_2_position
                 else:
-                    target_position = self.run_time
+                    # Use M1's actual run time (learned if available, else configured)
+                    target_position = self.motor1_run_time
                 
                 # Only update if not yet at target
                 if self.shared['m1_position'] < target_position:
@@ -847,18 +849,18 @@ class MotorManager:
             
             # Motor 2 position update
             if self.shared['m2_move_start']:
-                # Only update if not yet at target
-                if self.shared['m2_position'] < self.run_time:
+                # Only update if not yet at target (use M2's actual run time)
+                if self.shared['m2_position'] < self.motor2_run_time:
                     elapsed = now - self.shared['m2_move_start']
-                    remaining = self.run_time - self.shared['m2_position']
+                    remaining = self.motor2_run_time - self.shared['m2_position']
                     remaining = max(0, remaining)
-                    
+
                     # Calculate current speed
                     speed = self._calculate_ramp_speed(elapsed, remaining, ramp_time)
                     speed = max(0.0, min(1.0, speed))
-                    
+
                     # Update position: position += (elapsed_time * current_speed)
-                    self.shared['m2_position'] = min(self.run_time, self.shared['m2_position'] + (0.05 * speed))
+                    self.shared['m2_position'] = min(self.motor2_run_time, self.shared['m2_position'] + (0.05 * speed))
             elif (self.shared['m1_move_start'] and 
                   (now - self.shared['movement_start_time']) >= self.motor1_open_delay and
                   self.shared['state'] not in ['OPENING_TO_PARTIAL_1', 'OPENING_TO_PARTIAL_2']):
@@ -1012,7 +1014,8 @@ class MotorManager:
                                      self.motor1_use_limit_switches) or self.motor1_use_limit_switches
 
             if self.shared['state'] in ['OPENING', 'OPENING_TO_PARTIAL_1', 'OPENING_TO_PARTIAL_2']:
-                target_position = self.run_time
+                # Use M1's actual run time (learned if available, else configured)
+                target_position = self.motor1_run_time
                 if self.shared['state'] == 'OPENING_TO_PARTIAL_1':
                     target_position = self.partial_1_position
                 elif self.shared['state'] == 'OPENING_TO_PARTIAL_2':
@@ -1121,22 +1124,22 @@ class MotorManager:
                 safety_margin = 1.2  # Allow 20% overshoot before emergency stop
                 if ignore_position_limits_m2:
                     # Keep running until limit switch OR position exceeds safety margin
-                    if not self.shared.get('open_limit_m2_active', False) and self.shared['m2_position'] < self.run_time * safety_margin:
+                    if not self.shared.get('open_limit_m2_active', False) and self.shared['m2_position'] < self.motor2_run_time * safety_margin:
                         self.motor2.forward(speed)
                     else:
                         self.motor2.stop()
                         if not self.shared.get('open_limit_m2_active', False):
                             print(f"[MOTOR MGR] M2 EMERGENCY STOP: Exceeded safety margin without hitting limit!")
                 else:
-                    # Normal position-based stopping
-                    if self.shared['m2_position'] < self.run_time:
+                    # Normal position-based stopping (use M2's actual run time)
+                    if self.shared['m2_position'] < self.motor2_run_time:
                         self.motor2.forward(speed)
                     else:
                         self.motor2.stop()
                         # Snap to exact target when stopped
-                        if self.shared['m2_position'] != self.run_time:
-                            print(f"[MOTOR MGR] Snapping M2: {self.shared['m2_position']:.10f} -> {self.run_time}")
-                        self.shared['m2_position'] = self.run_time
+                        if self.shared['m2_position'] != self.motor2_run_time:
+                            print(f"[MOTOR MGR] Snapping M2: {self.shared['m2_position']:.10f} -> {self.motor2_run_time}")
+                        self.shared['m2_position'] = self.motor2_run_time
             else:
                 # When limit switches enabled, keep running until limit triggers
                 safety_margin_low = -0.2  # Allow some negative overshoot for closing

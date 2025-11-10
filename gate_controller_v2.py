@@ -32,8 +32,12 @@ class GateController:
         self.partial_1_auto_close_time = config.get('partial_1_auto_close_time', 10)
         self.partial_2_auto_close_time = config.get('partial_2_auto_close_time', 10)
         self.partial_return_pause = config.get('partial_return_pause', 2)
-        self.partial_1_position = (self.partial_1_percent / 100.0) * self.run_time
-        self.partial_2_position = (self.partial_2_percent / 100.0) * self.run_time
+
+        # Partial positions should be based on M1's actual run time (learned if available, else configured)
+        # This ensures partial percentages are accurate even when M1 has a different learned time
+        motor1_effective_time = self.motor1_learned_run_time if self.motor1_learned_run_time else self.run_time
+        self.partial_1_position = (self.partial_1_percent / 100.0) * motor1_effective_time
+        self.partial_2_position = (self.partial_2_percent / 100.0) * motor1_effective_time
 
         # Limit switch configuration
         self.limit_switches_enabled = config.get('limit_switches_enabled', False)
@@ -136,15 +140,19 @@ class GateController:
             self.partial_1_auto_close_time = config.get('partial_1_auto_close_time', 10)
             self.partial_2_auto_close_time = config.get('partial_2_auto_close_time', 10)
             self.partial_return_pause = config.get('partial_return_pause', 2)
-            self.partial_1_position = (self.partial_1_percent / 100.0) * self.run_time
-            self.partial_2_position = (self.partial_2_percent / 100.0) * self.run_time
 
-            # Limit switch configuration
+            # Limit switch configuration (must load learned times BEFORE calculating partial positions)
             self.limit_switches_enabled = config.get('limit_switches_enabled', False)
             self.motor1_use_limit_switches = config.get('motor1_use_limit_switches', False)
             self.motor2_use_limit_switches = config.get('motor2_use_limit_switches', False)
             self.motor1_learned_run_time = config.get('motor1_learned_run_time', None)
             self.motor2_learned_run_time = config.get('motor2_learned_run_time', None)
+
+            # Partial positions should be based on M1's actual run time (learned if available, else configured)
+            # This ensures partial percentages are accurate even when M1 has a different learned time
+            motor1_effective_time = self.motor1_learned_run_time if self.motor1_learned_run_time else self.run_time
+            self.partial_1_position = (self.partial_1_percent / 100.0) * motor1_effective_time
+            self.partial_2_position = (self.partial_2_percent / 100.0) * motor1_effective_time
             self.limit_switch_creep_speed = config.get('limit_switch_creep_speed', 0.2)
             self.learning_mode_enabled = config.get('learning_mode_enabled', False)
             self.opening_slowdown_percent = config.get('opening_slowdown_percent', 2.0)
