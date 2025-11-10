@@ -844,14 +844,20 @@ class MotorManager:
                     # Calculate remaining distance
                     remaining = target_position - self.shared['m1_position']
                     remaining = max(0, remaining)
-                    
+
                     # Calculate current speed using same ramping logic
                     speed = self._calculate_ramp_speed(elapsed, remaining, ramp_time)
                     speed = max(0.0, min(1.0, speed))
-                    
-                    # Update position: position += (elapsed_time * current_speed)
+
+                    # Apply speed multiplier (learning mode or user-configured open speed)
+                    if self.shared.get('learning_mode_enabled', False):
+                        speed_multiplier = self.learning_speed
+                    else:
+                        speed_multiplier = self.open_speed
+
+                    # Update position: position += (elapsed_time * current_speed * speed_multiplier)
                     # Using 0.05s as the loop interval (20Hz)
-                    self.shared['m1_position'] = min(target_position, self.shared['m1_position'] + (0.05 * speed))
+                    self.shared['m1_position'] = min(target_position, self.shared['m1_position'] + (0.05 * speed * speed_multiplier))
             
             # Motor 2 position update
             if self.shared['m2_move_start']:
@@ -865,8 +871,14 @@ class MotorManager:
                     speed = self._calculate_ramp_speed(elapsed, remaining, ramp_time)
                     speed = max(0.0, min(1.0, speed))
 
-                    # Update position: position += (elapsed_time * current_speed)
-                    self.shared['m2_position'] = min(self.motor2_run_time, self.shared['m2_position'] + (0.05 * speed))
+                    # Apply speed multiplier (learning mode or user-configured open speed)
+                    if self.shared.get('learning_mode_enabled', False):
+                        speed_multiplier = self.learning_speed
+                    else:
+                        speed_multiplier = self.open_speed
+
+                    # Update position: position += (elapsed_time * current_speed * speed_multiplier)
+                    self.shared['m2_position'] = min(self.motor2_run_time, self.shared['m2_position'] + (0.05 * speed * speed_multiplier))
             elif (self.shared['m1_move_start'] and 
                   (now - self.shared['movement_start_time']) >= self.motor1_open_delay and
                   self.shared['state'] not in ['OPENING_TO_PARTIAL_1', 'OPENING_TO_PARTIAL_2']):
@@ -881,13 +893,19 @@ class MotorManager:
                     elapsed = now - self.shared['m2_move_start']
                     remaining = self.shared['m2_position']
                     remaining = max(0, remaining)
-                    
+
                     # Calculate current speed
                     speed = self._calculate_ramp_speed(elapsed, remaining, ramp_time)
                     speed = max(0.0, min(1.0, speed))
-                    
-                    # Update position: position -= (elapsed_time * current_speed)
-                    self.shared['m2_position'] = max(0, self.shared['m2_position'] - (0.05 * speed))
+
+                    # Apply speed multiplier (learning mode or user-configured close speed)
+                    if self.shared.get('learning_mode_enabled', False):
+                        speed_multiplier = self.learning_speed
+                    else:
+                        speed_multiplier = self.close_speed
+
+                    # Update position: position -= (elapsed_time * current_speed * speed_multiplier)
+                    self.shared['m2_position'] = max(0, self.shared['m2_position'] - (0.05 * speed * speed_multiplier))
             
             # Motor 1 position update
             if self.shared['m1_move_start']:
@@ -906,17 +924,23 @@ class MotorManager:
                 # Only update if not yet at target
                 if self.shared['m1_position'] > target_position:
                     elapsed = now - self.shared['m1_move_start']
-                    
+
                     # Calculate remaining distance
                     remaining = self.shared['m1_position'] - target_position
                     remaining = max(0, remaining)
-                    
+
                     # Calculate current speed
                     speed = self._calculate_ramp_speed(elapsed, remaining, ramp_time)
                     speed = max(0.0, min(1.0, speed))
-                    
-                    # Update position: position -= (elapsed_time * current_speed)
-                    self.shared['m1_position'] = max(target_position, self.shared['m1_position'] - (0.05 * speed))
+
+                    # Apply speed multiplier (learning mode or user-configured close speed)
+                    if self.shared.get('learning_mode_enabled', False):
+                        speed_multiplier = self.learning_speed
+                    else:
+                        speed_multiplier = self.close_speed
+
+                    # Update position: position -= (elapsed_time * current_speed * speed_multiplier)
+                    self.shared['m1_position'] = max(target_position, self.shared['m1_position'] - (0.05 * speed * speed_multiplier))
             elif (self.shared['m2_move_start'] and 
                   (now - self.shared['movement_start_time']) >= self.motor2_close_delay):
                 # Start M1 after delay for ALL closing operations (including partial)
@@ -1002,8 +1026,9 @@ class MotorManager:
                     max_speed = self.open_speed
                     speed = speed * max_speed
 
-                    # Apply gradual slowdown when approaching open limit
-                    if self.motor1_use_limit_switches and self.motor1_run_time:
+                    # Apply gradual slowdown ONLY when approaching OPEN limit (not partial positions)
+                    if (self.motor1_use_limit_switches and self.motor1_run_time and
+                        self.shared['state'] not in ['OPENING_TO_PARTIAL_1', 'OPENING_TO_PARTIAL_2']):
                         remaining_distance = self.motor1_run_time - self.shared['m1_position']
                         speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True)
 
@@ -1012,8 +1037,9 @@ class MotorManager:
                     max_speed = self.close_speed
                     speed = speed * max_speed
 
-                    # Apply gradual slowdown when approaching close limit
-                    if self.motor1_use_limit_switches and self.motor1_run_time:
+                    # Apply gradual slowdown ONLY when approaching CLOSE limit (not partial positions)
+                    if (self.motor1_use_limit_switches and self.motor1_run_time and
+                        self.shared['state'] not in ['CLOSING_TO_PARTIAL_1', 'CLOSING_TO_PARTIAL_2']):
                         remaining_distance = self.shared['m1_position']
                         speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True)
 
@@ -1122,7 +1148,7 @@ class MotorManager:
                     max_speed = self.open_speed
                     speed = speed * max_speed
 
-                    # Apply gradual slowdown when approaching open limit
+                    # Apply gradual slowdown when approaching open limit (M2 has no partial positions)
                     if self.motor2_use_limit_switches and self.motor2_run_time:
                         remaining_distance = self.motor2_run_time - self.shared['m2_position']
                         speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True)
@@ -1132,7 +1158,7 @@ class MotorManager:
                     max_speed = self.close_speed
                     speed = speed * max_speed
 
-                    # Apply gradual slowdown when approaching close limit
+                    # Apply gradual slowdown when approaching close limit (M2 has no partial positions)
                     if self.motor2_use_limit_switches and self.motor2_run_time:
                         remaining_distance = self.shared['m2_position']
                         speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True)
