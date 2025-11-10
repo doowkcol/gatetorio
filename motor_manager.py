@@ -1084,9 +1084,14 @@ class MotorManager:
                 elif self.shared['state'] == 'CLOSING_TO_PARTIAL_2':
                     target_position = self.partial_2_position
 
+                # Partial positions don't have limit switches - always use position-based stopping
+                # Only ignore position limits when closing to FULL close (state = 'CLOSING')
+                use_limit_switch_mode = (ignore_position_limits and
+                                        self.shared['state'] == 'CLOSING')
+
                 # When limit switches enabled, keep running until limit triggers (with safety margin)
                 safety_margin_low = -0.2  # Allow some negative overshoot for closing (position can go slightly negative)
-                if ignore_position_limits:
+                if use_limit_switch_mode:
                     # Keep running until limit switch OR position goes too negative
                     if not self.shared.get('close_limit_m1_active', False) and self.shared['m1_position'] > target_position + safety_margin_low:
                         self.motor1.backward(speed)
