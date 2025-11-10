@@ -559,6 +559,8 @@ class GateController:
             print(f"  Commands: open={self.shared['cmd_open_active']}, "
                   f"close={self.shared['cmd_close_active']}, "
                   f"stop={self.shared['cmd_stop_active']}")
+            print(f"  Photocells: closing={self.shared['photocell_closing_active']}, "
+                  f"opening={self.shared['photocell_opening_active']}")
             print(f"  Safety: stop_opening_active={self.shared['safety_stop_opening_active']}, "
                   f"stop_opening_reversed={self.shared.get('safety_stop_opening_reversed', False)}, "
                   f"stop_opening_triggered={self.shared.get('safety_stop_opening_triggered', False)}")
