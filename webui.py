@@ -774,7 +774,19 @@ if __name__ == "__main__":
     web_thread.start()
     print("Web server starting on http://0.0.0.0:8000")
 
+    # Get local IP for LAN access info
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        print(f"Web UI accessible from LAN at: http://{local_ip}:8000")
+    except:
+        print("Web UI accessible at: http://localhost:8000")
+
     # Start Tkinter UI in main thread (required for GUI)
+    # Pass the same controller instance so both UIs share the same data
     print("Starting Tkinter UI...")
-    ui = GateUI()
+    ui = GateUI(controller=controller)
     ui.run()

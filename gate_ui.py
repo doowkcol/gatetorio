@@ -12,8 +12,9 @@ import threading
 import json
 
 class GateUI:
-    def __init__(self):
-        self.controller = GateController()
+    def __init__(self, controller=None):
+        # Use provided controller or create new one
+        self.controller = controller if controller is not None else GateController()
         
         # Create window
         self.root = tk.Tk()
