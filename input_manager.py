@@ -178,11 +178,13 @@ class InputManager:
 
         last_sample = time.time()
 
-        # Track consecutive inactive samples for debouncing deactivation
-        # This prevents toggling on marginal signals - once active, stays active until
-        # confirmed inactive for multiple samples (critical for safety inputs)
+        # Track consecutive samples for debouncing ALL inputs
+        # Prevents toggling on marginal/noisy signals - requires multiple consecutive
+        # samples to change state (both activation and deactivation)
+        consecutive_active = {}
         consecutive_inactive = {}
         for input_name in self.input_config.keys():
+            consecutive_active[input_name] = 0
             consecutive_inactive[input_name] = 0
 
         while self.shared.get('running', True):
@@ -194,7 +196,7 @@ class InputManager:
             # Sample all inputs at configured rate (default 0.01s = 100Hz for safety-critical response)
             # Much faster than previous 0.1s = 10Hz to prevent race conditions with controller
             if (now - last_sample) >= self.sample_rate:
-                self._sample_all_inputs(consecutive_inactive)
+                self._sample_all_inputs(consecutive_active, consecutive_inactive)
                 last_sample = now
 
             # Sleep briefly to avoid CPU hammering (but much less than sample rate)
@@ -202,12 +204,16 @@ class InputManager:
 
         print("Input Manager: Shutting down")
     
-    def _sample_all_inputs(self, consecutive_inactive):
-        """Sample all configured inputs and update shared memory
+    def _sample_all_inputs(self, consecutive_active, consecutive_inactive):
+        """Sample all configured inputs and update shared memory with universal debouncing
 
         Args:
+            consecutive_active: Dict tracking consecutive active samples per input
             consecutive_inactive: Dict tracking consecutive inactive samples per input
-                                 Used for debouncing deactivation of safety-critical inputs
+
+        All inputs use debouncing to prevent state changes from noise/glitches.
+        Requires multiple consecutive samples in the new state before changing.
+        Safety inputs use more aggressive debouncing than command inputs.
         """
         now = time.time()
 
@@ -218,7 +224,7 @@ class InputManager:
 
             channel = input_cfg['channel']
             input_type = input_cfg.get('type', 'NO')  # NO or NC or 8K2
-            
+
             # Read ADC value
             if self.adc_available and channel < len(self.analog_inputs) and self.analog_inputs[channel] is not None:
                 voltage = self.analog_inputs[channel].voltage
@@ -227,51 +233,64 @@ class InputManager:
                 # Simulation mode - read from shared dict if UI set it
                 voltage = self.shared.get(f'{input_name}_sim_voltage', 0.0)
                 value = int((voltage / 3.3) * 32767)  # Simulate 15-bit ADC
-            
+
             # Calculate resistance if pullup present
             resistance = self._calculate_resistance(voltage, pullup_ohms=10000, vcc=3.3)
-            
+
             # Get learned resistance parameters if configured
             learned_resistance = input_cfg.get('learned_resistance', None)
             tolerance_percent = input_cfg.get('tolerance_percent', None)
-            
-            # Determine active state based on type
+
+            # Determine raw active state based on type
             was_active = self.shared[f'{input_name}_state']
             is_active_raw = self._determine_active_state(voltage, resistance, input_type,
                                                     learned_resistance, tolerance_percent)
 
-            # SAFETY LATCH-ON: For safety-critical inputs, once active, stay active until
-            # confirmed inactive for multiple consecutive samples. Prevents race conditions
-            # with faster control loop and ensures safety signals are never missed.
+            # UNIVERSAL DEBOUNCING: All inputs require multiple consecutive samples to change state
+            # This prevents race conditions with faster control loop and filters electrical noise
+            # Safety inputs need more samples (more conservative) than command inputs
+            function = input_cfg.get('function')
             safety_functions = ['photocell_closing', 'photocell_opening',
                               'safety_stop_closing', 'safety_stop_opening']
-            debounce_samples = 3  # Must be inactive for 3 consecutive samples to deactivate
 
-            # Check the input's FUNCTION, not the input name (e.g., "IN6" has function "safety_stop_opening")
-            function = input_cfg.get('function')
             if function in safety_functions:
-                if is_active_raw:
-                    # Going active or staying active - immediately set active
-                    is_active = True
-                    consecutive_inactive[input_name] = 0
-                else:
-                    # Raw signal is inactive - check if we should latch on
-                    if was_active:
-                        # Was active, now seeing inactive - count consecutive samples
-                        consecutive_inactive[input_name] += 1
-                        if consecutive_inactive[input_name] >= debounce_samples:
-                            # Confirmed inactive for enough samples - allow deactivation
-                            is_active = False
-                        else:
-                            # Still within debounce window - stay active (latch on)
-                            is_active = True
-                    else:
-                        # Wasn't active, still not active
-                        is_active = False
-                        consecutive_inactive[input_name] = 0
+                # Safety inputs: Immediate activation, 3-sample deactivation (30ms @ 100Hz)
+                activate_samples = 1
+                deactivate_samples = 3
             else:
-                # Non-safety inputs use raw state directly
-                is_active = is_active_raw
+                # Command inputs: 2-sample activation, 2-sample deactivation (20ms @ 100Hz)
+                activate_samples = 2
+                deactivate_samples = 2
+
+            # Debouncing state machine
+            if is_active_raw:
+                # Raw signal is active
+                consecutive_inactive[input_name] = 0
+                consecutive_active[input_name] += 1
+
+                if was_active:
+                    # Already active, stay active
+                    is_active = True
+                else:
+                    # Was inactive, check if enough consecutive samples to activate
+                    if consecutive_active[input_name] >= activate_samples:
+                        is_active = True  # Activate now
+                    else:
+                        is_active = False  # Still debouncing, stay inactive
+            else:
+                # Raw signal is inactive
+                consecutive_active[input_name] = 0
+                consecutive_inactive[input_name] += 1
+
+                if not was_active:
+                    # Already inactive, stay inactive
+                    is_active = False
+                else:
+                    # Was active, check if enough consecutive samples to deactivate
+                    if consecutive_inactive[input_name] >= deactivate_samples:
+                        is_active = False  # Deactivate now
+                    else:
+                        is_active = True  # Still debouncing, stay active (latch-on)
 
             # Update shared memory
             self.shared[f'{input_name}_voltage'] = voltage
