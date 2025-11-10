@@ -1246,8 +1246,13 @@ class GateController:
                 self.shared['safety_stop_opening_triggered'] = True
             elif self.shared['state'] in ['OPENING', 'OPENING_TO_PARTIAL_1', 'OPENING_TO_PARTIAL_2']:
                 # Actively opening - trigger reversal (or immediate stop if closing photocell also active)
+                # CRITICAL SAFETY: Check closing photocell to prevent closing onto obstruction
+                print(f"[SAFETY CRITICAL] STOP OPENING triggered during {self.shared['state']}")
+                print(f"  photocell_closing_active={self.shared['photocell_closing_active']}")
+                print(f"  cmd_close_active={self.shared['cmd_close_active']}")
+
                 if self.shared['photocell_closing_active']:
-                    print("STOP OPENING + closing photocell - immediate STOP")
+                    print("STOP OPENING + closing photocell - immediate STOP (NO REVERSAL)")
                     self.cmd_stop()
                     self.shared['safety_stop_opening_triggered'] = True
                 else:
