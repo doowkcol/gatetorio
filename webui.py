@@ -763,4 +763,18 @@ async def ws(ws: WebSocket):
         await ws.close()
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    import threading
+    from gate_ui import GateUI
+
+    # Start web server in background thread
+    def run_web_server():
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+
+    web_thread = threading.Thread(target=run_web_server, daemon=True)
+    web_thread.start()
+    print("Web server starting on http://0.0.0.0:8000")
+
+    # Start Tkinter UI in main thread (required for GUI)
+    print("Starting Tkinter UI...")
+    ui = GateUI()
+    ui.run()
