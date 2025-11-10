@@ -914,10 +914,6 @@ class MotorManager:
                     target_position = self.partial_1_position
                 elif self.shared['state'] == 'CLOSING_TO_PARTIAL_2':
                     target_position = self.partial_2_position
-                elif self.shared['partial_2_active'] and self.shared['returning_from_full_open']:
-                    target_position = self.partial_2_position
-                elif self.shared['partial_1_active'] and self.shared['returning_from_full_open']:
-                    target_position = self.partial_1_position
                 else:
                     target_position = 0
                 
@@ -1087,10 +1083,6 @@ class MotorManager:
                     target_position = self.partial_1_position
                 elif self.shared['state'] == 'CLOSING_TO_PARTIAL_2':
                     target_position = self.partial_2_position
-                elif self.shared['partial_2_active'] and self.shared['returning_from_full_open']:
-                    target_position = self.partial_2_position
-                elif self.shared['partial_1_active'] and self.shared['returning_from_full_open']:
-                    target_position = self.partial_1_position
 
                 # When limit switches enabled, keep running until limit triggers (with safety margin)
                 safety_margin_low = -0.2  # Allow some negative overshoot for closing (position can go slightly negative)
