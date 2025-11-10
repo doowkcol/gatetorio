@@ -7,11 +7,21 @@ from fastapi.websockets import WebSocket
 import uvicorn
 
 from gate_controller_v2 import GateController
+import os
 
 app = FastAPI()
 controller = GateController()  # uses same shared dict/logic
-CFG = pathlib.Path("/home/doowkcol/Gatetorio_Code/gate_config.json")
-INPUT_CFG = pathlib.Path("/home/doowkcol/Gatetorio_Code/input_config.json")
+
+# Use environment variable or default paths
+CONFIG_DIR = os.getenv('GATETORIO_CONFIG_DIR', '/home/doowkcol/Gatetorio_Code')
+CFG = pathlib.Path(CONFIG_DIR) / "gate_config.json"
+INPUT_CFG = pathlib.Path(CONFIG_DIR) / "input_config.json"
+
+# Fallback to current directory if config files don't exist
+if not CFG.exists():
+    CFG = pathlib.Path("gate_config.json")
+if not INPUT_CFG.exists():
+    INPUT_CFG = pathlib.Path("input_config.json")
 
 INDEX = """<!doctype html><meta charset="utf-8">
 <title>Gate Controller</title>
@@ -666,23 +676,36 @@ def reload_cfg():
 def get_inputs():
     """Get all input states with voltage/resistance data"""
     try:
+        print(f"Reading input config from: {INPUT_CFG}")
         with open(INPUT_CFG, 'r') as f:
             input_config = json.load(f)
 
         inputs = {}
         for name, cfg in input_config.get('inputs', {}).items():
+            state_key = f'{name}_state'
+            voltage_key = f'{name}_voltage'
+            resistance_key = f'{name}_resistance'
+
+            # Debug: print what keys are in shared memory
+            if len(inputs) == 0:  # Only print once
+                print(f"Sample keys in controller.shared: {list(controller.shared.keys())[:10]}")
+
             inputs[name] = {
                 'channel': cfg['channel'],
                 'type': cfg.get('type', 'NO'),
                 'function': cfg.get('function'),
                 'description': cfg.get('description', ''),
-                'state': controller.shared.get(f'{name}_state', False),
-                'voltage': controller.shared.get(f'{name}_voltage', 0.0),
-                'resistance': controller.shared.get(f'{name}_resistance', None),
+                'state': controller.shared.get(state_key, False),
+                'voltage': controller.shared.get(voltage_key, 0.0),
+                'resistance': controller.shared.get(resistance_key, None),
             }
+        print(f"Returning {len(inputs)} inputs")
         return JSONResponse(inputs)
     except Exception as e:
-        return JSONResponse({}, status_code=500)
+        import traceback
+        print(f"ERROR in /api/inputs: {e}")
+        print(traceback.format_exc())
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.get("/api/input_config")
 def get_input_config():
