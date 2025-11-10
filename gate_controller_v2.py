@@ -579,15 +579,17 @@ class GateController:
         
         # SAFETY EDGES SUSTAINED - After reversal, act as full STOP
         # Before reversal: block movement in their direction only
-        # After reversal: block ALL movement (like STOP button)
+        # After reversal: block ALL movement (like STOP button) - STAYS BLOCKED until edge released
         # DURING reversal: also block ALL movement (don't let commands restart movement)
-        
+
         # Check if either edge has completed reversal and is still sustained
         # OR if we're currently doing a safety reversal (block during reversal too)
+        # CRITICAL: Once reversed, stay blocked based on 'reversed' flag ALONE
+        # Don't require real-time active flag - it may toggle due to noise/timing
         safety_edge_acting_as_stop = (
             self.shared['safety_reversing'] or  # DURING reversal
-            (self.shared['safety_stop_closing_active'] and self.shared.get('safety_stop_closing_reversed', False)) or
-            (self.shared['safety_stop_opening_active'] and self.shared.get('safety_stop_opening_reversed', False))
+            self.shared.get('safety_stop_closing_reversed', False) or  # After closing reversal - blocks until cleared
+            self.shared.get('safety_stop_opening_reversed', False)  # After opening reversal - blocks until cleared
         )
         
         # DEBUG: Print flag states when safety edges active
@@ -1198,13 +1200,21 @@ class GateController:
             # Motor manager handles the actual reversal via shared memory flags
             return
         
-        # Reset trigger flags and reversed status when each edge is released
+        # Reset trigger flags when edges released
+        # BUT: Don't automatically clear 'reversed' flag - it acts as a safety lock
+        # Once reversed, gate stays STOPPED until user explicitly releases obstruction AND presses new command
+        # Reversed flag is only cleared when edge confirmed released (debounced by input manager)
+        # AND gate is in a stopped state (not moving)
         if not self.shared['safety_stop_closing_active']:
             self.shared['safety_stop_closing_triggered'] = False
-            self.shared['safety_stop_closing_reversed'] = False
+            # Only clear reversed if gate is stopped and edge has been released
+            if self.shared['state'] in ['STOPPED', 'CLOSED', 'OPEN', 'PARTIAL_1', 'PARTIAL_2']:
+                self.shared['safety_stop_closing_reversed'] = False
         if not self.shared['safety_stop_opening_active']:
             self.shared['safety_stop_opening_triggered'] = False
-            self.shared['safety_stop_opening_reversed'] = False
+            # Only clear reversed if gate is stopped and edge has been released
+            if self.shared['state'] in ['STOPPED', 'CLOSED', 'OPEN', 'PARTIAL_1', 'PARTIAL_2']:
+                self.shared['safety_stop_opening_reversed'] = False
         
         # STOP CLOSING edge
         if self.shared['safety_stop_closing_active'] and not self.shared['safety_stop_closing_triggered']:
