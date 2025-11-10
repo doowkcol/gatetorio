@@ -1069,12 +1069,14 @@ class MotorManager:
                             print(f"[MOTOR MGR] M1 EMERGENCY STOP: Exceeded safety margin without hitting limit!")
                 else:
                     # Normal position-based stopping
-                    if self.shared['m1_position'] < target_position:
+                    # Use small tolerance to avoid floating point precision issues
+                    position_tolerance = 0.05  # One control loop cycle
+                    if self.shared['m1_position'] < target_position - position_tolerance:
                         self.motor1.forward(speed)
                     else:
                         self.motor1.stop()
                         # Snap to exact target when stopped
-                        if self.shared['m1_position'] != target_position:
+                        if abs(self.shared['m1_position'] - target_position) > 0.01:
                             print(f"[MOTOR MGR] Snapping M1: {self.shared['m1_position']:.10f} -> {target_position}")
                         self.shared['m1_position'] = target_position
             else:
@@ -1105,14 +1107,16 @@ class MotorManager:
                             print(f"[MOTOR MGR] M1 EMERGENCY STOP: Exceeded safety margin without hitting limit!")
                 else:
                     # Normal position-based stopping
-                    if self.shared['m1_position'] > target_position:
+                    # Use small tolerance to avoid floating point precision issues
+                    position_tolerance = 0.05  # One control loop cycle
+                    if self.shared['m1_position'] > target_position + position_tolerance:
                         self.motor1.backward(speed)
                         if self.shared['movement_command'] == 'CLOSE':
-                            print(f"[M1 MOTOR] Running: Pos {self.shared['m1_position']:.1f} > Target {target_position:.1f}")
+                            print(f"[M1 MOTOR] Running: Pos {self.shared['m1_position']:.2f} > Target {target_position:.2f} (+{position_tolerance})")
                     else:
                         self.motor1.stop()
                         if self.shared['movement_command'] == 'CLOSE':
-                            print(f"[M1 MOTOR] STOPPED: Pos {self.shared['m1_position']:.1f} <= Target {target_position:.1f}")
+                            print(f"[M1 MOTOR] STOPPED: Pos {self.shared['m1_position']:.2f} <= Target {target_position:.2f} (+{position_tolerance})")
                         # Snap to exact target when stopped
                         self.shared['m1_position'] = target_position
         else:
@@ -1183,12 +1187,14 @@ class MotorManager:
                             print(f"[MOTOR MGR] M2 EMERGENCY STOP: Exceeded safety margin without hitting limit!")
                 else:
                     # Normal position-based stopping (use M2's actual run time)
-                    if self.shared['m2_position'] < self.motor2_run_time:
+                    # Use small tolerance to avoid floating point precision issues
+                    position_tolerance = 0.05  # One control loop cycle
+                    if self.shared['m2_position'] < self.motor2_run_time - position_tolerance:
                         self.motor2.forward(speed)
                     else:
                         self.motor2.stop()
                         # Snap to exact target when stopped
-                        if self.shared['m2_position'] != self.motor2_run_time:
+                        if abs(self.shared['m2_position'] - self.motor2_run_time) > 0.01:
                             print(f"[MOTOR MGR] Snapping M2: {self.shared['m2_position']:.10f} -> {self.motor2_run_time}")
                         self.shared['m2_position'] = self.motor2_run_time
             else:
@@ -1204,7 +1210,9 @@ class MotorManager:
                             print(f"[MOTOR MGR] M2 EMERGENCY STOP: Exceeded safety margin without hitting limit!")
                 else:
                     # Normal position-based stopping
-                    if self.shared['m2_position'] > 0:
+                    # Use small tolerance to avoid floating point precision issues
+                    position_tolerance = 0.05  # One control loop cycle
+                    if self.shared['m2_position'] > position_tolerance:
                         self.motor2.backward(speed)
                     else:
                         self.motor2.stop()
