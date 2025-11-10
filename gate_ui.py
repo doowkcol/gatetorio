@@ -358,47 +358,44 @@ class GateUI:
         )
         command_editor_btn.pack(side='left', padx=5)
 
-        # Learning Mode button
-        learning_btn = tk.Button(
-            bottom_frame,
-            text="LEARNING",
-            font=('Arial', 12),
-            command=self.show_learning_page,
-            bg='darkorange',
-            fg='black'
-        )
-        learning_btn.pack(side='left', padx=5)
-        
+        # Learning controls now consolidated into Settings page
+
         print("All UI elements created")
     
     def build_settings_page(self):
-        """Build the settings configuration page"""
+        """Build the consolidated settings configuration page (includes learning controls)"""
         # Title
         title = tk.Label(
             self.settings_frame,
-            text="SETTINGS",
-            font=('Arial', 24, 'bold'),
+            text="SETTINGS & CONFIGURATION",
+            font=('Arial', 22, 'bold'),
             bg='black',
             fg='white'
         )
         title.pack(pady=10)
-        
+
         # Scrollable frame for settings
         canvas = tk.Canvas(self.settings_frame, bg='black', highlightthickness=0)
         scrollbar = tk.Scrollbar(self.settings_frame, orient="vertical", command=canvas.yview)
         scrollable_frame = tk.Frame(canvas, bg='black')
-        
+
         scrollable_frame.bind(
             "<Configure>",
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
-        
+
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
-        
+
         # Dictionary to hold entry widgets
         self.config_entries = {}
-        
+
+        # ==== BASIC TIMING SETTINGS ====
+        timing_section = tk.Label(scrollable_frame, text="⚙️ BASIC TIMING SETTINGS",
+                                 font=('Arial', 14, 'bold'), bg='#222222', fg='cyan',
+                                 relief='ridge', bd=2)
+        timing_section.pack(fill='x', padx=10, pady=(10, 5))
+
         # Config fields with labels and descriptions
         config_fields = [
             ('run_time', 'Full Travel Time (s)', 'Time for gate to fully open/close'),
@@ -415,42 +412,42 @@ class GateUI:
             ('partial_2_auto_close_time', 'PO2 Auto-Close (s)', 'Auto-close time for partial position 2'),
             ('partial_return_pause', 'Partial Return Pause (s)', 'Pause before returning from partial'),
         ]
-        
+
         for key, label, description in config_fields:
             frame = tk.Frame(scrollable_frame, bg='black')
             frame.pack(fill='x', padx=20, pady=5)
-            
+
             # Label
             lbl = tk.Label(
                 frame,
                 text=label,
-                font=('Arial', 12, 'bold'),
+                font=('Arial', 11, 'bold'),
                 bg='black',
                 fg='white',
                 anchor='w'
             )
             lbl.pack(side='left', fill='x', expand=True)
-            
+
             # Entry
-            entry = tk.Entry(frame, font=('Arial', 12), width=10)
+            entry = tk.Entry(frame, font=('Arial', 11), width=10)
             entry.pack(side='right', padx=5)
             self.config_entries[key] = entry
-            
+
             # Description
             desc = tk.Label(
                 scrollable_frame,
                 text=description,
-                font=('Arial', 9),
+                font=('Arial', 8),
                 bg='black',
                 fg='gray',
                 anchor='w'
             )
-            desc.pack(fill='x', padx=40, pady=(0, 10))
-        
+            desc.pack(fill='x', padx=40, pady=(0, 8))
+
         # Auto-close enabled checkbox
         auto_close_frame = tk.Frame(scrollable_frame, bg='black')
         auto_close_frame.pack(fill='x', padx=20, pady=5)
-        
+
         self.auto_close_var = tk.BooleanVar()
         auto_close_check = tk.Checkbutton(
             auto_close_frame,
@@ -464,14 +461,133 @@ class GateUI:
             activeforeground='white'
         )
         auto_close_check.pack(side='left')
-        
+
+        # ==== LIMIT SWITCH CONFIGURATION ====
+        ls_section = tk.Label(scrollable_frame, text="🔌 LIMIT SWITCH CONFIGURATION",
+                             font=('Arial', 14, 'bold'), bg='#222222', fg='cyan',
+                             relief='ridge', bd=2)
+        ls_section.pack(fill='x', padx=10, pady=(15, 5))
+
+        ls_desc = tk.Label(scrollable_frame,
+                          text="Enable if motors have physical limit switches at end positions",
+                          font=('Arial', 9), bg='black', fg='gray')
+        ls_desc.pack(padx=20, pady=2)
+
+        self.m1_ls_var = tk.BooleanVar(value=False)
+        m1_ls_check = tk.Checkbutton(scrollable_frame, text="Motor 1 use limit switches",
+                                     variable=self.m1_ls_var, bg='black', fg='white',
+                                     selectcolor='black', font=('Arial', 11))
+        m1_ls_check.pack(anchor='w', padx=30, pady=3)
+
+        self.m2_ls_var = tk.BooleanVar(value=False)
+        m2_ls_check = tk.Checkbutton(scrollable_frame, text="Motor 2 use limit switches",
+                                     variable=self.m2_ls_var, bg='black', fg='white',
+                                     selectcolor='black', font=('Arial', 11))
+        m2_ls_check.pack(anchor='w', padx=30, pady=3)
+
+        # ==== SPEED & SLOWDOWN CONFIGURATION ====
+        speed_section = tk.Label(scrollable_frame, text="🎚️ SPEED & SLOWDOWN SETTINGS",
+                                font=('Arial', 14, 'bold'), bg='#222222', fg='cyan',
+                                relief='ridge', bd=2)
+        speed_section.pack(fill='x', padx=10, pady=(15, 5))
+
+        # Opening slowdown
+        open_sd_frame = tk.Frame(scrollable_frame, bg='black')
+        open_sd_frame.pack(fill='x', padx=20, pady=5)
+
+        tk.Label(open_sd_frame, text="Opening Slowdown %:", font=('Arial', 10),
+                 bg='black', fg='white').pack(side='left', padx=5)
+
+        self.open_slowdown_var = tk.DoubleVar(value=2.0)
+        self.open_slowdown_label = tk.Label(open_sd_frame, text="2.0%", font=('Arial', 10, 'bold'),
+                                             bg='black', fg='yellow', width=8)
+        self.open_slowdown_label.pack(side='right', padx=5)
+
+        open_sd_slider = tk.Scale(open_sd_frame, from_=0.5, to=20.0, resolution=0.5,
+                                   variable=self.open_slowdown_var, orient='horizontal',
+                                   command=self.update_open_slowdown_label, bg='#333333',
+                                   fg='white', highlightthickness=0)
+        open_sd_slider.pack(side='right', expand=True, fill='x', padx=5)
+
+        # Closing slowdown
+        close_sd_frame = tk.Frame(scrollable_frame, bg='black')
+        close_sd_frame.pack(fill='x', padx=20, pady=5)
+
+        tk.Label(close_sd_frame, text="Closing Slowdown %:", font=('Arial', 10),
+                 bg='black', fg='white').pack(side='left', padx=5)
+
+        self.close_slowdown_var = tk.DoubleVar(value=10.0)
+        self.close_slowdown_label = tk.Label(close_sd_frame, text="10.0%", font=('Arial', 10, 'bold'),
+                                              bg='black', fg='yellow', width=8)
+        self.close_slowdown_label.pack(side='right', padx=5)
+
+        close_sd_slider = tk.Scale(close_sd_frame, from_=0.5, to=20.0, resolution=0.5,
+                                    variable=self.close_slowdown_var, orient='horizontal',
+                                    command=self.update_close_slowdown_label, bg='#333333',
+                                    fg='white', highlightthickness=0)
+        close_sd_slider.pack(side='right', expand=True, fill='x', padx=5)
+
+        # Learning Speed
+        learning_speed_frame = tk.Frame(scrollable_frame, bg='black')
+        learning_speed_frame.pack(fill='x', padx=20, pady=5)
+
+        tk.Label(learning_speed_frame, text="Learning Speed:", font=('Arial', 10),
+                 bg='black', fg='white').pack(side='left', padx=5)
+
+        self.learning_speed_var = tk.DoubleVar(value=0.3)
+        self.learning_speed_label = tk.Label(learning_speed_frame, text="30%", font=('Arial', 10, 'bold'),
+                                              bg='black', fg='yellow', width=8)
+        self.learning_speed_label.pack(side='right', padx=5)
+
+        learning_speed_slider = tk.Scale(learning_speed_frame, from_=0.1, to=1.0, resolution=0.05,
+                                          variable=self.learning_speed_var, orient='horizontal',
+                                          command=self.update_learning_speed_label, bg='#333333',
+                                          fg='white', highlightthickness=0)
+        learning_speed_slider.pack(side='right', expand=True, fill='x', padx=5)
+
+        # Open Speed
+        open_speed_frame = tk.Frame(scrollable_frame, bg='black')
+        open_speed_frame.pack(fill='x', padx=20, pady=5)
+
+        tk.Label(open_speed_frame, text="Open Speed:", font=('Arial', 10),
+                 bg='black', fg='white').pack(side='left', padx=5)
+
+        self.open_speed_var = tk.DoubleVar(value=1.0)
+        self.open_speed_label = tk.Label(open_speed_frame, text="100%", font=('Arial', 10, 'bold'),
+                                          bg='black', fg='lime', width=8)
+        self.open_speed_label.pack(side='right', padx=5)
+
+        open_speed_slider = tk.Scale(open_speed_frame, from_=0.1, to=1.0, resolution=0.05,
+                                      variable=self.open_speed_var, orient='horizontal',
+                                      command=self.update_open_speed_label, bg='#333333',
+                                      fg='white', highlightthickness=0)
+        open_speed_slider.pack(side='right', expand=True, fill='x', padx=5)
+
+        # Close Speed
+        close_speed_frame = tk.Frame(scrollable_frame, bg='black')
+        close_speed_frame.pack(fill='x', padx=20, pady=5)
+
+        tk.Label(close_speed_frame, text="Close Speed:", font=('Arial', 10),
+                 bg='black', fg='white').pack(side='left', padx=5)
+
+        self.close_speed_var = tk.DoubleVar(value=1.0)
+        self.close_speed_label = tk.Label(close_speed_frame, text="100%", font=('Arial', 10, 'bold'),
+                                           bg='black', fg='orange', width=8)
+        self.close_speed_label.pack(side='right', padx=5)
+
+        close_speed_slider = tk.Scale(close_speed_frame, from_=0.1, to=1.0, resolution=0.05,
+                                       variable=self.close_speed_var, orient='horizontal',
+                                       command=self.update_close_speed_label, bg='#333333',
+                                       fg='white', highlightthickness=0)
+        close_speed_slider.pack(side='right', expand=True, fill='x', padx=5)
+
         canvas.pack(side="left", fill="both", expand=True, padx=10)
         scrollbar.pack(side="right", fill="y")
-        
+
         # Button frame at bottom
         button_frame = tk.Frame(self.settings_frame, bg='black')
         button_frame.pack(fill='x', padx=20, pady=10)
-        
+
         # Save button
         save_btn = tk.Button(
             button_frame,
@@ -484,7 +600,7 @@ class GateUI:
             bd=5
         )
         save_btn.pack(side='left', expand=True, fill='both', padx=5)
-        
+
         # Back button
         back_btn = tk.Button(
             button_frame,
@@ -1441,52 +1557,93 @@ class GateUI:
         save_times_btn.pack(side='left', expand=True, fill='x', padx=5)
 
     def load_current_config(self):
-        """Load current config values into the entry fields"""
+        """Load current config values into the entry fields and learning controls"""
         config_file = '/home/doowkcol/Gatetorio_Code/gate_config.json'
         try:
             with open(config_file, 'r') as f:
                 config = json.load(f)
-            
+
+            # Load basic timing settings into entry fields
             for key, entry in self.config_entries.items():
                 if key in config:
                     entry.delete(0, tk.END)
                     entry.insert(0, str(config[key]))
-            
+
             self.auto_close_var.set(config.get('auto_close_enabled', False))
+
+            # Load learning-related settings if UI elements exist
+            if hasattr(self, 'm1_ls_var'):
+                self.m1_ls_var.set(config.get('motor1_use_limit_switches', False))
+            if hasattr(self, 'm2_ls_var'):
+                self.m2_ls_var.set(config.get('motor2_use_limit_switches', False))
+            if hasattr(self, 'open_slowdown_var'):
+                self.open_slowdown_var.set(config.get('opening_slowdown_percent', 2.0))
+            if hasattr(self, 'close_slowdown_var'):
+                self.close_slowdown_var.set(config.get('closing_slowdown_percent', 10.0))
+            if hasattr(self, 'learning_speed_var'):
+                self.learning_speed_var.set(config.get('learning_speed', 0.3))
+            if hasattr(self, 'open_speed_var'):
+                self.open_speed_var.set(config.get('open_speed', 1.0))
+            if hasattr(self, 'close_speed_var'):
+                self.close_speed_var.set(config.get('close_speed', 1.0))
+
         except Exception as e:
             print(f"Error loading config: {e}")
     
     def save_config(self):
-        """Save the config values from entry fields"""
+        """Save the config values from entry fields - preserves all existing config fields"""
         config_file = '/home/doowkcol/Gatetorio_Code/gate_config.json'
-        
+
         try:
             # Stop gate before saving config changes
             print("Stopping gate before config save...")
             self.controller.shared['cmd_stop_active'] = True
             self.controller.shared['cmd_open_active'] = False
             self.controller.shared['cmd_close_active'] = False
-            
-            # Build new config from entries
-            new_config = {}
-            
+
+            # Read existing config to preserve fields we're not editing
+            try:
+                with open(config_file, 'r') as f:
+                    config = json.load(f)
+            except FileNotFoundError:
+                config = {}
+
+            # Update only the fields from the UI (preserves learned times, learning settings, etc.)
             for key, entry in self.config_entries.items():
                 value = entry.get()
                 # Convert to appropriate type
                 if key in ['run_time', 'pause_time', 'motor1_open_delay', 'motor2_close_delay',
                           'auto_close_time', 'safety_reverse_time', 'partial_auto_close_time',
-                          'partial_return_pause']:
-                    new_config[key] = float(value)
+                          'partial_return_pause', 'partial_1_auto_close_time', 'partial_2_auto_close_time']:
+                    config[key] = float(value)
                 elif key in ['step_logic_mode', 'partial_1_percent', 'partial_2_percent']:
-                    new_config[key] = int(value)
+                    config[key] = int(value)
                 elif key == 'deadman_speed':
-                    new_config[key] = float(value)
-            
-            new_config['auto_close_enabled'] = self.auto_close_var.get()
-            
+                    config[key] = float(value)
+
+            config['auto_close_enabled'] = self.auto_close_var.get()
+
+            # Update learning-related settings if they exist in UI
+            if hasattr(self, 'm1_ls_var'):
+                config['motor1_use_limit_switches'] = self.m1_ls_var.get()
+            if hasattr(self, 'm2_ls_var'):
+                config['motor2_use_limit_switches'] = self.m2_ls_var.get()
+            if hasattr(self, 'open_slowdown_var'):
+                config['opening_slowdown_percent'] = self.open_slowdown_var.get()
+            if hasattr(self, 'close_slowdown_var'):
+                config['closing_slowdown_percent'] = self.close_slowdown_var.get()
+            if hasattr(self, 'learning_speed_var'):
+                config['learning_speed'] = self.learning_speed_var.get()
+            if hasattr(self, 'open_speed_var'):
+                config['open_speed'] = self.open_speed_var.get()
+            if hasattr(self, 'close_speed_var'):
+                config['close_speed'] = self.close_speed_var.get()
+            if hasattr(self, 'm1_ls_var') and hasattr(self, 'm2_ls_var'):
+                config['limit_switches_enabled'] = self.m1_ls_var.get() or self.m2_ls_var.get()
+
             # Write to file
             with open(config_file, 'w') as f:
-                json.dump(new_config, f, indent=2)
+                json.dump(config, f, indent=2)
             
             print("Config saved successfully!")
             
