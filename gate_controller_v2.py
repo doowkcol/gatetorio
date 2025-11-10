@@ -363,12 +363,37 @@ class GateController:
                     # Check for full open - use limit switches if enabled, otherwise use position
                     open_complete = False
                     if self.limit_switches_enabled and (self.motor1_use_limit_switches or self.motor2_use_limit_switches):
-                        # With limit switches: BOTH must trigger to be fully open
-                        m1_at_limit = self.shared.get('open_limit_m1_active', False) if self.motor1_use_limit_switches else self.shared['m1_position'] >= (self.run_time - POSITION_TOLERANCE)
-                        m2_at_limit = self.shared.get('open_limit_m2_active', False) if self.motor2_use_limit_switches else self.shared['m2_position'] >= (self.run_time - POSITION_TOLERANCE)
-                        open_complete = m1_at_limit and m2_at_limit
+                        # With limit switches: check each motor individually
+                        m1_limit_check = self.shared.get('open_limit_m1_active', False)
+                        m2_limit_check = self.shared.get('open_limit_m2_active', False)
+
+                        # For motors WITH limit switches: wait for limit
+                        # For motors WITHOUT limit switches: use position
+                        if self.motor1_use_limit_switches:
+                            m1_done = m1_limit_check
+                            m1_reason = f"limit={m1_limit_check}"
+                        else:
+                            m1_done = self.shared['m1_position'] >= (self.run_time - POSITION_TOLERANCE)
+                            m1_reason = f"pos={self.shared['m1_position']:.2f}>={self.run_time - POSITION_TOLERANCE:.2f}"
+
+                        if self.motor2_use_limit_switches:
+                            m2_done = m2_limit_check
+                            m2_reason = f"limit={m2_limit_check}"
+                        else:
+                            m2_done = self.shared['m2_position'] >= (self.run_time - POSITION_TOLERANCE)
+                            m2_reason = f"pos={self.shared['m2_position']:.2f}>={self.run_time - POSITION_TOLERANCE:.2f}"
+
+                        open_complete = m1_done and m2_done
+
+                        # Debug: show why we're waiting (only print when close to completion)
+                        if not open_complete and (self.shared['m1_position'] >= 11.5 or self.shared['m2_position'] >= 11.5):
+                            if not m1_done:
+                                print(f"[WAITING] M1 not done: {m1_reason}")
+                            if not m2_done:
+                                print(f"[WAITING] M2 not done: {m2_reason}")
+
                         if open_complete:
-                            print(f"[COMPLETION] Limit switches triggered - M1={m1_at_limit}, M2={m2_at_limit}")
+                            print(f"[COMPLETION] OPEN complete! M1: {m1_reason}, M2: {m2_reason}")
                     else:
                         # Without limit switches: use position
                         open_complete = (self.shared['m1_position'] >= (self.run_time - POSITION_TOLERANCE) and
@@ -404,12 +429,37 @@ class GateController:
                     # Check for full close - use limit switches if enabled, otherwise use position
                     close_complete = False
                     if self.limit_switches_enabled and (self.motor1_use_limit_switches or self.motor2_use_limit_switches):
-                        # With limit switches: BOTH must trigger to be fully closed
-                        m1_at_limit = self.shared.get('close_limit_m1_active', False) if self.motor1_use_limit_switches else self.shared['m1_position'] <= POSITION_TOLERANCE
-                        m2_at_limit = self.shared.get('close_limit_m2_active', False) if self.motor2_use_limit_switches else self.shared['m2_position'] <= POSITION_TOLERANCE
-                        close_complete = m1_at_limit and m2_at_limit
+                        # With limit switches: check each motor individually
+                        m1_limit_check = self.shared.get('close_limit_m1_active', False)
+                        m2_limit_check = self.shared.get('close_limit_m2_active', False)
+
+                        # For motors WITH limit switches: wait for limit
+                        # For motors WITHOUT limit switches: use position
+                        if self.motor1_use_limit_switches:
+                            m1_done = m1_limit_check
+                            m1_reason = f"limit={m1_limit_check}"
+                        else:
+                            m1_done = self.shared['m1_position'] <= POSITION_TOLERANCE
+                            m1_reason = f"pos={self.shared['m1_position']:.2f}<={POSITION_TOLERANCE:.2f}"
+
+                        if self.motor2_use_limit_switches:
+                            m2_done = m2_limit_check
+                            m2_reason = f"limit={m2_limit_check}"
+                        else:
+                            m2_done = self.shared['m2_position'] <= POSITION_TOLERANCE
+                            m2_reason = f"pos={self.shared['m2_position']:.2f}<={POSITION_TOLERANCE:.2f}"
+
+                        close_complete = m1_done and m2_done
+
+                        # Debug: show why we're waiting (only print when close to completion)
+                        if not close_complete and (self.shared['m1_position'] <= 0.5 or self.shared['m2_position'] <= 0.5):
+                            if not m1_done:
+                                print(f"[WAITING] M1 not done: {m1_reason}")
+                            if not m2_done:
+                                print(f"[WAITING] M2 not done: {m2_reason}")
+
                         if close_complete:
-                            print(f"[COMPLETION] Limit switches triggered - M1={m1_at_limit}, M2={m2_at_limit}")
+                            print(f"[COMPLETION] CLOSE complete! M1: {m1_reason}, M2: {m2_reason}")
                     else:
                         # Without limit switches: use position
                         close_complete = (self.shared['m1_position'] <= POSITION_TOLERANCE and
