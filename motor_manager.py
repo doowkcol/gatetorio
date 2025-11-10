@@ -1204,8 +1204,8 @@ class MotorManager:
         Instead of abrupt switch to creep speed, this creates a smooth deceleration
         zone that transitions from max_speed down to creep_speed over slowdown_distance.
 
-        IMPORTANT: Adjusts slowdown distance based on speed multiplier so that reduced
-        speeds (e.g. 0.5) still get smooth slowdown instead of hitting creep mode too early.
+        The slowdown_distance is in POSITION units (seconds at full speed), NOT real time.
+        At slower speeds, the slowdown takes proportionally longer in real time, which is correct.
 
         Args:
             speed: Current calculated speed from ramp
@@ -1220,22 +1220,16 @@ class MotorManager:
             # No limit switches, no special slowdown
             return speed
 
-        # CRITICAL FIX: Adjust slowdown distance for speed multiplier
-        # When running at 0.5 speed, it takes 2x longer to cover the same distance
-        # So we need to start slowdown at 2x the distance to maintain smooth behavior
-        # Example: slowdown_distance=2s, max_speed=0.5 -> effective_slowdown=4s
-        effective_slowdown_distance = self.slowdown_distance / max(max_speed, 0.1)  # Prevent division by zero
-
-        if remaining_distance >= effective_slowdown_distance:
+        if remaining_distance >= self.slowdown_distance:
             # Outside slowdown zone, use normal speed
             return speed
 
         # Inside slowdown zone - gradual deceleration from max_speed to creep_speed
-        # Formula: speed = creep + (max_speed - creep) * (remaining / effective_slowdown_distance)
-        # At remaining = effective_slowdown_distance: speed = max_speed
+        # Formula: speed = creep + (max_speed - creep) * (remaining / slowdown_distance)
+        # At remaining = slowdown_distance: speed = max_speed
         # At remaining = 0: speed = creep_speed
         speed_range = max_speed - self.limit_switch_creep_speed
-        target_speed = self.limit_switch_creep_speed + (speed_range * (remaining_distance / effective_slowdown_distance))
+        target_speed = self.limit_switch_creep_speed + (speed_range * (remaining_distance / self.slowdown_distance))
 
         # Use minimum of ramp speed and slowdown target
         # This ensures we don't speed up during slowdown
