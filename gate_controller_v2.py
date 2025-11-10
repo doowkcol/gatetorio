@@ -624,14 +624,8 @@ class GateController:
                         # Only stop if reversal already happened (triggered flag is set)
                         self._execute_stop()
 
-                # CRITICAL SAFETY: Clear command flags to prevent automatic retry when edge releases
-                # UI/inputs may be sustaining these commands, but safety edge must override completely
-                self.shared['cmd_close_active'] = False
-                self.shared['auto_close_active'] = False
-                self.shared['partial_1_auto_close_active'] = False
-                self.shared['partial_2_auto_close_active'] = False
-
                 # BLOCK all closing commands completely - return regardless of state
+                # NOTE: Flags stay active (not cleared) so safety edge continuously blocks while sustained
                 return
         
         if self.shared['safety_stop_opening_active']:
@@ -646,14 +640,8 @@ class GateController:
                         # Only stop if reversal already happened (triggered flag is set)
                         self._execute_stop()
 
-                # CRITICAL SAFETY: Clear command flags to prevent automatic retry when edge releases
-                # UI/inputs may be sustaining these commands, but safety edge must override completely
-                self.shared['cmd_open_active'] = False
-                self.shared['timed_open_active'] = False
-                self.shared['partial_1_active'] = False
-                self.shared['partial_2_active'] = False
-
                 # BLOCK all opening commands completely - return regardless of state
+                # NOTE: Flags stay active (not cleared) so safety edge continuously blocks while sustained
                 return
         
         # SUSTAINED STOP - Blocks everything

@@ -243,11 +243,13 @@ class InputManager:
             # SAFETY LATCH-ON: For safety-critical inputs, once active, stay active until
             # confirmed inactive for multiple consecutive samples. Prevents race conditions
             # with faster control loop and ensures safety signals are never missed.
-            safety_inputs = ['photocell_closing', 'photocell_opening',
-                           'safety_stop_closing', 'safety_stop_opening']
+            safety_functions = ['photocell_closing', 'photocell_opening',
+                              'safety_stop_closing', 'safety_stop_opening']
             debounce_samples = 3  # Must be inactive for 3 consecutive samples to deactivate
 
-            if input_name in safety_inputs:
+            # Check the input's FUNCTION, not the input name (e.g., "IN6" has function "safety_stop_opening")
+            function = input_cfg.get('function')
+            if function in safety_functions:
                 if is_active_raw:
                     # Going active or staying active - immediately set active
                     is_active = True
