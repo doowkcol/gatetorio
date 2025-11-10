@@ -717,9 +717,9 @@ class MotorManager:
 
                 # Stop motor and set to full open position
                 self.motor1.stop()
+                print(f"[LIMIT SWITCH] M1 OPEN limit reached - position was {self.shared['m1_position']:.2f}s, setting to {self.motor1_run_time:.2f}s")
                 self.shared['m1_position'] = self.motor1_run_time
                 self.shared['m1_speed'] = 0.0
-                print(f"[LIMIT SWITCH] M1 OPEN limit reached - position set to {self.motor1_run_time:.2f}s")
 
         # Check Motor 1 CLOSE limit switch
         if self.motor1_use_limit_switches and self.shared.get('close_limit_m1_active', False):
@@ -838,7 +838,13 @@ class MotorManager:
                 else:
                     # Use M1's actual run time (learned if available, else configured)
                     target_position = self.motor1_run_time
-                
+
+                # DEBUG: Log partial position movements
+                if self.shared['state'] in ['OPENING_TO_PARTIAL_1', 'OPENING_TO_PARTIAL_2']:
+                    if not hasattr(self, '_last_partial_open_debug') or (now - self._last_partial_open_debug) > 0.5:
+                        print(f"[PARTIAL DEBUG OPEN] M1: pos={self.shared['m1_position']:.2f}s target={target_position:.2f}s motor1_run_time={self.motor1_run_time:.2f}s")
+                        self._last_partial_open_debug = now
+
                 # Only update if not yet at target
                 if self.shared['m1_position'] < target_position:
                     # Calculate remaining distance
@@ -916,7 +922,13 @@ class MotorManager:
                     target_position = self.partial_2_position
                 else:
                     target_position = 0
-                
+
+                # DEBUG: Log partial position movements
+                if self.shared['state'] in ['CLOSING_TO_PARTIAL_1', 'CLOSING_TO_PARTIAL_2']:
+                    if not hasattr(self, '_last_partial_debug') or (now - self._last_partial_debug) > 0.5:
+                        print(f"[PARTIAL DEBUG] M1: pos={self.shared['m1_position']:.2f}s target={target_position:.2f}s motor1_run_time={self.motor1_run_time:.2f}s")
+                        self._last_partial_debug = now
+
                 # Only update if not yet at target
                 if self.shared['m1_position'] > target_position:
                     elapsed = now - self.shared['m1_move_start']
