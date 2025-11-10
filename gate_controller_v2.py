@@ -877,8 +877,8 @@ class GateController:
             if self.shared['cmd_close_active']:
                 return
 
-            # If closing from PO1, reverse back to PO1
-            if self.shared['state'] == 'CLOSING_TO_PARTIAL_1':
+            # If closing from PO1 to fully closed, reverse back to PO1
+            if self.shared['state'] == 'CLOSING' and self.shared['m1_position'] > self.partial_1_position:
                 print("PO1 command while closing from PO1 - reversing M1 back to PO1")
                 self._move_to_partial_1()
                 return
@@ -907,8 +907,8 @@ class GateController:
             if self.shared['cmd_close_active']:
                 return
 
-            # If closing from PO2, reverse back to PO2
-            if self.shared['state'] == 'CLOSING_TO_PARTIAL_2':
+            # If closing from PO2 to fully closed, reverse back to PO2
+            if self.shared['state'] == 'CLOSING' and self.shared['m1_position'] > self.partial_2_position:
                 print("PO2 command while closing from PO2 - reversing M1 back to PO2")
                 self._move_to_partial_2()
                 return
