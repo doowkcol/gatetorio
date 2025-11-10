@@ -134,8 +134,9 @@ class MotorManager:
 
     def _process_auto_learn(self, now):
         """Process auto-learn state machine - progressive learning: 0.25 -> 0.5 -> full speed"""
-        # Initialize state on first call
-        if not self.shared.get('auto_learn_state'):
+        # Initialize state on first call or restart after completion
+        # Check if state is missing OR count variables don't exist (means we need to re-initialize)
+        if not self.shared.get('auto_learn_state') or 'auto_learn_m1_open_count' not in self.shared:
             self.shared['auto_learn_state'] = 'IDLE'
             self.shared['auto_learn_phase_start'] = now
             self.shared['auto_learn_m1_start'] = None
@@ -665,12 +666,30 @@ class MotorManager:
             self.shared['learning_m2_close_time'] = m2_close_avg
             self.shared['learning_overall_avg_time'] = overall_avg
 
-            # Clear flags
+            # Clear flags and temporary variables (so they get re-initialized on next run)
             self.shared['auto_learn_active'] = False
             self.shared['auto_learn_state'] = 'IDLE'
             self.shared['auto_learn_status_msg'] = 'Complete! Save times and exit engineer mode.'
             self.shared['m1_position'] = 0.0
             self.shared['m2_position'] = 0.0
+
+            # Remove temporary count/average variables to trigger re-initialization on next run
+            if 'auto_learn_m1_open_count' in self.shared:
+                del self.shared['auto_learn_m1_open_count']
+            if 'auto_learn_m1_close_count' in self.shared:
+                del self.shared['auto_learn_m1_close_count']
+            if 'auto_learn_m2_open_count' in self.shared:
+                del self.shared['auto_learn_m2_open_count']
+            if 'auto_learn_m2_close_count' in self.shared:
+                del self.shared['auto_learn_m2_close_count']
+            if 'auto_learn_m1_open_avg' in self.shared:
+                del self.shared['auto_learn_m1_open_avg']
+            if 'auto_learn_m1_close_avg' in self.shared:
+                del self.shared['auto_learn_m1_close_avg']
+            if 'auto_learn_m2_open_avg' in self.shared:
+                del self.shared['auto_learn_m2_open_avg']
+            if 'auto_learn_m2_close_avg' in self.shared:
+                del self.shared['auto_learn_m2_close_avg']
 
             print("Gates in closed position - ready to save times")
 
