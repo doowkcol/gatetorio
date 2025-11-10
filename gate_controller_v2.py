@@ -4,7 +4,7 @@ Gate Controller V2 - Multiprocessing architecture
 Step 3: Added input manager process
 """
 
-from time import time
+from time import time, sleep
 import json
 import threading
 import multiprocessing
@@ -32,9 +32,30 @@ class GateController:
         self.partial_1_auto_close_time = config.get('partial_1_auto_close_time', 10)
         self.partial_2_auto_close_time = config.get('partial_2_auto_close_time', 10)
         self.partial_return_pause = config.get('partial_return_pause', 2)
-        self.partial_1_position = (self.partial_1_percent / 100.0) * self.run_time
-        self.partial_2_position = (self.partial_2_percent / 100.0) * self.run_time
-        
+
+        # Limit switch configuration (MUST load learned times BEFORE calculating partial positions)
+        self.limit_switches_enabled = config.get('limit_switches_enabled', False)
+        self.motor1_use_limit_switches = config.get('motor1_use_limit_switches', False)
+        self.motor2_use_limit_switches = config.get('motor2_use_limit_switches', False)
+        self.motor1_learned_run_time = config.get('motor1_learned_run_time', None)
+        self.motor2_learned_run_time = config.get('motor2_learned_run_time', None)
+
+        # Partial positions should be based on M1's actual run time (learned if available, else configured)
+        # This ensures partial percentages are accurate even when M1 has a different learned time
+        motor1_effective_time = self.motor1_learned_run_time if self.motor1_learned_run_time else self.run_time
+        self.partial_1_position = (self.partial_1_percent / 100.0) * motor1_effective_time
+        self.partial_2_position = (self.partial_2_percent / 100.0) * motor1_effective_time
+        self.limit_switch_creep_speed = config.get('limit_switch_creep_speed', 0.2)
+        self.learning_mode_enabled = config.get('learning_mode_enabled', False)
+        self.opening_slowdown_percent = config.get('opening_slowdown_percent', 2.0)
+        self.closing_slowdown_percent = config.get('closing_slowdown_percent', 10.0)
+        self.slowdown_distance = config.get('slowdown_distance', 2.0)  # Seconds for gradual slowdown
+        self.learning_speed = config.get('learning_speed', 0.3)
+        self.open_speed = config.get('open_speed', 1.0)  # User-configurable open speed (0.1-1.0)
+        self.close_speed = config.get('close_speed', 1.0)  # User-configurable close speed (0.1-1.0)
+        # Engineer mode is runtime-only, never persisted - always starts disabled
+        self.engineer_mode_enabled = False
+
         # Create shared memory dict
         self.manager = multiprocessing.Manager()
         self.shared = self.manager.dict()
@@ -49,7 +70,19 @@ class GateController:
             'motor2_close_delay': self.motor2_close_delay,
             'partial_1_position': self.partial_1_position,
             'partial_2_position': self.partial_2_position,
-            'deadman_speed': self.deadman_speed
+            'deadman_speed': self.deadman_speed,
+            'limit_switches_enabled': self.limit_switches_enabled,
+            'motor1_use_limit_switches': self.motor1_use_limit_switches,
+            'motor2_use_limit_switches': self.motor2_use_limit_switches,
+            'motor1_learned_run_time': self.motor1_learned_run_time,
+            'motor2_learned_run_time': self.motor2_learned_run_time,
+            'limit_switch_creep_speed': self.limit_switch_creep_speed,
+            'opening_slowdown_percent': self.opening_slowdown_percent,
+            'closing_slowdown_percent': self.closing_slowdown_percent,
+            'slowdown_distance': self.slowdown_distance,
+            'learning_speed': self.learning_speed,
+            'open_speed': self.open_speed,
+            'close_speed': self.close_speed
         }
         
         # Start motor manager process
@@ -62,7 +95,7 @@ class GateController:
         
         # Prepare config for input manager
         input_config = {
-            'num_inputs': 4,  # ADS1115 has 4 channels
+            'num_inputs': 8,  # Dual ADS1115 = 8 channels
             'input_sample_rate': 0.1  # 10Hz sampling
         }
         
@@ -77,12 +110,16 @@ class GateController:
         # Start control thread (decision making only)
         self.control_thread = threading.Thread(target=self._control_loop, daemon=True)
         self.control_thread.start()
-        
+
         print(f"Gate Controller V2 (Step 3 - Three Processes) initialized")
         print(f"  Full travel time: {self.run_time}s")
         print(f"  Motor Manager PID: {self.motor_process.pid}")
         print(f"  Input Manager PID: {self.input_process.pid}")
         print(f"  Auto-close: {'ENABLED' if self.auto_close_enabled else 'DISABLED'} ({self.auto_close_time}s)")
+
+        # Wait briefly for input manager to read limit switches, then detect initial position
+        sleep(0.5)
+        self._detect_initial_position()
     
     def reload_config(self, config_file='/home/doowkcol/Gatetorio_Code/gate_config.json'):
         """Reload configuration from file - updates runtime parameters
@@ -109,9 +146,30 @@ class GateController:
             self.partial_1_auto_close_time = config.get('partial_1_auto_close_time', 10)
             self.partial_2_auto_close_time = config.get('partial_2_auto_close_time', 10)
             self.partial_return_pause = config.get('partial_return_pause', 2)
-            self.partial_1_position = (self.partial_1_percent / 100.0) * self.run_time
-            self.partial_2_position = (self.partial_2_percent / 100.0) * self.run_time
-            
+
+            # Limit switch configuration (must load learned times BEFORE calculating partial positions)
+            self.limit_switches_enabled = config.get('limit_switches_enabled', False)
+            self.motor1_use_limit_switches = config.get('motor1_use_limit_switches', False)
+            self.motor2_use_limit_switches = config.get('motor2_use_limit_switches', False)
+            self.motor1_learned_run_time = config.get('motor1_learned_run_time', None)
+            self.motor2_learned_run_time = config.get('motor2_learned_run_time', None)
+
+            # Partial positions should be based on M1's actual run time (learned if available, else configured)
+            # This ensures partial percentages are accurate even when M1 has a different learned time
+            motor1_effective_time = self.motor1_learned_run_time if self.motor1_learned_run_time else self.run_time
+            self.partial_1_position = (self.partial_1_percent / 100.0) * motor1_effective_time
+            self.partial_2_position = (self.partial_2_percent / 100.0) * motor1_effective_time
+            self.limit_switch_creep_speed = config.get('limit_switch_creep_speed', 0.2)
+            self.learning_mode_enabled = config.get('learning_mode_enabled', False)
+            self.opening_slowdown_percent = config.get('opening_slowdown_percent', 2.0)
+            self.closing_slowdown_percent = config.get('closing_slowdown_percent', 10.0)
+            self.slowdown_distance = config.get('slowdown_distance', 2.0)
+            self.learning_speed = config.get('learning_speed', 0.3)
+            self.open_speed = config.get('open_speed', 1.0)
+            self.close_speed = config.get('close_speed', 1.0)
+            # Engineer mode is runtime-only, don't change it during reload
+            # self.engineer_mode_enabled - keep current runtime value
+
             # Update motor manager config via shared memory
             self.shared['config_run_time'] = self.run_time
             self.shared['config_motor1_open_delay'] = self.motor1_open_delay
@@ -119,6 +177,18 @@ class GateController:
             self.shared['config_partial_1_position'] = self.partial_1_position
             self.shared['config_partial_2_position'] = self.partial_2_position
             self.shared['config_deadman_speed'] = self.deadman_speed
+            self.shared['config_limit_switches_enabled'] = self.limit_switches_enabled
+            self.shared['config_motor1_use_limit_switches'] = self.motor1_use_limit_switches
+            self.shared['config_motor2_use_limit_switches'] = self.motor2_use_limit_switches
+            self.shared['config_motor1_learned_run_time'] = self.motor1_learned_run_time
+            self.shared['config_motor2_learned_run_time'] = self.motor2_learned_run_time
+            self.shared['config_limit_switch_creep_speed'] = self.limit_switch_creep_speed
+            self.shared['config_opening_slowdown_percent'] = self.opening_slowdown_percent
+            self.shared['config_closing_slowdown_percent'] = self.closing_slowdown_percent
+            self.shared['config_slowdown_distance'] = self.slowdown_distance
+            self.shared['config_learning_speed'] = self.learning_speed
+            self.shared['config_open_speed'] = self.open_speed
+            self.shared['config_close_speed'] = self.close_speed
             self.shared['config_reload_flag'] = True  # Signal motor manager to reload
             
             print(f"  Config reloaded successfully")
@@ -186,38 +256,117 @@ class GateController:
         self.shared['running'] = True
         self.shared['motor_manager_heartbeat'] = time()
         self.shared['controller_heartbeat'] = time()
-        
+
         # Safety reversal command flags (for motor manager)
         self.shared['execute_safety_reverse'] = False
         self.shared['safety_reverse_direction'] = None  # 'OPEN' or 'CLOSE'
         self.shared['safety_reverse_start_time'] = None
-    
+
+        # Limit switch flags
+        self.shared['open_limit_m1_active'] = False
+        self.shared['close_limit_m1_active'] = False
+        self.shared['open_limit_m2_active'] = False
+        self.shared['close_limit_m2_active'] = False
+
+        # Learning mode flags
+        self.shared['learning_mode_enabled'] = False
+        self.shared['learning_m1_start_time'] = None
+        self.shared['learning_m2_start_time'] = None
+        self.shared['learning_m1_open_time'] = None
+        self.shared['learning_m1_close_time'] = None
+        self.shared['learning_m2_open_time'] = None
+        self.shared['learning_m2_close_time'] = None
+        self.shared['engineer_mode_enabled'] = False
+
+        # Auto-learn state machine
+        self.shared['auto_learn_active'] = False
+        self.shared['auto_learn_state'] = 'IDLE'
+        self.shared['auto_learn_cycle'] = 0
+        self.shared['auto_learn_m1_times'] = []
+        self.shared['auto_learn_m2_times'] = []
+        self.shared['auto_learn_m1_expected'] = None
+        self.shared['auto_learn_m2_expected'] = None
+        self.shared['auto_learn_phase_start'] = None
+        self.shared['auto_learn_status_msg'] = 'Ready'
+
+    def _detect_initial_position(self):
+        """Detect initial gate position based on limit switch states at startup"""
+        if not self.limit_switches_enabled:
+            return  # No limit switches, stick with default CLOSED state
+
+        # Check limit switch states
+        m1_open = self.shared.get('open_limit_m1_active', False)
+        m2_open = self.shared.get('open_limit_m2_active', False)
+        m1_close = self.shared.get('close_limit_m1_active', False)
+        m2_close = self.shared.get('close_limit_m2_active', False)
+
+        # Determine initial state based on limit switches
+        if m1_open and m2_open:
+            # Both motors at open limits
+            self.shared['state'] = 'OPEN'
+            # Set positions based on learned or configured run times
+            if self.motor1_learned_run_time:
+                self.shared['m1_position'] = self.motor1_learned_run_time
+            else:
+                self.shared['m1_position'] = self.run_time
+
+            if self.motor2_learned_run_time:
+                self.shared['m2_position'] = self.motor2_learned_run_time
+            else:
+                self.shared['m2_position'] = self.run_time
+
+            print("[STARTUP] Detected gate at OPEN position (both open limits active)")
+        elif m1_close and m2_close:
+            # Both motors at close limits (or default)
+            self.shared['state'] = 'CLOSED'
+            self.shared['m1_position'] = 0.0
+            self.shared['m2_position'] = 0.0
+            print("[STARTUP] Detected gate at CLOSED position (both close limits active)")
+        elif not m1_open and not m2_open and not m1_close and not m2_close:
+            # No limits active - assume closed (default)
+            self.shared['state'] = 'CLOSED'
+            self.shared['m1_position'] = 0.0
+            self.shared['m2_position'] = 0.0
+            print("[STARTUP] No limits active - defaulting to CLOSED position")
+        else:
+            # Partial position or inconsistent state - keep default but warn
+            print(f"[STARTUP] WARNING: Inconsistent limit switch state detected:")
+            print(f"  M1: open={m1_open}, close={m1_close}")
+            print(f"  M2: open={m2_open}, close={m2_close}")
+            print(f"  Defaulting to CLOSED position")
+
     def _control_loop(self):
         """Main control loop - decision making only (no motor control)"""
         last_auto_close_update = time()
         last_partial_1_update = time()  # Separate timer for PO1
         last_partial_2_update = time()  # Separate timer for PO2
-        
+
         while self.shared['running']:
             now = time()
-            
+
             # Update heartbeat
             self.shared['controller_heartbeat'] = now
-            
+
+            # If auto-learn is active, skip all normal controller logic
+            # Motor manager handles everything during auto-learn
+            if self.shared.get('auto_learn_active', False):
+                sleep(0.05)
+                continue
+
             # STEP 1: Evaluate commands
             self._evaluate_commands(now)
-            
+
             # STEP 2: Check safety edges
             self._process_safety_edges(now)
-            
+
             # STEP 3: Check photocell logic
             if not self.shared['safety_reversing']:
                 self._process_photocells()
-            
+
             # STEP 4: Check movement completion
             # Use small tolerance for floating point comparison
             POSITION_TOLERANCE = 0.01  # 0.01 seconds = 10ms tolerance
-            
+
             if self.shared['movement_command'] == 'OPEN':
                 # Debug: Print position check for opening
                 if self.shared['state'] == 'OPENING':
@@ -230,9 +379,50 @@ class GateController:
                     self._complete_partial_1()
                 elif self.shared['state'] == 'OPENING_TO_PARTIAL_2' and self.shared['m1_position'] >= (self.partial_2_position - POSITION_TOLERANCE):
                     self._complete_partial_2()
-                elif self.shared['m1_position'] >= (self.run_time - POSITION_TOLERANCE) and self.shared['m2_position'] >= (self.run_time - POSITION_TOLERANCE):
-                    print(f"[COMPLETION] Calling _complete_open() - M1={self.shared['m1_position']:.2f}, M2={self.shared['m2_position']:.2f}")
-                    self._complete_open()
+                else:
+                    # Check for full open - use limit switches if enabled, otherwise use position
+                    open_complete = False
+                    if self.limit_switches_enabled and (self.motor1_use_limit_switches or self.motor2_use_limit_switches):
+                        # With limit switches: check each motor individually
+                        m1_limit_check = self.shared.get('open_limit_m1_active', False)
+                        m2_limit_check = self.shared.get('open_limit_m2_active', False)
+
+                        # For motors WITH limit switches: wait for limit
+                        # For motors WITHOUT limit switches: use position
+                        if self.motor1_use_limit_switches:
+                            m1_done = m1_limit_check
+                            m1_reason = f"limit={m1_limit_check}"
+                        else:
+                            m1_done = self.shared['m1_position'] >= (self.run_time - POSITION_TOLERANCE)
+                            m1_reason = f"pos={self.shared['m1_position']:.2f}>={self.run_time - POSITION_TOLERANCE:.2f}"
+
+                        if self.motor2_use_limit_switches:
+                            m2_done = m2_limit_check
+                            m2_reason = f"limit={m2_limit_check}"
+                        else:
+                            m2_done = self.shared['m2_position'] >= (self.run_time - POSITION_TOLERANCE)
+                            m2_reason = f"pos={self.shared['m2_position']:.2f}>={self.run_time - POSITION_TOLERANCE:.2f}"
+
+                        open_complete = m1_done and m2_done
+
+                        # Debug: show why we're waiting (only print when close to completion)
+                        if not open_complete and (self.shared['m1_position'] >= 11.5 or self.shared['m2_position'] >= 11.5):
+                            if not m1_done:
+                                print(f"[WAITING] M1 not done: {m1_reason}")
+                            if not m2_done:
+                                print(f"[WAITING] M2 not done: {m2_reason}")
+
+                        if open_complete:
+                            print(f"[COMPLETION] OPEN complete! M1: {m1_reason}, M2: {m2_reason}")
+                    else:
+                        # Without limit switches: use position
+                        open_complete = (self.shared['m1_position'] >= (self.run_time - POSITION_TOLERANCE) and
+                                       self.shared['m2_position'] >= (self.run_time - POSITION_TOLERANCE))
+                        if open_complete:
+                            print(f"[COMPLETION] Position reached - M1={self.shared['m1_position']:.2f}, M2={self.shared['m2_position']:.2f}")
+
+                    if open_complete:
+                        self._complete_open()
             elif self.shared['movement_command'] == 'CLOSE':
                 # Debug: Print position check for closing
                 if self.shared['state'] == 'CLOSING':
@@ -255,10 +445,51 @@ class GateController:
                 elif self.shared['partial_1_active'] and self.shared['m1_position'] <= (self.partial_1_position + POSITION_TOLERANCE) and self.shared['returning_from_full_open']:
                     if self.shared['m2_position'] <= POSITION_TOLERANCE:
                         self._complete_partial_1()
-                elif self.shared['m1_position'] <= POSITION_TOLERANCE and self.shared['m2_position'] <= POSITION_TOLERANCE:
-                    print(f"[COMPLETION] Calling _complete_close() - M1={self.shared['m1_position']:.2f}, M2={self.shared['m2_position']:.2f}")
-                    self._complete_close()
-            
+                else:
+                    # Check for full close - use limit switches if enabled, otherwise use position
+                    close_complete = False
+                    if self.limit_switches_enabled and (self.motor1_use_limit_switches or self.motor2_use_limit_switches):
+                        # With limit switches: check each motor individually
+                        m1_limit_check = self.shared.get('close_limit_m1_active', False)
+                        m2_limit_check = self.shared.get('close_limit_m2_active', False)
+
+                        # For motors WITH limit switches: wait for limit
+                        # For motors WITHOUT limit switches: use position
+                        if self.motor1_use_limit_switches:
+                            m1_done = m1_limit_check
+                            m1_reason = f"limit={m1_limit_check}"
+                        else:
+                            m1_done = self.shared['m1_position'] <= POSITION_TOLERANCE
+                            m1_reason = f"pos={self.shared['m1_position']:.2f}<={POSITION_TOLERANCE:.2f}"
+
+                        if self.motor2_use_limit_switches:
+                            m2_done = m2_limit_check
+                            m2_reason = f"limit={m2_limit_check}"
+                        else:
+                            m2_done = self.shared['m2_position'] <= POSITION_TOLERANCE
+                            m2_reason = f"pos={self.shared['m2_position']:.2f}<={POSITION_TOLERANCE:.2f}"
+
+                        close_complete = m1_done and m2_done
+
+                        # Debug: show why we're waiting (only print when close to completion)
+                        if not close_complete and (self.shared['m1_position'] <= 0.5 or self.shared['m2_position'] <= 0.5):
+                            if not m1_done:
+                                print(f"[WAITING] M1 not done: {m1_reason}")
+                            if not m2_done:
+                                print(f"[WAITING] M2 not done: {m2_reason}")
+
+                        if close_complete:
+                            print(f"[COMPLETION] CLOSE complete! M1: {m1_reason}, M2: {m2_reason}")
+                    else:
+                        # Without limit switches: use position
+                        close_complete = (self.shared['m1_position'] <= POSITION_TOLERANCE and
+                                        self.shared['m2_position'] <= POSITION_TOLERANCE)
+                        if close_complete:
+                            print(f"[COMPLETION] Position reached - M1={self.shared['m1_position']:.2f}, M2={self.shared['m2_position']:.2f}")
+
+                    if close_complete:
+                        self._complete_close()
+
             # STEP 5: Auto-close countdown
             if self.shared['auto_close_active'] and (now - last_auto_close_update) >= 1.0:
                 self.shared['auto_close_countdown'] -= 1
@@ -926,10 +1157,15 @@ class GateController:
                 self.shared['safety_reversing'] = False
                 self.shared['execute_safety_reverse'] = False
                 # Mark that this edge has completed reversal (becomes full STOP)
-                if self.shared['safety_stop_closing_active']:
+                # Use state to determine which edge triggered reversal (more reliable than checking if still active)
+                if self.shared['state'] == 'REVERSING_FROM_CLOSE':
+                    # Was reversing from closing, so STOP CLOSING edge triggered it
                     self.shared['safety_stop_closing_reversed'] = True
-                if self.shared['safety_stop_opening_active']:
+                    print(f"  Marked STOP CLOSING as reversed (edge still active: {self.shared['safety_stop_closing_active']})")
+                elif self.shared['state'] == 'REVERSING_FROM_OPEN':
+                    # Was reversing from opening, so STOP OPENING edge triggered it
                     self.shared['safety_stop_opening_reversed'] = True
+                    print(f"  Marked STOP OPENING as reversed (edge still active: {self.shared['safety_stop_opening_active']})")
                 self.cmd_stop()
             # Motor manager handles the actual reversal via shared memory flags
             return
@@ -1327,14 +1563,14 @@ class GateController:
         # Set sustained flag
         if sustained:
             self.shared['cmd_stop_active'] = True
-        
+
         # Deadman controls override STOP (not blocked)
         if self.shared['deadman_open_active'] or self.shared['deadman_close_active']:
             # Allow deadman to override, don't print block message
             return
-        
+
         print(f"\n>>> STOP command - M1:{self.shared['m1_position']:.1f}s M2:{self.shared['m2_position']:.1f}s")
-        
+
         # Remember what we were doing for 3/4-step logic
         if self.shared['state'] == 'OPENING':
             self.shared['stopped_after_opening'] = True
@@ -1342,7 +1578,7 @@ class GateController:
         elif self.shared['state'] == 'CLOSING':
             self.shared['stopped_after_closing'] = True
             self.shared['stopped_after_opening'] = False
-        
+
         # Stop movement
         self.shared['state'] = 'STOPPED'
         self.shared['movement_start_time'] = None
@@ -1351,6 +1587,13 @@ class GateController:
         self.shared['m2_move_start'] = None
         self.shared['auto_close_active'] = False
         self.shared['opening_paused'] = False
+
+        # Stop auto-learn if active
+        if self.shared.get('auto_learn_active', False):
+            print("Stopping auto-learn sequence...")
+            self.shared['auto_learn_active'] = False
+            self.shared['auto_learn_state'] = 'IDLE'
+            self.shared['learning_mode_enabled'] = False
     
     def cmd_photocell_closing(self, active):
         """Set closing photocell state"""
@@ -1642,6 +1885,138 @@ class GateController:
                 # Default to opening if unknown
                 self.cmd_open()
     
+    def enable_learning_mode(self):
+        """Enable learning mode to record motor travel times"""
+        self.shared['learning_mode_enabled'] = True
+        print("Learning mode ENABLED - motor travel times will be recorded")
+
+    def disable_learning_mode(self):
+        """Disable learning mode"""
+        self.shared['learning_mode_enabled'] = False
+        print("Learning mode DISABLED")
+
+    def save_learned_times(self, config_file='/home/doowkcol/Gatetorio_Code/gate_config.json'):
+        """Save learned motor run times to config file"""
+        try:
+            # Get learned times from shared memory
+            m1_open_time = self.shared.get('learning_m1_open_time')
+            m1_close_time = self.shared.get('learning_m1_close_time')
+            m2_open_time = self.shared.get('learning_m2_open_time')
+            m2_close_time = self.shared.get('learning_m2_close_time')
+
+            # Average open and close times for each motor
+            m1_learned = None
+            if m1_open_time and m1_close_time:
+                m1_learned = (m1_open_time + m1_close_time) / 2.0
+            elif m1_open_time:
+                m1_learned = m1_open_time
+            elif m1_close_time:
+                m1_learned = m1_close_time
+
+            m2_learned = None
+            if m2_open_time and m2_close_time:
+                m2_learned = (m2_open_time + m2_close_time) / 2.0
+            elif m2_open_time:
+                m2_learned = m2_open_time
+            elif m2_close_time:
+                m2_learned = m2_close_time
+
+            if not m1_learned and not m2_learned:
+                print("No learned times to save - complete a full open/close cycle first")
+                return False
+
+            # Load current config
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+
+            # Update learned times
+            if m1_learned:
+                config['motor1_learned_run_time'] = m1_learned
+                print(f"Learned M1 run time: {m1_learned:.2f}s")
+
+            if m2_learned:
+                config['motor2_learned_run_time'] = m2_learned
+                print(f"Learned M2 run time: {m2_learned:.2f}s")
+
+            # Save config
+            with open(config_file, 'w') as f:
+                json.dump(config, f, indent=2)
+
+            print("Learned times saved to config - reload config to apply")
+            return True
+
+        except Exception as e:
+            print(f"Error saving learned times: {e}")
+            return False
+
+    def get_learning_status(self):
+        """Get current learning mode status and recorded times"""
+        return {
+            'learning_mode_enabled': self.shared.get('learning_mode_enabled', False),
+            'm1_open_time': self.shared.get('learning_m1_open_time'),
+            'm1_close_time': self.shared.get('learning_m1_close_time'),
+            'm2_open_time': self.shared.get('learning_m2_open_time'),
+            'm2_close_time': self.shared.get('learning_m2_close_time')
+        }
+
+    def start_auto_learn(self):
+        """Start the automated learning sequence - motor_manager handles the actual learning"""
+        if not self.shared.get('engineer_mode_enabled', False):
+            print("ERROR: Engineer mode must be enabled to start auto-learn")
+            return False
+
+        if self.shared['auto_learn_active']:
+            print("Auto-learn already running")
+            return False
+
+        # Check that limit switches are enabled
+        if not self.motor1_use_limit_switches or not self.motor2_use_limit_switches:
+            print("ERROR: Auto-learn requires limit switches to be enabled for both motors")
+            print("Please enable M1 and M2 limit switches in the learning configuration")
+            self.shared['auto_learn_status_msg'] = 'Error: Limit switches not enabled'
+            return False
+
+        # Stop any current movement
+        self.cmd_stop()
+
+        # Clear previous learning data
+        self.shared['learning_m1_open_time'] = None
+        self.shared['learning_m1_close_time'] = None
+        self.shared['learning_m2_open_time'] = None
+        self.shared['learning_m2_close_time'] = None
+
+        # Signal motor_manager to start auto-learn
+        # Motor manager will handle the entire sequence
+        self.shared['auto_learn_active'] = True
+        self.shared['auto_learn_status_msg'] = 'Starting auto-learn sequence...'
+
+        print("=== AUTO-LEARN STARTED ===")
+        print("Motor manager will handle the learning sequence")
+
+        return True
+
+    def stop_auto_learn(self):
+        """Stop the automated learning sequence"""
+        if not self.shared['auto_learn_active']:
+            return False
+
+        print("=== AUTO-LEARN STOPPED ===")
+        self.shared['auto_learn_active'] = False
+        self.shared['auto_learn_status_msg'] = 'Stopped by user'
+
+        return True
+
+    def get_auto_learn_status(self):
+        """Get current auto-learn status"""
+        return {
+            'active': self.shared.get('auto_learn_active', False),
+            'state': self.shared.get('auto_learn_state', 'IDLE'),
+            'cycle': self.shared.get('auto_learn_cycle', 0),
+            'status_msg': self.shared.get('auto_learn_status_msg', 'Ready'),
+            'm1_times': list(self.shared.get('auto_learn_m1_times', [])),
+            'm2_times': list(self.shared.get('auto_learn_m2_times', []))
+        }
+
     def get_status(self):
         """Get current status"""
         avg_pos = (self.shared['m1_position'] + self.shared['m2_position']) / 2

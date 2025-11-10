@@ -4,29 +4,59 @@
       "channel": 0,
       "enabled": true,
       "type": "NO",
-      "function": null,
+      "function": "close_limit_m1",
       "description": "Open command button"
     },
     "IN2": {
       "channel": 1,
       "enabled": true,
       "type": "NO",
-      "function": "cmd_close",
+      "function": "open_limit_m1",
       "description": "Close command button"
     },
     "IN3": {
       "channel": 2,
       "enabled": true,
       "type": "NO",
-      "function": null,
+      "function": "open_limit_m2",
       "description": "Stop command button"
     },
     "IN4": {
       "channel": 3,
       "enabled": true,
       "type": "NO",
-      "function": "cmd_open",
+      "function": "close_limit_m2",
       "description": "Spare input"
+    },
+    "IN5": {
+      "channel": 4,
+      "enabled": true,
+      "type": "NO",
+      "function": "cmd_open",
+      "description": "ADC2 Channel 0 - Unassigned"
+    },
+    "IN6": {
+      "channel": 5,
+      "enabled": true,
+      "type": "8K2",
+      "function": "safety_stop_opening",
+      "description": "ADC2 Channel 1 - Unassigned",
+      "tolerance_percent": 5.0,
+      "learned_resistance": 5140.219074382063
+    },
+    "IN7": {
+      "channel": 6,
+      "enabled": true,
+      "type": "NO",
+      "function": null,
+      "description": "ADC2 Channel 2 - Unassigned"
+    },
+    "IN8": {
+      "channel": 7,
+      "enabled": true,
+      "type": "NO",
+      "function": null,
+      "description": "ADC2 Channel 3 - Unassigned"
     }
   }
 }

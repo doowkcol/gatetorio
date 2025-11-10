@@ -10,5 +10,19 @@
   "partial_1_percent": 35,
   "partial_2_percent": 70,
   "partial_return_pause": 2.0,
-  "auto_close_enabled": true
+  "auto_close_enabled": true,
+  "limit_switches_enabled": true,
+  "motor1_use_limit_switches": true,
+  "motor2_use_limit_switches": true,
+  "motor1_learned_run_time": 14.04432705640793,
+  "motor2_learned_run_time": 12.889749103784562,
+  "limit_switch_creep_speed": 0.2,
+  "learning_mode_enabled": false,
+  "opening_slowdown_percent": 2.0,
+  "closing_slowdown_percent": 10.0,
+  "slowdown_distance": 2.0,
+  "learning_speed": 0.3,
+  "open_speed": 1.0,
+  "close_speed": 0.5,
+  "engineer_mode_enabled": false
 }

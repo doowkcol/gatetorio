@@ -22,18 +22,20 @@ class GateUI:
         self.root.configure(bg='black')
         print("Window created")
         
-        # Create main frame, settings frame, input status frame, and command editor frame
+        # Create main frame, settings frame, input status frame, command editor frame, and learning frame
         self.main_frame = tk.Frame(self.root, bg='black')
         self.settings_frame = tk.Frame(self.root, bg='black')
         self.input_status_frame = tk.Frame(self.root, bg='black')
         self.command_editor_frame = tk.Frame(self.root, bg='black')
-        
+        self.learning_frame = tk.Frame(self.root, bg='black')
+
         # Build all pages
         self.build_main_page()
         self.build_settings_page()
         self.build_input_status_page()
         self.build_command_editor_page()
-        
+        self.build_learning_page()
+
         # Show main page initially
         self.show_main_page()
         
@@ -48,21 +50,24 @@ class GateUI:
         self.settings_frame.pack_forget()
         self.input_status_frame.pack_forget()
         self.command_editor_frame.pack_forget()
+        self.learning_frame.pack_forget()
         self.main_frame.pack(expand=True, fill='both')
-    
+
     def show_settings_page(self):
         """Show the settings page"""
         self.main_frame.pack_forget()
         self.input_status_frame.pack_forget()
         self.command_editor_frame.pack_forget()
+        self.learning_frame.pack_forget()
         self.load_current_config()
         self.settings_frame.pack(expand=True, fill='both')
-    
+
     def show_input_status_page(self):
         """Show the input status page"""
         self.main_frame.pack_forget()
         self.settings_frame.pack_forget()
         self.command_editor_frame.pack_forget()
+        self.learning_frame.pack_forget()
         self.input_status_frame.pack(expand=True, fill='both')
     
     def show_command_editor_page(self):
@@ -70,8 +75,18 @@ class GateUI:
         self.main_frame.pack_forget()
         self.settings_frame.pack_forget()
         self.input_status_frame.pack_forget()
+        self.learning_frame.pack_forget()
         self.load_input_config_for_editor()
         self.command_editor_frame.pack(expand=True, fill='both')
+
+    def show_learning_page(self):
+        """Show the learning mode page"""
+        self.main_frame.pack_forget()
+        self.settings_frame.pack_forget()
+        self.input_status_frame.pack_forget()
+        self.command_editor_frame.pack_forget()
+        self.load_learning_config()
+        self.learning_frame.pack(expand=True, fill='both')
     
     def build_main_page(self):
         """Build the main control page"""
@@ -341,6 +356,17 @@ class GateUI:
             fg='white'
         )
         command_editor_btn.pack(side='left', padx=5)
+
+        # Learning Mode button
+        learning_btn = tk.Button(
+            bottom_frame,
+            text="LEARNING",
+            font=('Arial', 12),
+            command=self.show_learning_page,
+            bg='darkorange',
+            fg='black'
+        )
+        learning_btn.pack(side='left', padx=5)
         
         print("All UI elements created")
     
@@ -535,9 +561,16 @@ class GateUI:
             input_frame.pack(fill='x', padx=10, pady=5)
             
             # Input name header with channel
+            # Determine which ADC and physical channel (channels 0-3 = ADC1, channels 4-7 = ADC2)
+            channel_num = input_cfg['channel']
+            if channel_num < 4:
+                adc_label = f"ADC1 CH{channel_num}"
+            else:
+                adc_label = f"ADC2 CH{channel_num - 4}"
+
             name_label = tk.Label(
                 input_frame,
-                text=f"{input_name} (ADC CH{input_cfg['channel']})",
+                text=f"{input_name} ({adc_label})",
                 font=('Arial', 14, 'bold'),
                 bg='#222222',
                 fg='cyan',
@@ -705,7 +738,11 @@ class GateUI:
             ('timed_open', 'Timed Open'),
             ('partial_1', 'Partial Open 1'),
             ('partial_2', 'Partial Open 2'),
-            ('step_logic', 'Step Logic')
+            ('step_logic', 'Step Logic'),
+            ('open_limit_m1', 'Limit Switch - M1 OPEN'),
+            ('close_limit_m1', 'Limit Switch - M1 CLOSE'),
+            ('open_limit_m2', 'Limit Switch - M2 OPEN'),
+            ('close_limit_m2', 'Limit Switch - M2 CLOSE')
         ]
         
         # Input type options
@@ -1080,7 +1117,328 @@ class GateUI:
         
         # Remove it after 2 seconds
         self.root.after(2000, confirm.destroy)
-    
+
+    def build_learning_page(self):
+        """Build the learning mode configuration page"""
+        # Title
+        title = tk.Label(
+            self.learning_frame,
+            text="LEARNING MODE",
+            font=('Arial', 24, 'bold'),
+            bg='black',
+            fg='yellow'
+        )
+        title.pack(pady=10)
+
+        # Scrollable content
+        canvas = tk.Canvas(self.learning_frame, bg='black', highlightthickness=0)
+        scrollbar = tk.Scrollbar(self.learning_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg='black')
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Engineer Mode Toggle (must be enabled first)
+        engineer_frame = tk.Frame(scrollable_frame, bg='#440000', relief='ridge', bd=3)
+        engineer_frame.pack(fill='x', padx=10, pady=10)
+
+        self.engineer_mode_var = tk.BooleanVar(value=False)
+        engineer_check = tk.Checkbutton(
+            engineer_frame,
+            text="🔧 ENGINEER MODE (Enable before learning)",
+            variable=self.engineer_mode_var,
+            command=self.toggle_engineer_mode,
+            font=('Arial', 14, 'bold'),
+            bg='#440000',
+            fg='yellow',
+            selectcolor='#440000',
+            activebackground='#440000',
+            activeforeground='white'
+        )
+        engineer_check.pack(pady=10)
+
+        # Learning Mode Toggle
+        learning_mode_frame = tk.Frame(scrollable_frame, bg='#003300', relief='ridge', bd=3)
+        learning_mode_frame.pack(fill='x', padx=10, pady=5)
+
+        self.learning_mode_var = tk.BooleanVar(value=False)
+        self.learning_mode_check = tk.Checkbutton(
+            learning_mode_frame,
+            text="📚 Learning Mode (Record travel times)",
+            variable=self.learning_mode_var,
+            command=self.toggle_learning_mode,
+            font=('Arial', 12, 'bold'),
+            bg='#003300',
+            fg='lightgreen',
+            selectcolor='#003300',
+            state='disabled'
+        )
+        self.learning_mode_check.pack(pady=10)
+
+        # Limit Switch Configuration
+        ls_config_frame = tk.Frame(scrollable_frame, bg='#222222', relief='ridge', bd=2)
+        ls_config_frame.pack(fill='x', padx=10, pady=5)
+
+        tk.Label(ls_config_frame, text="Limit Switch Configuration", font=('Arial', 12, 'bold'),
+                 bg='#222222', fg='cyan').pack(pady=5)
+
+        self.m1_ls_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(ls_config_frame, text="Motor 1 use limit switches",
+                       variable=self.m1_ls_var, bg='#222222', fg='white',
+                       selectcolor='#222222').pack(anchor='w', padx=20)
+
+        self.m2_ls_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(ls_config_frame, text="Motor 2 use limit switches",
+                       variable=self.m2_ls_var, bg='#222222', fg='white',
+                       selectcolor='#222222').pack(anchor='w', padx=20, pady=5)
+
+        # Slowdown Configuration
+        slowdown_frame = tk.Frame(scrollable_frame, bg='#222222', relief='ridge', bd=2)
+        slowdown_frame.pack(fill='x', padx=10, pady=5)
+
+        tk.Label(slowdown_frame, text="Slowdown Configuration", font=('Arial', 12, 'bold'),
+                 bg='#222222', fg='cyan').pack(pady=5)
+
+        # Opening slowdown
+        open_sd_frame = tk.Frame(slowdown_frame, bg='#222222')
+        open_sd_frame.pack(fill='x', padx=10)
+
+        tk.Label(open_sd_frame, text="Opening Slowdown %:", font=('Arial', 10),
+                 bg='#222222', fg='white').pack(side='left', padx=5)
+
+        self.open_slowdown_var = tk.DoubleVar(value=2.0)
+        self.open_slowdown_label = tk.Label(open_sd_frame, text="2.0%", font=('Arial', 10, 'bold'),
+                                             bg='#222222', fg='yellow', width=8)
+        self.open_slowdown_label.pack(side='right', padx=5)
+
+        open_sd_slider = tk.Scale(open_sd_frame, from_=0.5, to=20.0, resolution=0.5,
+                                   variable=self.open_slowdown_var, orient='horizontal',
+                                   command=self.update_open_slowdown_label, bg='#222222',
+                                   fg='white', highlightthickness=0)
+        open_sd_slider.pack(side='right', expand=True, fill='x', padx=5)
+
+        # Closing slowdown
+        close_sd_frame = tk.Frame(slowdown_frame, bg='#222222')
+        close_sd_frame.pack(fill='x', padx=10, pady=5)
+
+        tk.Label(close_sd_frame, text="Closing Slowdown %:", font=('Arial', 10),
+                 bg='#222222', fg='white').pack(side='left', padx=5)
+
+        self.close_slowdown_var = tk.DoubleVar(value=10.0)
+        self.close_slowdown_label = tk.Label(close_sd_frame, text="10.0%", font=('Arial', 10, 'bold'),
+                                              bg='#222222', fg='yellow', width=8)
+        self.close_slowdown_label.pack(side='right', padx=5)
+
+        close_sd_slider = tk.Scale(close_sd_frame, from_=0.5, to=20.0, resolution=0.5,
+                                    variable=self.close_slowdown_var, orient='horizontal',
+                                    command=self.update_close_slowdown_label, bg='#222222',
+                                    fg='white', highlightthickness=0)
+        close_sd_slider.pack(side='right', expand=True, fill='x', padx=5)
+
+        # Learning Speed
+        speed_frame = tk.Frame(slowdown_frame, bg='#222222')
+        speed_frame.pack(fill='x', padx=10, pady=5)
+
+        tk.Label(speed_frame, text="Learning Speed:", font=('Arial', 10),
+                 bg='#222222', fg='white').pack(side='left', padx=5)
+
+        self.learning_speed_var = tk.DoubleVar(value=0.3)
+        self.learning_speed_label = tk.Label(speed_frame, text="30%", font=('Arial', 10, 'bold'),
+                                              bg='#222222', fg='yellow', width=8)
+        self.learning_speed_label.pack(side='right', padx=5)
+
+        learning_speed_slider = tk.Scale(speed_frame, from_=0.1, to=1.0, resolution=0.05,
+                                          variable=self.learning_speed_var, orient='horizontal',
+                                          command=self.update_learning_speed_label, bg='#222222',
+                                          fg='white', highlightthickness=0)
+        learning_speed_slider.pack(side='right', expand=True, fill='x', padx=5)
+
+        # Open Speed
+        open_speed_frame = tk.Frame(slowdown_frame, bg='#222222')
+        open_speed_frame.pack(fill='x', padx=10, pady=5)
+
+        tk.Label(open_speed_frame, text="Open Speed:", font=('Arial', 10),
+                 bg='#222222', fg='white').pack(side='left', padx=5)
+
+        self.open_speed_var = tk.DoubleVar(value=1.0)
+        self.open_speed_label = tk.Label(open_speed_frame, text="100%", font=('Arial', 10, 'bold'),
+                                          bg='#222222', fg='lime', width=8)
+        self.open_speed_label.pack(side='right', padx=5)
+
+        open_speed_slider = tk.Scale(open_speed_frame, from_=0.1, to=1.0, resolution=0.05,
+                                      variable=self.open_speed_var, orient='horizontal',
+                                      command=self.update_open_speed_label, bg='#222222',
+                                      fg='white', highlightthickness=0)
+        open_speed_slider.pack(side='right', expand=True, fill='x', padx=5)
+
+        # Close Speed
+        close_speed_frame = tk.Frame(slowdown_frame, bg='#222222')
+        close_speed_frame.pack(fill='x', padx=10, pady=5)
+
+        tk.Label(close_speed_frame, text="Close Speed:", font=('Arial', 10),
+                 bg='#222222', fg='white').pack(side='left', padx=5)
+
+        self.close_speed_var = tk.DoubleVar(value=1.0)
+        self.close_speed_label = tk.Label(close_speed_frame, text="100%", font=('Arial', 10, 'bold'),
+                                           bg='#222222', fg='orange', width=8)
+        self.close_speed_label.pack(side='right', padx=5)
+
+        close_speed_slider = tk.Scale(close_speed_frame, from_=0.1, to=1.0, resolution=0.05,
+                                       variable=self.close_speed_var, orient='horizontal',
+                                       command=self.update_close_speed_label, bg='#222222',
+                                       fg='white', highlightthickness=0)
+        close_speed_slider.pack(side='right', expand=True, fill='x', padx=5)
+
+        # Learned Times Display
+        times_frame = tk.Frame(scrollable_frame, bg='#001133', relief='ridge', bd=2)
+        times_frame.pack(fill='x', padx=10, pady=5)
+
+        tk.Label(times_frame, text="Learned Travel Times", font=('Arial', 12, 'bold'),
+                 bg='#001133', fg='cyan').pack(pady=5)
+
+        self.learned_times_labels = {}
+        for motor_label in ['M1 Open', 'M1 Close', 'M2 Open', 'M2 Close']:
+            label = tk.Label(times_frame, text=f"{motor_label}: Not learned",
+                             font=('Arial', 10), bg='#001133', fg='white')
+            label.pack(anchor='w', padx=20)
+            self.learned_times_labels[motor_label] = label
+
+        # Auto-Learn Section
+        auto_learn_frame = tk.Frame(scrollable_frame, bg='#330033', relief='ridge', bd=3)
+        auto_learn_frame.pack(fill='x', padx=10, pady=10)
+
+        tk.Label(auto_learn_frame, text="🤖 AUTOMATED LEARNING", font=('Arial', 14, 'bold'),
+                 bg='#330033', fg='magenta').pack(pady=5)
+
+        tk.Label(auto_learn_frame,
+                 text="Automatically learn gate travel times through progressive cycles.\n" +
+                      "Gates will open/close slowly, then perform multiple fast cycles,\n" +
+                      "and return to closed position when complete.",
+                 font=('Arial', 9), bg='#330033', fg='white', justify='left').pack(padx=10)
+
+        # Auto-learn status
+        self.auto_learn_status_label = tk.Label(auto_learn_frame, text="Status: Ready",
+                                                 font=('Arial', 10, 'bold'), bg='#330033', fg='yellow')
+        self.auto_learn_status_label.pack(pady=5)
+
+        # Limit switch indicators
+        limit_frame = tk.Frame(auto_learn_frame, bg='#330033')
+        limit_frame.pack(pady=5)
+
+        tk.Label(limit_frame, text="Limit Switches:", font=('Arial', 9, 'bold'),
+                 bg='#330033', fg='white').pack()
+
+        limit_indicators_frame = tk.Frame(limit_frame, bg='#330033')
+        limit_indicators_frame.pack(pady=5)
+
+        # Create 4 limit switch indicators
+        self.limit_indicators = {}
+        limit_configs = [
+            ('M1 Open', 'open_limit_m1_active'),
+            ('M1 Close', 'close_limit_m1_active'),
+            ('M2 Open', 'open_limit_m2_active'),
+            ('M2 Close', 'close_limit_m2_active')
+        ]
+
+        for i, (label_text, key) in enumerate(limit_configs):
+            indicator_frame = tk.Frame(limit_indicators_frame, bg='#330033')
+            indicator_frame.pack(side='left', padx=5)
+
+            tk.Label(indicator_frame, text=label_text, font=('Arial', 8),
+                     bg='#330033', fg='white').pack()
+
+            indicator = tk.Label(indicator_frame, text="●", font=('Arial', 16),
+                                bg='#330033', fg='gray')
+            indicator.pack()
+
+            self.limit_indicators[key] = indicator
+
+        # Auto-learn buttons
+        auto_learn_btn_frame = tk.Frame(auto_learn_frame, bg='#330033')
+        auto_learn_btn_frame.pack(pady=10)
+
+        self.start_auto_learn_btn = tk.Button(
+            auto_learn_btn_frame,
+            text="▶ START AUTO-LEARN",
+            font=('Arial', 12, 'bold'),
+            bg='#00AA00',
+            fg='white',
+            command=self.start_auto_learn,
+            relief='raised',
+            bd=3,
+            width=20
+        )
+        self.start_auto_learn_btn.pack(side='left', padx=5)
+
+        self.stop_auto_learn_btn = tk.Button(
+            auto_learn_btn_frame,
+            text="⬛ STOP",
+            font=('Arial', 12, 'bold'),
+            bg='#AA0000',
+            fg='white',
+            command=self.stop_auto_learn,
+            relief='raised',
+            bd=3,
+            width=10,
+            state='disabled'
+        )
+        self.stop_auto_learn_btn.pack(side='left', padx=5)
+
+        # Add bottom spacing so content doesn't get cut off
+        tk.Frame(scrollable_frame, bg='black', height=20).pack()
+
+        canvas.pack(side="left", fill="both", expand=True, pady=(0, 10))
+        scrollbar.pack(side="right", fill="y", pady=(0, 10))
+
+        # Button frame at bottom - reorganized for better visibility
+        button_frame = tk.Frame(self.learning_frame, bg='black')
+        button_frame.pack(fill='x', padx=10, pady=5, side='bottom')
+
+        # Back button (left side)
+        back_btn = tk.Button(
+            button_frame,
+            text="◄ BACK",
+            font=('Arial', 12, 'bold'),
+            bg='blue',
+            fg='white',
+            command=self.show_main_page,
+            relief='raised',
+            bd=3,
+            width=10
+        )
+        back_btn.pack(side='left', padx=5)
+
+        # Save config button (center)
+        save_btn = tk.Button(
+            button_frame,
+            text="SAVE CONFIG",
+            font=('Arial', 12, 'bold'),
+            bg='green',
+            fg='white',
+            command=self.save_learning_config,
+            relief='raised',
+            bd=3
+        )
+        save_btn.pack(side='left', expand=True, fill='x', padx=5)
+
+        # Save learned times button (right)
+        save_times_btn = tk.Button(
+            button_frame,
+            text="SAVE LEARNED TIMES",
+            font=('Arial', 12, 'bold'),
+            bg='orange',
+            fg='white',
+            command=self.save_learned_times,
+            relief='raised',
+            bd=3
+        )
+        save_times_btn.pack(side='left', expand=True, fill='x', padx=5)
+
     def load_current_config(self):
         """Load current config values into the entry fields"""
         config_file = '/home/doowkcol/Gatetorio_Code/gate_config.json'
@@ -1158,9 +1516,14 @@ class GateUI:
     
     def toggle_open(self):
         """Toggle OPEN command"""
+        # Block if engineer mode is enabled
+        if self.controller.shared.get('engineer_mode_enabled', False):
+            print("OPEN blocked - Engineer mode is active")
+            return
+
         self.open_active = not self.open_active
         self.controller.shared['cmd_open_active'] = self.open_active
-        
+
         if self.open_active:
             print("OPEN button activated!")
             self.open_btn.config(relief='sunken', bg='darkgreen', text="OPEN\n[ON]")
@@ -1182,9 +1545,14 @@ class GateUI:
     
     def toggle_close(self):
         """Toggle CLOSE command"""
+        # Block if engineer mode is enabled
+        if self.controller.shared.get('engineer_mode_enabled', False):
+            print("CLOSE blocked - Engineer mode is active")
+            return
+
         self.close_active = not self.close_active
         self.controller.shared['cmd_close_active'] = self.close_active
-        
+
         if self.close_active:
             print("CLOSE button activated!")
             self.close_btn.config(relief='sunken', bg='darkblue', text="CLOSE\n[ON]")
@@ -1377,7 +1745,10 @@ class GateUI:
         
         # Update input status displays (if on that page)
         self.update_input_displays()
-        
+
+        # Update auto-learn status (if on learning page)
+        self.update_auto_learn_status()
+
         # Schedule next update
         self.root.after(100, self.update_status)
     
@@ -1415,7 +1786,48 @@ class GateUI:
                 widgets['resistance'].config(text=f"R: {resistance/1000:.1f}k")
             else:
                 widgets['resistance'].config(text=f"R: {resistance:.0f}ohm")
-    
+
+    def update_auto_learn_status(self):
+        """Update auto-learn status display"""
+        # Only update if we have auto-learn status label initialized
+        if not hasattr(self, 'auto_learn_status_label'):
+            return
+
+        # Get auto-learn status from controller
+        auto_learn_status = self.controller.get_auto_learn_status()
+        active = auto_learn_status['active']
+        status_msg = auto_learn_status['status_msg']
+        cycle = auto_learn_status['cycle']
+
+        # Update status label
+        if active:
+            if cycle > 0:
+                self.auto_learn_status_label.config(text=f"Status: Cycle {cycle} - {status_msg}", fg='lime')
+            else:
+                self.auto_learn_status_label.config(text=f"Status: {status_msg}", fg='lime')
+        else:
+            self.auto_learn_status_label.config(text=f"Status: {status_msg}", fg='yellow')
+
+        # Update button states
+        if active:
+            self.start_auto_learn_btn.config(state='disabled')
+            self.stop_auto_learn_btn.config(state='normal')
+        else:
+            self.start_auto_learn_btn.config(state='normal')
+            self.stop_auto_learn_btn.config(state='disabled')
+
+        # Update limit switch indicators
+        if hasattr(self, 'limit_indicators'):
+            for key, indicator in self.limit_indicators.items():
+                is_active = self.controller.shared.get(key, False)
+                if is_active:
+                    indicator.config(fg='lime')  # Green when active
+                else:
+                    indicator.config(fg='gray')  # Gray when inactive
+
+        # Update learned times display
+        self.update_learned_times_display()
+
     def on_exit(self):
         """Handle exit - properly kill all processes"""
         print("Exit button pressed - shutting down all processes")
@@ -1450,7 +1862,187 @@ class GateUI:
         import sys
         print("Exiting Python process")
         sys.exit(0)
-    
+
+    def load_learning_config(self):
+        """Load learning configuration into UI elements"""
+        config_file = '/home/doowkcol/Gatetorio_Code/gate_config.json'
+        try:
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+
+            self.engineer_mode_var.set(config.get('engineer_mode_enabled', False))
+            self.learning_mode_var.set(config.get('learning_mode_enabled', False))
+            self.m1_ls_var.set(config.get('motor1_use_limit_switches', False))
+            self.m2_ls_var.set(config.get('motor2_use_limit_switches', False))
+            self.open_slowdown_var.set(config.get('opening_slowdown_percent', 2.0))
+            self.close_slowdown_var.set(config.get('closing_slowdown_percent', 10.0))
+            self.learning_speed_var.set(config.get('learning_speed', 0.3))
+            self.open_speed_var.set(config.get('open_speed', 1.0))
+            self.close_speed_var.set(config.get('close_speed', 1.0))
+
+            # Update labels
+            self.update_open_slowdown_label(None)
+            self.update_close_slowdown_label(None)
+            self.update_learning_speed_label(None)
+            self.update_open_speed_label(None)
+            self.update_close_speed_label(None)
+
+            # Update engineer mode state
+            if self.engineer_mode_var.get():
+                self.learning_mode_check.config(state='normal')
+            else:
+                self.learning_mode_check.config(state='disabled')
+
+            # Update learned times display
+            self.update_learned_times_display()
+
+        except Exception as e:
+            print(f"Error loading learning config: {e}")
+
+    def toggle_engineer_mode(self):
+        """Toggle engineer mode - blocks normal commands when enabled"""
+        enabled = self.engineer_mode_var.get()
+        self.controller.shared['engineer_mode_enabled'] = enabled
+
+        if enabled:
+            self.learning_mode_check.config(state='normal')
+            print("ENGINEER MODE ENABLED - Normal commands blocked except STOP")
+        else:
+            self.learning_mode_check.config(state='disabled')
+            self.learning_mode_var.set(False)
+            self.controller.shared['learning_mode_enabled'] = False
+            print("Engineer mode disabled - Normal operation restored")
+
+    def toggle_learning_mode(self):
+        """Toggle learning mode"""
+        enabled = self.learning_mode_var.get()
+        if enabled:
+            self.controller.enable_learning_mode()
+        else:
+            self.controller.disable_learning_mode()
+
+    def start_auto_learn(self):
+        """Start the automated learning sequence"""
+        if not self.engineer_mode_var.get():
+            print("ERROR: Engineer mode must be enabled to start auto-learn")
+            return
+
+        # Start auto-learn
+        success = self.controller.start_auto_learn()
+
+        if success:
+            # Disable start button, enable stop button
+            self.start_auto_learn_btn.config(state='disabled')
+            self.stop_auto_learn_btn.config(state='normal')
+            print("Auto-learn started - sequence will run automatically")
+        else:
+            print("Failed to start auto-learn")
+
+    def stop_auto_learn(self):
+        """Stop the automated learning sequence"""
+        self.controller.stop_auto_learn()
+
+        # Re-enable start button, disable stop button
+        self.start_auto_learn_btn.config(state='normal')
+        self.stop_auto_learn_btn.config(state='disabled')
+        print("Auto-learn stopped")
+
+    def update_open_slowdown_label(self, value):
+        """Update opening slowdown percentage label"""
+        self.open_slowdown_label.config(text=f"{self.open_slowdown_var.get():.1f}%")
+
+    def update_close_slowdown_label(self, value):
+        """Update closing slowdown percentage label"""
+        self.close_slowdown_label.config(text=f"{self.close_slowdown_var.get():.1f}%")
+
+    def update_learning_speed_label(self, value):
+        """Update learning speed label"""
+        speed_percent = self.learning_speed_var.get() * 100
+        self.learning_speed_label.config(text=f"{speed_percent:.0f}%")
+
+    def update_open_speed_label(self, value):
+        """Update open speed label"""
+        speed_percent = self.open_speed_var.get() * 100
+        self.open_speed_label.config(text=f"{speed_percent:.0f}%")
+
+    def update_close_speed_label(self, value):
+        """Update close speed label"""
+        speed_percent = self.close_speed_var.get() * 100
+        self.close_speed_label.config(text=f"{speed_percent:.0f}%")
+
+    def save_learning_config(self):
+        """Save learning configuration to file"""
+        config_file = '/home/doowkcol/Gatetorio_Code/gate_config.json'
+        try:
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+
+            # Engineer mode is runtime-only, never saved to config
+            # config['engineer_mode_enabled'] - not saved
+            config['learning_mode_enabled'] = self.learning_mode_var.get()
+            config['motor1_use_limit_switches'] = self.m1_ls_var.get()
+            config['motor2_use_limit_switches'] = self.m2_ls_var.get()
+            config['limit_switches_enabled'] = self.m1_ls_var.get() or self.m2_ls_var.get()
+            config['opening_slowdown_percent'] = self.open_slowdown_var.get()
+            config['closing_slowdown_percent'] = self.close_slowdown_var.get()
+            config['learning_speed'] = self.learning_speed_var.get()
+            config['open_speed'] = self.open_speed_var.get()
+            config['close_speed'] = self.close_speed_var.get()
+
+            with open(config_file, 'w') as f:
+                json.dump(config, f, indent=2)
+
+            print("Learning configuration saved!")
+            self.controller.reload_config()
+            self.show_save_confirmation()
+
+        except Exception as e:
+            print(f"Error saving learning config: {e}")
+
+    def save_learned_times(self):
+        """Save learned travel times to config"""
+        success = self.controller.save_learned_times()
+        if success:
+            self.controller.reload_config()
+            self.update_learned_times_display()
+            self.show_save_confirmation()
+
+    def update_learned_times_display(self):
+        """Update the learned times labels"""
+        status = self.controller.get_learning_status()
+
+        m1_open = status.get('m1_open_time')
+        m1_close = status.get('m1_close_time')
+        m2_open = status.get('m2_open_time')
+        m2_close = status.get('m2_close_time')
+
+        self.learned_times_labels['M1 Open'].config(
+            text=f"M1 Open: {m1_open:.2f}s" if m1_open else "M1 Open: Not learned"
+        )
+        self.learned_times_labels['M1 Close'].config(
+            text=f"M1 Close: {m1_close:.2f}s" if m1_close else "M1 Close: Not learned"
+        )
+        self.learned_times_labels['M2 Open'].config(
+            text=f"M2 Open: {m2_open:.2f}s" if m2_open else "M2 Open: Not learned"
+        )
+        self.learned_times_labels['M2 Close'].config(
+            text=f"M2 Close: {m2_close:.2f}s" if m2_close else "M2 Close: Not learned"
+        )
+
+    def show_save_confirmation(self):
+        """Show a temporary 'Saved!' message"""
+        confirm = tk.Label(
+            self.learning_frame,
+            text="SAVED!",
+            font=('Arial', 20, 'bold'),
+            bg='green',
+            fg='white'
+        )
+        confirm.place(relx=0.5, rely=0.5, anchor='center')
+
+        # Remove it after 1.5 seconds
+        self.root.after(1500, confirm.destroy)
+
     def run(self):
         """Start the UI"""
         self.root.mainloop()
