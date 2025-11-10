@@ -1089,6 +1089,10 @@ class MotorManager:
                 use_limit_switch_mode = (ignore_position_limits and
                                         self.shared['state'] == 'CLOSING')
 
+                # DEBUG: Show motor control decisions for M1 closing
+                if self.shared['movement_command'] == 'CLOSE':
+                    print(f"[M1 MOTOR] State={self.shared['state']} Pos={self.shared['m1_position']:.1f} Target={target_position:.1f} LimitMode={use_limit_switch_mode} IgnoreLimits={ignore_position_limits}")
+
                 # When limit switches enabled, keep running until limit triggers (with safety margin)
                 safety_margin_low = -0.2  # Allow some negative overshoot for closing (position can go slightly negative)
                 if use_limit_switch_mode:
@@ -1103,8 +1107,12 @@ class MotorManager:
                     # Normal position-based stopping
                     if self.shared['m1_position'] > target_position:
                         self.motor1.backward(speed)
+                        if self.shared['movement_command'] == 'CLOSE':
+                            print(f"[M1 MOTOR] Running: Pos {self.shared['m1_position']:.1f} > Target {target_position:.1f}")
                     else:
                         self.motor1.stop()
+                        if self.shared['movement_command'] == 'CLOSE':
+                            print(f"[M1 MOTOR] STOPPED: Pos {self.shared['m1_position']:.1f} <= Target {target_position:.1f}")
                         # Snap to exact target when stopped
                         self.shared['m1_position'] = target_position
         else:
