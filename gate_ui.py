@@ -592,6 +592,39 @@ class GateUI:
                                   font=('Arial', 9), bg='black', fg='gray')
         autolearn_desc.pack(padx=20, pady=2)
 
+        # Engineer mode toggle (required for auto-learn)
+        engineer_frame = tk.Frame(scrollable_frame, bg='#440000', relief='ridge', bd=3)
+        engineer_frame.pack(fill='x', padx=20, pady=10)
+
+        self.engineer_mode_var = tk.BooleanVar(value=False)
+        engineer_check = tk.Checkbutton(
+            engineer_frame,
+            text="🔧 ENGINEER MODE (Enable before auto-learn)",
+            variable=self.engineer_mode_var,
+            command=self.toggle_engineer_mode,
+            font=('Arial', 12, 'bold'),
+            bg='#440000',
+            fg='yellow',
+            selectcolor='#440000',
+            activebackground='#440000',
+            activeforeground='yellow'
+        )
+        engineer_check.pack(pady=5)
+
+        engineer_warning = tk.Label(
+            engineer_frame,
+            text="WARNING: Engineer mode blocks normal OPEN/CLOSE commands",
+            font=('Arial', 8),
+            bg='#440000',
+            fg='orange'
+        )
+        engineer_warning.pack(pady=2)
+
+        # Create dummy learning_mode vars for compatibility (manual learning is obsolete, auto-learn is used instead)
+        # But code still references these in toggle_engineer_mode
+        self.learning_mode_var = tk.BooleanVar(value=False)
+        self.learning_mode_check = None  # Not displayed, just for compatibility
+
         # Auto-learn button frame
         autolearn_btn_frame = tk.Frame(scrollable_frame, bg='black')
         autolearn_btn_frame.pack(fill='x', padx=20, pady=10)
@@ -2095,13 +2128,16 @@ class GateUI:
             self.update_close_speed_label(None)
 
             # Update engineer mode state
-            if self.engineer_mode_var.get():
-                self.learning_mode_check.config(state='normal')
-            else:
-                self.learning_mode_check.config(state='disabled')
+            # learning_mode_check only exists in old learning page
+            if self.learning_mode_check is not None:
+                if self.engineer_mode_var.get():
+                    self.learning_mode_check.config(state='normal')
+                else:
+                    self.learning_mode_check.config(state='disabled')
 
-            # Update learned times display
-            self.update_learned_times_display()
+            # Update learned times display (if method exists - only in old learning page)
+            if hasattr(self, 'update_learned_times_display'):
+                self.update_learned_times_display()
 
         except Exception as e:
             print(f"Error loading learning config: {e}")
@@ -2112,10 +2148,13 @@ class GateUI:
         self.controller.shared['engineer_mode_enabled'] = enabled
 
         if enabled:
-            self.learning_mode_check.config(state='normal')
+            # learning_mode_check only exists in old learning page, not in consolidated settings
+            if self.learning_mode_check is not None:
+                self.learning_mode_check.config(state='normal')
             print("ENGINEER MODE ENABLED - Normal commands blocked except STOP")
         else:
-            self.learning_mode_check.config(state='disabled')
+            if self.learning_mode_check is not None:
+                self.learning_mode_check.config(state='disabled')
             self.learning_mode_var.set(False)
             self.controller.shared['learning_mode_enabled'] = False
             print("Engineer mode disabled - Normal operation restored")
