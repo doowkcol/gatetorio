@@ -581,6 +581,55 @@ class GateUI:
                                        fg='white', highlightthickness=0)
         close_speed_slider.pack(side='right', expand=True, fill='x', padx=5)
 
+        # ==== AUTO-LEARN CONFIGURATION ====
+        autolearn_section = tk.Label(scrollable_frame, text="🤖 AUTO-LEARN TRAVEL TIMES",
+                                     font=('Arial', 14, 'bold'), bg='#222222', fg='cyan',
+                                     relief='ridge', bd=2)
+        autolearn_section.pack(fill='x', padx=10, pady=(15, 5))
+
+        autolearn_desc = tk.Label(scrollable_frame,
+                                  text="Automatically measure motor travel times using limit switches",
+                                  font=('Arial', 9), bg='black', fg='gray')
+        autolearn_desc.pack(padx=20, pady=2)
+
+        # Auto-learn button frame
+        autolearn_btn_frame = tk.Frame(scrollable_frame, bg='black')
+        autolearn_btn_frame.pack(fill='x', padx=20, pady=10)
+
+        # Start auto-learn button
+        self.start_auto_learn_btn = tk.Button(
+            autolearn_btn_frame,
+            text="START AUTO-LEARN",
+            font=('Arial', 12, 'bold'),
+            bg='green',
+            fg='white',
+            command=self.start_auto_learn,
+            relief='raised',
+            bd=3,
+            width=20
+        )
+        self.start_auto_learn_btn.pack(side='left', padx=5)
+
+        # Stop auto-learn button
+        self.stop_auto_learn_btn = tk.Button(
+            autolearn_btn_frame,
+            text="STOP AUTO-LEARN",
+            font=('Arial', 12, 'bold'),
+            bg='red',
+            fg='white',
+            command=self.stop_auto_learn,
+            state='disabled',
+            relief='raised',
+            bd=3,
+            width=20
+        )
+        self.stop_auto_learn_btn.pack(side='left', padx=5)
+
+        autolearn_note = tk.Label(scrollable_frame,
+                                  text="Note: Engineer mode must be enabled and limit switches configured",
+                                  font=('Arial', 8), bg='black', fg='orange')
+        autolearn_note.pack(padx=20, pady=(0, 10))
+
         canvas.pack(side="left", fill="both", expand=True, padx=10)
         scrollbar.pack(side="right", fill="y")
 
