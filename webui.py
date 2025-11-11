@@ -7,11 +7,21 @@ from fastapi.websockets import WebSocket
 import uvicorn
 
 from gate_controller_v2 import GateController
+import os
 
 app = FastAPI()
 controller = GateController()  # uses same shared dict/logic
-CFG = pathlib.Path("/home/doowkcol/Gatetorio_Code/gate_config.json")
-INPUT_CFG = pathlib.Path("/home/doowkcol/Gatetorio_Code/input_config.json")
+
+# Use environment variable or default paths
+CONFIG_DIR = os.getenv('GATETORIO_CONFIG_DIR', '/home/doowkcol/Gatetorio_Code')
+CFG = pathlib.Path(CONFIG_DIR) / "gate_config.json"
+INPUT_CFG = pathlib.Path(CONFIG_DIR) / "input_config.json"
+
+# Fallback to current directory if config files don't exist
+if not CFG.exists():
+    CFG = pathlib.Path("gate_config.json")
+if not INPUT_CFG.exists():
+    INPUT_CFG = pathlib.Path("input_config.json")
 
 INDEX = """<!doctype html><meta charset="utf-8">
 <title>Gate Controller</title>
@@ -120,9 +130,19 @@ INDEX = """<!doctype html><meta charset="utf-8">
     <form id="cfg" onsubmit="saveCfg(event)">
       <div class="config-grid">
         <div class="config-item">
-          <div class="config-label">Run Time (s)</div>
-          <input name="run_time" type="number" step="0.1">
-          <div class="config-desc">Full travel time for gate to open/close</div>
+          <div class="config-label">Motor 1 Travel Time (s)</div>
+          <input name="motor1_run_time" type="number" step="0.1">
+          <div class="config-desc">Time for M1 to fully open/close</div>
+        </div>
+        <div class="config-item">
+          <div class="config-label">Motor 2 Travel Time (s)</div>
+          <input name="motor2_run_time" type="number" step="0.1">
+          <div class="config-desc">Time for M2 to fully open/close</div>
+        </div>
+        <div class="config-item">
+          <div class="config-label">Motor 2 Enabled</div>
+          <input name="motor2_enabled" type="checkbox">
+          <div class="config-desc">Enable/disable motor 2 (for single-motor systems)</div>
         </div>
         <div class="config-item">
           <div class="config-label">Pause Time (s)</div>
@@ -365,15 +385,37 @@ async function pulse(){
 // Settings page
 async function loadCfg(){
   const c = await fetchJSON('/api/config');
-  for (const k in c){ const el = document.querySelector(`[name="${k}"]`); if(el){
-    if(el.tagName==='SELECT'){ el.value = String(c[k]); } else { el.value = c[k]; }
-  }}
+  for (const k in c){
+    const el = document.querySelector(`[name="${k}"]`);
+    if(el){
+      if(el.type === 'checkbox'){
+        el.checked = Boolean(c[k]);
+      } else if(el.tagName==='SELECT'){
+        el.value = String(c[k]);
+      } else {
+        el.value = c[k];
+      }
+    }
+  }
 }
 async function saveCfg(e){
   e.preventDefault();
-  const fd = new FormData(document.getElementById('cfg'));
+  const form = document.getElementById('cfg');
+  const fd = new FormData(form);
   const out = {};
-  fd.forEach((v,k)=>{ out[k]= (v==='true'||v==='false')? (v==='true') : Number(v); });
+
+  // Handle all form elements including checkboxes
+  for (const el of form.elements) {
+    if (el.name) {
+      if (el.type === 'checkbox') {
+        out[el.name] = el.checked;
+      } else if (fd.has(el.name)) {
+        const v = fd.get(el.name);
+        out[el.name] = (v==='true'||v==='false')? (v==='true') : Number(v);
+      }
+    }
+  }
+
   await fetchJSON('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(out)});
   alert('Configuration saved!');
 }
@@ -666,23 +708,43 @@ def reload_cfg():
 def get_inputs():
     """Get all input states with voltage/resistance data"""
     try:
+        print(f"Reading input config from: {INPUT_CFG}")
         with open(INPUT_CFG, 'r') as f:
             input_config = json.load(f)
 
         inputs = {}
         for name, cfg in input_config.get('inputs', {}).items():
+            state_key = f'{name}_state'
+            voltage_key = f'{name}_voltage'
+            resistance_key = f'{name}_resistance'
+
+            # Debug: print what keys are in shared memory
+            if len(inputs) == 0:  # Only print once
+                print(f"Sample keys in controller.shared: {list(controller.shared.keys())[:10]}")
+
+            # Get resistance and handle inf/nan values (not JSON compliant)
+            resistance = controller.shared.get(resistance_key, None)
+            if resistance is not None:
+                import math
+                if math.isinf(resistance) or math.isnan(resistance):
+                    resistance = None  # Convert inf/nan to null for JSON
+
             inputs[name] = {
                 'channel': cfg['channel'],
                 'type': cfg.get('type', 'NO'),
                 'function': cfg.get('function'),
                 'description': cfg.get('description', ''),
-                'state': controller.shared.get(f'{name}_state', False),
-                'voltage': controller.shared.get(f'{name}_voltage', 0.0),
-                'resistance': controller.shared.get(f'{name}_resistance', None),
+                'state': controller.shared.get(state_key, False),
+                'voltage': controller.shared.get(voltage_key, 0.0),
+                'resistance': resistance,
             }
+        print(f"Returning {len(inputs)} inputs")
         return JSONResponse(inputs)
     except Exception as e:
-        return JSONResponse({}, status_code=500)
+        import traceback
+        print(f"ERROR in /api/inputs: {e}")
+        print(traceback.format_exc())
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 @app.get("/api/input_config")
 def get_input_config():
@@ -760,7 +822,34 @@ async def ws(ws: WebSocket):
             await ws.send_text(msg)
             await asyncio.sleep(1.0)
     except Exception:
-        await ws.close()
+        # Connection closed by client - don't try to close again
+        pass
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    import threading
+    from gate_ui import GateUI
+
+    # Start web server in background thread
+    def run_web_server():
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+
+    web_thread = threading.Thread(target=run_web_server, daemon=True)
+    web_thread.start()
+    print("Web server starting on http://0.0.0.0:8000")
+
+    # Get local IP for LAN access info
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        print(f"Web UI accessible from LAN at: http://{local_ip}:8000")
+    except:
+        print("Web UI accessible at: http://localhost:8000")
+
+    # Start Tkinter UI in main thread (required for GUI)
+    # Pass the same controller instance so both UIs share the same data
+    print("Starting Tkinter UI...")
+    ui = GateUI(controller=controller)
+    ui.run()

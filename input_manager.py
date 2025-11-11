@@ -49,12 +49,12 @@ class InputManager:
             shared_dict: Multiprocessing shared dictionary
             config: Configuration dict with:
                 - num_inputs: Number of analog inputs (8 for dual ADS1115)
-                - input_sample_rate: Sampling rate in seconds (default 0.1 = 10Hz)
+                - input_sample_rate: Sampling rate in seconds (default 0.01 = 100Hz for safety-critical response)
         """
         self.shared = shared_dict
         self.config = config
         self.num_inputs = config.get('num_inputs', 8)
-        self.sample_rate = config.get('input_sample_rate', 0.1)
+        self.sample_rate = config.get('input_sample_rate', 0.01)  # 100Hz default for safety-critical inputs
 
         # Initialize ADCs if available
         self.adc1 = None  # First ADC at 0x48 (ADDR->GND, default)
@@ -175,27 +175,46 @@ class InputManager:
     def run(self):
         """Main input manager loop - runs continuously"""
         print("Input Manager: Starting main loop")
-        
+
         last_sample = time.time()
-        
+
+        # Track consecutive samples for debouncing ALL inputs
+        # Prevents toggling on marginal/noisy signals - requires multiple consecutive
+        # samples to change state (both activation and deactivation)
+        consecutive_active = {}
+        consecutive_inactive = {}
+        for input_name in self.input_config.keys():
+            consecutive_active[input_name] = 0
+            consecutive_inactive[input_name] = 0
+
         while self.shared.get('running', True):
             now = time.time()
-            
+
             # Update heartbeat
             self.shared['input_manager_heartbeat'] = now
-            
-            # Sample all inputs at configured rate
+
+            # Sample all inputs at configured rate (default 0.01s = 100Hz for safety-critical response)
+            # Much faster than previous 0.1s = 10Hz to prevent race conditions with controller
             if (now - last_sample) >= self.sample_rate:
-                self._sample_all_inputs()
+                self._sample_all_inputs(consecutive_active, consecutive_inactive)
                 last_sample = now
-            
-            # Sleep briefly to avoid CPU hammering
-            time.sleep(0.01)
-        
+
+            # Sleep briefly to avoid CPU hammering (but much less than sample rate)
+            time.sleep(0.005)  # 5ms sleep, allows up to 200Hz sampling if configured
+
         print("Input Manager: Shutting down")
     
-    def _sample_all_inputs(self):
-        """Sample all configured inputs and update shared memory"""
+    def _sample_all_inputs(self, consecutive_active, consecutive_inactive):
+        """Sample all configured inputs and update shared memory with universal debouncing
+
+        Args:
+            consecutive_active: Dict tracking consecutive active samples per input
+            consecutive_inactive: Dict tracking consecutive inactive samples per input
+
+        All inputs use debouncing to prevent state changes from noise/glitches.
+        Requires multiple consecutive samples in the new state before changing.
+        Safety inputs use more aggressive debouncing than command inputs.
+        """
         now = time.time()
 
         for input_name, input_cfg in self.input_config.items():
@@ -205,7 +224,7 @@ class InputManager:
 
             channel = input_cfg['channel']
             input_type = input_cfg.get('type', 'NO')  # NO or NC or 8K2
-            
+
             # Read ADC value
             if self.adc_available and channel < len(self.analog_inputs) and self.analog_inputs[channel] is not None:
                 voltage = self.analog_inputs[channel].voltage
@@ -214,19 +233,65 @@ class InputManager:
                 # Simulation mode - read from shared dict if UI set it
                 voltage = self.shared.get(f'{input_name}_sim_voltage', 0.0)
                 value = int((voltage / 3.3) * 32767)  # Simulate 15-bit ADC
-            
+
             # Calculate resistance if pullup present
             resistance = self._calculate_resistance(voltage, pullup_ohms=10000, vcc=3.3)
-            
+
             # Get learned resistance parameters if configured
             learned_resistance = input_cfg.get('learned_resistance', None)
             tolerance_percent = input_cfg.get('tolerance_percent', None)
-            
-            # Determine active state based on type
+
+            # Determine raw active state based on type
             was_active = self.shared[f'{input_name}_state']
-            is_active = self._determine_active_state(voltage, resistance, input_type, 
+            is_active_raw = self._determine_active_state(voltage, resistance, input_type,
                                                     learned_resistance, tolerance_percent)
-            
+
+            # UNIVERSAL DEBOUNCING: All inputs require multiple consecutive samples to change state
+            # This prevents race conditions with faster control loop and filters electrical noise
+            # Safety inputs need more samples (more conservative) than command inputs
+            function = input_cfg.get('function')
+            safety_functions = ['photocell_closing', 'photocell_opening',
+                              'safety_stop_closing', 'safety_stop_opening']
+
+            if function in safety_functions:
+                # Safety inputs: Immediate activation, 3-sample deactivation (30ms @ 100Hz)
+                activate_samples = 1
+                deactivate_samples = 3
+            else:
+                # Command inputs: 2-sample activation, 2-sample deactivation (20ms @ 100Hz)
+                activate_samples = 2
+                deactivate_samples = 2
+
+            # Debouncing state machine
+            if is_active_raw:
+                # Raw signal is active
+                consecutive_inactive[input_name] = 0
+                consecutive_active[input_name] += 1
+
+                if was_active:
+                    # Already active, stay active
+                    is_active = True
+                else:
+                    # Was inactive, check if enough consecutive samples to activate
+                    if consecutive_active[input_name] >= activate_samples:
+                        is_active = True  # Activate now
+                    else:
+                        is_active = False  # Still debouncing, stay inactive
+            else:
+                # Raw signal is inactive
+                consecutive_active[input_name] = 0
+                consecutive_inactive[input_name] += 1
+
+                if not was_active:
+                    # Already inactive, stay inactive
+                    is_active = False
+                else:
+                    # Was active, check if enough consecutive samples to deactivate
+                    if consecutive_inactive[input_name] >= deactivate_samples:
+                        is_active = False  # Deactivate now
+                    else:
+                        is_active = True  # Still debouncing, stay active (latch-on)
+
             # Update shared memory
             self.shared[f'{input_name}_voltage'] = voltage
             self.shared[f'{input_name}_resistance'] = resistance
