@@ -130,9 +130,19 @@ INDEX = """<!doctype html><meta charset="utf-8">
     <form id="cfg" onsubmit="saveCfg(event)">
       <div class="config-grid">
         <div class="config-item">
-          <div class="config-label">Run Time (s)</div>
-          <input name="run_time" type="number" step="0.1">
-          <div class="config-desc">Full travel time for gate to open/close</div>
+          <div class="config-label">Motor 1 Travel Time (s)</div>
+          <input name="motor1_run_time" type="number" step="0.1">
+          <div class="config-desc">Time for M1 to fully open/close</div>
+        </div>
+        <div class="config-item">
+          <div class="config-label">Motor 2 Travel Time (s)</div>
+          <input name="motor2_run_time" type="number" step="0.1">
+          <div class="config-desc">Time for M2 to fully open/close</div>
+        </div>
+        <div class="config-item">
+          <div class="config-label">Motor 2 Enabled</div>
+          <input name="motor2_enabled" type="checkbox">
+          <div class="config-desc">Enable/disable motor 2 (for single-motor systems)</div>
         </div>
         <div class="config-item">
           <div class="config-label">Pause Time (s)</div>
@@ -375,15 +385,37 @@ async function pulse(){
 // Settings page
 async function loadCfg(){
   const c = await fetchJSON('/api/config');
-  for (const k in c){ const el = document.querySelector(`[name="${k}"]`); if(el){
-    if(el.tagName==='SELECT'){ el.value = String(c[k]); } else { el.value = c[k]; }
-  }}
+  for (const k in c){
+    const el = document.querySelector(`[name="${k}"]`);
+    if(el){
+      if(el.type === 'checkbox'){
+        el.checked = Boolean(c[k]);
+      } else if(el.tagName==='SELECT'){
+        el.value = String(c[k]);
+      } else {
+        el.value = c[k];
+      }
+    }
+  }
 }
 async function saveCfg(e){
   e.preventDefault();
-  const fd = new FormData(document.getElementById('cfg'));
+  const form = document.getElementById('cfg');
+  const fd = new FormData(form);
   const out = {};
-  fd.forEach((v,k)=>{ out[k]= (v==='true'||v==='false')? (v==='true') : Number(v); });
+
+  // Handle all form elements including checkboxes
+  for (const el of form.elements) {
+    if (el.name) {
+      if (el.type === 'checkbox') {
+        out[el.name] = el.checked;
+      } else if (fd.has(el.name)) {
+        const v = fd.get(el.name);
+        out[el.name] = (v==='true'||v==='false')? (v==='true') : Number(v);
+      }
+    }
+  }
+
   await fetchJSON('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(out)});
   alert('Configuration saved!');
 }

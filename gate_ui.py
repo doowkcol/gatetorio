@@ -391,7 +391,9 @@ class GateUI:
 
         # Config fields with labels and descriptions
         config_fields = [
-            ('run_time', 'Full Travel Time (s)', 'Time for gate to fully open/close'),
+            ('motor1_run_time', 'Motor 1 Travel Time (s)', 'Time for M1 to fully open/close'),
+            ('motor2_run_time', 'Motor 2 Travel Time (s)', 'Time for M2 to fully open/close'),
+            ('motor2_enabled', 'Motor 2 Enabled', 'Enable/disable motor 2 (for single-motor systems)'),
             ('pause_time', 'Pause Time (s)', 'Pause between movements'),
             ('motor1_open_delay', 'Motor 1 Open Delay (s)', 'Delay before M1 starts opening'),
             ('motor2_close_delay', 'Motor 2 Close Delay (s)', 'Delay before M2 starts closing'),
@@ -1741,7 +1743,7 @@ class GateUI:
             for key, entry in self.config_entries.items():
                 value = entry.get()
                 # Convert to appropriate type
-                if key in ['run_time', 'pause_time', 'motor1_open_delay', 'motor2_close_delay',
+                if key in ['motor1_run_time', 'motor2_run_time', 'pause_time', 'motor1_open_delay', 'motor2_close_delay',
                           'auto_close_time', 'safety_reverse_time', 'partial_auto_close_time',
                           'partial_return_pause', 'partial_1_auto_close_time', 'partial_2_auto_close_time']:
                     config[key] = float(value)
@@ -1749,6 +1751,8 @@ class GateUI:
                     config[key] = int(value)
                 elif key == 'deadman_speed':
                     config[key] = float(value)
+                elif key == 'motor2_enabled':
+                    config[key] = bool(value)
 
             config['auto_close_enabled'] = self.auto_close_var.get()
 

@@ -1978,6 +1978,10 @@ class GateController:
             m2_open_time = self.shared.get('learning_m2_open_time')
             m2_close_time = self.shared.get('learning_m2_close_time')
 
+            print(f"[SAVE] Retrieved learned times from shared memory:")
+            print(f"  M1 open: {m1_open_time}, close: {m1_close_time}")
+            print(f"  M2 open: {m2_open_time}, close: {m2_close_time}")
+
             # Average open and close times for each motor
             m1_learned = None
             if m1_open_time and m1_close_time:
@@ -1996,31 +2000,60 @@ class GateController:
                 m2_learned = m2_close_time
 
             if not m1_learned and not m2_learned:
-                print("No learned times to save - complete a full open/close cycle first")
+                print("[SAVE] No learned times to save - complete a full open/close cycle first")
                 return False
 
+            print(f"[SAVE] Calculated averages: M1={m1_learned:.2f}s, M2={m2_learned:.2f}s")
+
             # Load current config
+            print(f"[SAVE] Reading config from: {config_file}")
             with open(config_file, 'r') as f:
                 config = json.load(f)
 
-            # Update motor run times directly (no more separate learned times)
+            # Migrate old format if needed
+            config_modified = False
+            if 'run_time' in config and 'motor1_run_time' not in config:
+                print("[SAVE] Detected old config format - migrating to new format")
+                old_run_time = config['run_time']
+                # Use learned times if available, otherwise use old run_time
+                if 'motor1_learned_run_time' not in config:
+                    config['motor1_run_time'] = old_run_time
+                    config['motor2_run_time'] = old_run_time
+                else:
+                    config['motor1_run_time'] = config.get('motor1_learned_run_time', old_run_time)
+                    config['motor2_run_time'] = config.get('motor2_learned_run_time', old_run_time)
+                # Remove old fields
+                config.pop('motor1_learned_run_time', None)
+                config.pop('motor2_learned_run_time', None)
+                config_modified = True
+                print(f"  Migrated: motor1_run_time={config['motor1_run_time']:.2f}s, motor2_run_time={config['motor2_run_time']:.2f}s")
+
+            # Add motor2_enabled if not present
+            if 'motor2_enabled' not in config:
+                config['motor2_enabled'] = True
+                config_modified = True
+
+            # Update motor run times with newly learned values
             if m1_learned:
                 config['motor1_run_time'] = m1_learned
-                print(f"Learned M1 run time: {m1_learned:.2f}s")
+                print(f"[SAVE] Updated M1 run time: {m1_learned:.2f}s")
 
             if m2_learned:
                 config['motor2_run_time'] = m2_learned
-                print(f"Learned M2 run time: {m2_learned:.2f}s")
+                print(f"[SAVE] Updated M2 run time: {m2_learned:.2f}s")
 
             # Save config
+            print(f"[SAVE] Writing config to: {config_file}")
             with open(config_file, 'w') as f:
                 json.dump(config, f, indent=2)
 
-            print("Learned times saved to config - reload config to apply")
+            print("[SAVE] Learned times saved successfully - reload config to apply")
             return True
 
         except Exception as e:
-            print(f"Error saving learned times: {e}")
+            print(f"[SAVE ERROR] Failed to save learned times: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def get_learning_status(self):
