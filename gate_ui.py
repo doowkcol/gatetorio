@@ -618,6 +618,60 @@ class GateUI:
         self.learning_mode_var = tk.BooleanVar(value=False)
         self.learning_mode_check = None  # Not displayed, just for compatibility
 
+        # Learned Travel Times Display
+        times_frame = tk.Frame(scrollable_frame, bg='#001133', relief='ridge', bd=2)
+        times_frame.pack(fill='x', padx=20, pady=10)
+
+        tk.Label(times_frame, text="📊 Learned Travel Times", font=('Arial', 12, 'bold'),
+                 bg='#001133', fg='cyan').pack(pady=5)
+
+        self.learned_times_labels = {}
+        for motor_label in ['M1 Open', 'M1 Close', 'M2 Open', 'M2 Close']:
+            label = tk.Label(times_frame, text=f"{motor_label}: Not learned",
+                             font=('Arial', 10), bg='#001133', fg='white')
+            label.pack(anchor='w', padx=20, pady=2)
+            self.learned_times_labels[motor_label] = label
+
+        # Auto-learn status
+        self.auto_learn_status_label = tk.Label(scrollable_frame, text="Status: Ready",
+                                                 font=('Arial', 11, 'bold'), bg='black', fg='yellow')
+        self.auto_learn_status_label.pack(pady=5)
+
+        # Limit switch indicators
+        limit_frame = tk.Frame(scrollable_frame, bg='#1a1a1a', relief='ridge', bd=2)
+        limit_frame.pack(fill='x', padx=20, pady=5)
+
+        tk.Label(limit_frame, text="Limit Switch Feedback:", font=('Arial', 10, 'bold'),
+                 bg='#1a1a1a', fg='white').pack(pady=5)
+
+        limit_indicators_frame = tk.Frame(limit_frame, bg='#1a1a1a')
+        limit_indicators_frame.pack(pady=5)
+
+        # Create 4 limit switch indicators
+        self.limit_indicators = {}
+        limit_configs = [
+            ('M1 Open', 'open_limit_m1_active'),
+            ('M1 Close', 'close_limit_m1_active'),
+            ('M2 Open', 'open_limit_m2_active'),
+            ('M2 Close', 'close_limit_m2_active')
+        ]
+
+        for i, (label_text, key) in enumerate(limit_configs):
+            indicator_frame = tk.Frame(limit_indicators_frame, bg='#1a1a1a')
+            indicator_frame.pack(side='left', padx=10)
+
+            tk.Label(indicator_frame, text=label_text, font=('Arial', 9),
+                     bg='#1a1a1a', fg='white').pack()
+
+            indicator = tk.Label(indicator_frame, text="●", font=('Arial', 16),
+                                bg='#1a1a1a', fg='gray')
+            indicator.pack()
+
+            self.limit_indicators[key] = indicator
+
+        tk.Label(limit_frame, text="(Green = active, Gray = inactive)",
+                 font=('Arial', 8), bg='#1a1a1a', fg='gray').pack(pady=(0, 5))
+
         # Auto-learn button frame
         autolearn_btn_frame = tk.Frame(scrollable_frame, bg='black')
         autolearn_btn_frame.pack(fill='x', padx=20, pady=10)
@@ -2058,9 +2112,8 @@ class GateUI:
                 else:
                     indicator.config(fg='gray')  # Gray when inactive
 
-        # Update learned times display (only if learning page was built - obsolete in consolidated settings)
-        if hasattr(self, 'learned_times_labels'):
-            self.update_learned_times_display()
+        # Update learned times display (now always exists in consolidated settings page)
+        self.update_learned_times_display()
 
     def on_exit(self):
         """Handle exit - properly kill all processes"""
@@ -2129,9 +2182,8 @@ class GateUI:
                 else:
                     self.learning_mode_check.config(state='disabled')
 
-            # Update learned times display (if method exists - only in old learning page)
-            if hasattr(self, 'update_learned_times_display'):
-                self.update_learned_times_display()
+            # Update learned times display (now always exists in consolidated settings page)
+            self.update_learned_times_display()
 
         except Exception as e:
             print(f"Error loading learning config: {e}")
@@ -2244,8 +2296,7 @@ class GateUI:
         success = self.controller.save_learned_times()
         if success:
             self.controller.reload_config()
-            if hasattr(self, 'learned_times_labels'):
-                self.update_learned_times_display()
+            self.update_learned_times_display()
             self.show_save_confirmation()
 
     def update_learned_times_display(self):
