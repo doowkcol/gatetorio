@@ -51,7 +51,7 @@ class GateUI:
         self.settings_frame.pack_forget()
         self.input_status_frame.pack_forget()
         self.command_editor_frame.pack_forget()
-        self.learning_frame.pack_forget()
+        # self.learning_frame.pack_forget()  # Obsolete
         self.main_frame.pack(expand=True, fill='both')
 
     def show_settings_page(self):
@@ -59,7 +59,7 @@ class GateUI:
         self.main_frame.pack_forget()
         self.input_status_frame.pack_forget()
         self.command_editor_frame.pack_forget()
-        self.learning_frame.pack_forget()
+        # self.learning_frame.pack_forget()  # Obsolete
         self.load_current_config()
         self.settings_frame.pack(expand=True, fill='both')
 
@@ -68,26 +68,19 @@ class GateUI:
         self.main_frame.pack_forget()
         self.settings_frame.pack_forget()
         self.command_editor_frame.pack_forget()
-        self.learning_frame.pack_forget()
+        # self.learning_frame.pack_forget()  # Obsolete
         self.input_status_frame.pack(expand=True, fill='both')
-    
+
     def show_command_editor_page(self):
         """Show the command editor page"""
         self.main_frame.pack_forget()
         self.settings_frame.pack_forget()
         self.input_status_frame.pack_forget()
-        self.learning_frame.pack_forget()
+        # self.learning_frame.pack_forget()  # Obsolete
         self.load_input_config_for_editor()
         self.command_editor_frame.pack(expand=True, fill='both')
 
-    def show_learning_page(self):
-        """Show the learning mode page"""
-        self.main_frame.pack_forget()
-        self.settings_frame.pack_forget()
-        self.input_status_frame.pack_forget()
-        self.command_editor_frame.pack_forget()
-        self.load_learning_config()
-        self.learning_frame.pack(expand=True, fill='both')
+    # show_learning_page() removed - learning controls consolidated into settings page
     
     def build_main_page(self):
         """Build the main control page"""
@@ -2065,8 +2058,9 @@ class GateUI:
                 else:
                     indicator.config(fg='gray')  # Gray when inactive
 
-        # Update learned times display
-        self.update_learned_times_display()
+        # Update learned times display (only if learning page was built - obsolete in consolidated settings)
+        if hasattr(self, 'learned_times_labels'):
+            self.update_learned_times_display()
 
     def on_exit(self):
         """Handle exit - properly kill all processes"""
@@ -2250,7 +2244,8 @@ class GateUI:
         success = self.controller.save_learned_times()
         if success:
             self.controller.reload_config()
-            self.update_learned_times_display()
+            if hasattr(self, 'learned_times_labels'):
+                self.update_learned_times_display()
             self.show_save_confirmation()
 
     def update_learned_times_display(self):
