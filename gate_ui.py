@@ -28,14 +28,14 @@ class GateUI:
         self.settings_frame = tk.Frame(self.root, bg='black')
         self.input_status_frame = tk.Frame(self.root, bg='black')
         self.command_editor_frame = tk.Frame(self.root, bg='black')
-        self.learning_frame = tk.Frame(self.root, bg='black')
+        # self.learning_frame = tk.Frame(self.root, bg='black')  # Obsolete - learning controls now in settings page
 
         # Build all pages
         self.build_main_page()
         self.build_settings_page()
         self.build_input_status_page()
         self.build_command_editor_page()
-        self.build_learning_page()
+        # self.build_learning_page()  # Obsolete - learning controls consolidated into settings page
 
         # Show main page initially
         self.show_main_page()
