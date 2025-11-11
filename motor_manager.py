@@ -15,7 +15,9 @@ class MotorManager:
         self.shared = shared_dict
         
         # Config values
-        self.run_time = config['run_time']
+        self.motor1_run_time = config['motor1_run_time']
+        self.motor2_run_time = config['motor2_run_time']
+        self.motor2_enabled = config.get('motor2_enabled', True)
         self.motor1_open_delay = config['motor1_open_delay']
         self.motor2_close_delay = config['motor2_close_delay']
         self.partial_1_position = config['partial_1_position']
@@ -27,8 +29,6 @@ class MotorManager:
         self.limit_switches_enabled = config.get('limit_switches_enabled', False)
         self.motor1_use_limit_switches = config.get('motor1_use_limit_switches', False)
         self.motor2_use_limit_switches = config.get('motor2_use_limit_switches', False)
-        self.motor1_learned_run_time = config.get('motor1_learned_run_time', None)
-        self.motor2_learned_run_time = config.get('motor2_learned_run_time', None)
         self.limit_switch_creep_speed = config.get('limit_switch_creep_speed', 0.2)
         self.opening_slowdown_percent = config.get('opening_slowdown_percent', 2.0)
         self.closing_slowdown_percent = config.get('closing_slowdown_percent', 10.0)
@@ -36,10 +36,6 @@ class MotorManager:
         self.learning_speed = config.get('learning_speed', 0.3)
         self.open_speed = config.get('open_speed', 1.0)  # User-configurable open speed (0.1-1.0)
         self.close_speed = config.get('close_speed', 1.0)  # User-configurable close speed (0.1-1.0)
-
-        # Use learned run times if available, otherwise use standard run_time
-        self.motor1_run_time = self.motor1_learned_run_time if self.motor1_learned_run_time else self.run_time
-        self.motor2_run_time = self.motor2_learned_run_time if self.motor2_learned_run_time else self.run_time
         
         # Force release ALL GPIO at system level before initializing motors
         # This fixes "GPIO busy" error from crashed previous sessions
@@ -63,13 +59,26 @@ class MotorManager:
         # Initialize motors
         self.motor1 = Motor(forward=17, backward=18, enable=27, pwm=True)
         self.motor2 = Motor(forward=22, backward=23, enable=4, pwm=True)
-        
+
+        # Fault tracking (per motor, degrades globally)
+        self.m1_consecutive_faults = 0
+        self.m2_consecutive_faults = 0
+        self.degraded_mode = False  # True when in 30% speed fallback mode
+        self.degraded_speed = 0.3   # Speed to use when degraded
+
+        # Fault detection thresholds
+        self.over_travel_threshold = 1.20  # 120% of expected position
+        self.limit_release_check = 0.50    # Check at 50% travel that starting limit released
+        self.fault_trigger_count = 5       # Degrade after this many consecutive faults
+
         print("Motor Manager initialized")
     
     def _reload_config(self):
         """Reload config from shared memory"""
         print("Motor Manager: Reloading config from shared memory...")
-        self.run_time = self.shared.get('config_run_time', self.run_time)
+        self.motor1_run_time = self.shared.get('config_motor1_run_time', self.motor1_run_time)
+        self.motor2_run_time = self.shared.get('config_motor2_run_time', self.motor2_run_time)
+        self.motor2_enabled = self.shared.get('config_motor2_enabled', self.motor2_enabled)
         self.motor1_open_delay = self.shared.get('config_motor1_open_delay', self.motor1_open_delay)
         self.motor2_close_delay = self.shared.get('config_motor2_close_delay', self.motor2_close_delay)
         self.partial_1_position = self.shared.get('config_partial_1_position', self.partial_1_position)
@@ -79,8 +88,6 @@ class MotorManager:
         self.limit_switches_enabled = self.shared.get('config_limit_switches_enabled', self.limit_switches_enabled)
         self.motor1_use_limit_switches = self.shared.get('config_motor1_use_limit_switches', self.motor1_use_limit_switches)
         self.motor2_use_limit_switches = self.shared.get('config_motor2_use_limit_switches', self.motor2_use_limit_switches)
-        self.motor1_learned_run_time = self.shared.get('config_motor1_learned_run_time', self.motor1_learned_run_time)
-        self.motor2_learned_run_time = self.shared.get('config_motor2_learned_run_time', self.motor2_learned_run_time)
         self.limit_switch_creep_speed = self.shared.get('config_limit_switch_creep_speed', self.limit_switch_creep_speed)
         self.opening_slowdown_percent = self.shared.get('config_opening_slowdown_percent', self.opening_slowdown_percent)
         self.closing_slowdown_percent = self.shared.get('config_closing_slowdown_percent', self.closing_slowdown_percent)
@@ -88,12 +95,114 @@ class MotorManager:
         self.learning_speed = self.shared.get('config_learning_speed', self.learning_speed)
         self.open_speed = self.shared.get('config_open_speed', self.open_speed)
         self.close_speed = self.shared.get('config_close_speed', self.close_speed)
+        print(f"Motor Manager: Config reloaded - M1: {self.motor1_run_time}s, M2: {self.motor2_run_time}s (enabled={self.motor2_enabled}), open_speed={self.open_speed}, close_speed={self.close_speed}")
 
-        # Update individual motor run times
-        self.motor1_run_time = self.motor1_learned_run_time if self.motor1_learned_run_time else self.run_time
-        self.motor2_run_time = self.motor2_learned_run_time if self.motor2_learned_run_time else self.run_time
-        print(f"Motor Manager: Config reloaded - run_time={self.run_time}s, open_speed={self.open_speed}, close_speed={self.close_speed}")
-    
+    def _record_fault(self, motor_num, fault_type, details=""):
+        """Record a fault for the specified motor and check if degradation needed"""
+        if motor_num == 1:
+            self.m1_consecutive_faults += 1
+            fault_count = self.m1_consecutive_faults
+        else:
+            self.m2_consecutive_faults += 1
+            fault_count = self.m2_consecutive_faults
+
+        print(f"[FAULT] M{motor_num} {fault_type}: {details} (consecutive: {fault_count})")
+
+        # Check if we need to degrade (either motor hitting fault threshold triggers degradation)
+        if fault_count >= self.fault_trigger_count or self.m1_consecutive_faults >= self.fault_trigger_count or self.m2_consecutive_faults >= self.fault_trigger_count:
+            if not self.degraded_mode:
+                self._enter_degraded_mode(motor_num, fault_type)
+
+    def _clear_fault(self, motor_num):
+        """Clear fault counter for a motor after successful movement"""
+        if motor_num == 1:
+            if self.m1_consecutive_faults > 0:
+                print(f"[FAULT] M1 fault counter cleared (was {self.m1_consecutive_faults})")
+                self.m1_consecutive_faults = 0
+        else:
+            if self.m2_consecutive_faults > 0:
+                print(f"[FAULT] M2 fault counter cleared (was {self.m2_consecutive_faults})")
+                self.m2_consecutive_faults = 0
+
+    def _enter_degraded_mode(self, motor_num, fault_type):
+        """Enter degraded mode: disable limit switches, set speed to 30%, log fault"""
+        self.degraded_mode = True
+        print(f"")
+        print(f"{'='*60}")
+        print(f"[FAULT] ENTERING DEGRADED MODE")
+        print(f"  Trigger: M{motor_num} {fault_type}")
+        print(f"  M1 faults: {self.m1_consecutive_faults}, M2 faults: {self.m2_consecutive_faults}")
+        print(f"  Action: Switching to time-based mode at {self.degraded_speed*100}% speed")
+        print(f"{'='*60}")
+        print(f"")
+
+        # Disable limit switches and switch to time-based operation
+        self.motor1_use_limit_switches = False
+        self.motor2_use_limit_switches = False
+        self.limit_switches_enabled = False
+
+        # Force speed to degraded level
+        self.open_speed = self.degraded_speed
+        self.close_speed = self.degraded_speed
+
+        # Update shared memory for UI visibility
+        self.shared['degraded_mode'] = True
+        self.shared['config_open_speed'] = self.degraded_speed
+        self.shared['config_close_speed'] = self.degraded_speed
+
+    def _check_over_travel(self, motor_num, position, expected_time, direction):
+        """Check if motor has over-traveled (120% threshold)"""
+        over_travel_position = expected_time * self.over_travel_threshold
+
+        if position > over_travel_position:
+            self._record_fault(motor_num, "OVER_TRAVEL",
+                             f"{direction} - position {position:.2f}s exceeds {over_travel_position:.2f}s ({self.over_travel_threshold*100}%)")
+            return True
+        return False
+
+    def _check_limit_release(self, motor_num, position, expected_time, direction, start_limit_active):
+        """Check if starting limit has released at 50% travel"""
+        halfway_position = expected_time * self.limit_release_check
+
+        if position >= halfway_position and start_limit_active:
+            self._record_fault(motor_num, "LIMIT_STUCK",
+                             f"{direction} - {direction.lower().replace('ing','')} limit still active at {position:.2f}s (50% = {halfway_position:.2f}s)")
+            return True
+        return False
+
+    def _check_limit_activation(self, motor_num, position, expected_time, direction,
+                               target_limit_active, start_limit_active, close_limit_active, open_limit_active):
+        """Check limit switch states at expected completion"""
+        # At full travel, check if we reached the correct limit
+        over_travel_position = expected_time * self.over_travel_threshold
+
+        if position >= expected_time and position < over_travel_position:
+            # We're at or past expected position but haven't exceeded safety margin
+            if not target_limit_active:
+                # Target limit not active - could be faulty limit or motor issue
+                if direction == "OPENING":
+                    if start_limit_active and close_limit_active:
+                        # Both close limits still active - motor likely not moving
+                        self._record_fault(motor_num, "MOTOR_STALLED",
+                                         f"{direction} - close limits still active, motor may not be running")
+                    else:
+                        self._record_fault(motor_num, "LIMIT_MISSING",
+                                         f"{direction} - open limit not activated at {position:.2f}s")
+                else:  # CLOSING
+                    if start_limit_active and open_limit_active:
+                        # Both open limits still active - motor likely not moving
+                        self._record_fault(motor_num, "MOTOR_STALLED",
+                                         f"{direction} - open limits still active, motor may not be running")
+                    else:
+                        self._record_fault(motor_num, "LIMIT_MISSING",
+                                         f"{direction} - close limit not activated at {position:.2f}s")
+                return True
+            else:
+                # Successfully reached limit - clear fault counter
+                self._clear_fault(motor_num)
+                return False
+        return False
+
     def run(self):
         """Main motor control loop - runs at 20Hz"""
         print("Motor Manager process started")
@@ -949,11 +1058,12 @@ class MotorManager:
 
                     # Update position: position -= (elapsed_time * current_speed * speed_multiplier)
                     self.shared['m1_position'] = max(target_position, self.shared['m1_position'] - (0.05 * speed * speed_multiplier))
-            elif (self.shared['m2_move_start'] and 
-                  (now - self.shared['movement_start_time']) >= self.motor2_close_delay):
+            elif (self.shared['m2_move_start'] and
+                  (now - self.shared['movement_start_time']) >= (0 if not self.motor2_enabled else self.motor2_close_delay)):
                 # Start M1 after delay for ALL closing operations (including partial)
+                # Skip delay if motor2 is disabled
                 # Only exclude if we're moving FROM a partial position (not returning from OPEN)
-                if not (self.shared['state'] in ['CLOSING_TO_PARTIAL_1', 'CLOSING_TO_PARTIAL_2'] and 
+                if not (self.shared['state'] in ['CLOSING_TO_PARTIAL_1', 'CLOSING_TO_PARTIAL_2'] and
                         not self.shared.get('returning_from_full_open', False)):
                     self.shared['m1_move_start'] = now
                     self.shared['m1_target'] = self.shared['m1_position']
@@ -1018,7 +1128,7 @@ class MotorManager:
                 elif self.shared['state'] == 'CLOSING_TO_PARTIAL_2':
                     remaining = self.shared['m1_position'] - self.partial_2_position
                 else:
-                    remaining = self.run_time - self.shared['m1_position'] if self.shared['movement_command'] == 'OPEN' else self.shared['m1_position']
+                    remaining = self.motor1_run_time - self.shared['m1_position'] if self.shared['movement_command'] == 'OPEN' else self.shared['m1_position']
 
                 remaining = max(0, remaining)
                 speed = self._calculate_ramp_speed(elapsed, remaining, ramp_time)
@@ -1069,16 +1179,28 @@ class MotorManager:
                     target_position = self.partial_2_position
 
                 # When limit switches enabled, keep running until limit triggers (with safety margin)
-                # Safety margin prevents infinite running if limit switch fails
-                safety_margin = 1.2  # Allow 20% overshoot before emergency stop
+                # Fault detection prevents infinite running if limit switch fails
                 if ignore_position_limits:
-                    # Keep running until limit switch OR position exceeds safety margin
-                    if not self.shared.get('open_limit_m1_active', False) and self.shared['m1_position'] < target_position * safety_margin:
+                    # Perform fault checks
+                    open_limit_m1 = self.shared.get('open_limit_m1_active', False)
+                    close_limit_m1 = self.shared.get('close_limit_m1_active', False)
+
+                    # Check for over-travel (120% threshold)
+                    if self._check_over_travel(1, self.shared['m1_position'], target_position, "OPENING"):
+                        self.motor1.stop()
+                    # Check limit release at 50% travel
+                    elif self._check_limit_release(1, self.shared['m1_position'], target_position, "OPENING", close_limit_m1):
+                        self.motor1.forward(speed)  # Continue but fault is logged
+                    # Check limit activation at expected position
+                    elif self._check_limit_activation(1, self.shared['m1_position'], target_position, "OPENING",
+                                                      open_limit_m1, close_limit_m1, close_limit_m1, open_limit_m1):
+                        self.motor1.forward(speed)  # Continue but fault is logged
+                    # Normal operation - keep running until limit hits
+                    elif not open_limit_m1:
                         self.motor1.forward(speed)
                     else:
+                        # Successfully hit limit
                         self.motor1.stop()
-                        if not self.shared.get('open_limit_m1_active', False):
-                            print(f"[MOTOR MGR] M1 EMERGENCY STOP: Exceeded safety margin without hitting limit!")
                 else:
                     # Normal position-based stopping
                     # Use small tolerance to avoid floating point precision issues
@@ -1107,16 +1229,37 @@ class MotorManager:
                 if self.shared['movement_command'] == 'CLOSE':
                     print(f"[M1 MOTOR] State={self.shared['state']} Pos={self.shared['m1_position']:.1f} Target={target_position:.1f} LimitMode={use_limit_switch_mode} IgnoreLimits={ignore_position_limits}")
 
-                # When limit switches enabled, keep running until limit triggers (with safety margin)
-                safety_margin_low = -0.2  # Allow some negative overshoot for closing (position can go slightly negative)
+                # When limit switches enabled, keep running until limit triggers (with fault detection)
                 if use_limit_switch_mode:
-                    # Keep running until limit switch OR position goes too negative
-                    if not self.shared.get('close_limit_m1_active', False) and self.shared['m1_position'] > target_position + safety_margin_low:
+                    # Perform fault checks
+                    open_limit_m1 = self.shared.get('open_limit_m1_active', False)
+                    close_limit_m1 = self.shared.get('close_limit_m1_active', False)
+
+                    # For closing, position goes from motor1_run_time down to 0
+                    # So over-travel means position going significantly below 0
+                    # Check using absolute position value
+                    if self.shared['m1_position'] < -0.5:  # More than 0.5s below zero is over-travel
+                        self._record_fault(1, "OVER_TRAVEL", f"CLOSING - position {self.shared['m1_position']:.2f}s below zero")
+                        self.motor1.stop()
+                    # Check limit release - at 50% travel from open, open limit should be off
+                    elif self._check_limit_release(1, self.motor1_run_time - self.shared['m1_position'],
+                                                   self.motor1_run_time, "CLOSING", open_limit_m1):
+                        self.motor1.backward(speed)  # Continue but fault is logged
+                    # Check limit activation at expected position
+                    elif self.shared['m1_position'] <= 0.1 and not close_limit_m1:
+                        # Near zero but close limit not active
+                        if open_limit_m1:
+                            self._record_fault(1, "LIMIT_MISSING", "CLOSING - close limit not activated, open still active")
+                        else:
+                            self._record_fault(1, "LIMIT_MISSING", "CLOSING - close limit not activated at position 0")
+                        self.motor1.backward(speed)  # Continue but fault is logged
+                    # Normal operation - keep running until limit hits
+                    elif not close_limit_m1:
                         self.motor1.backward(speed)
                     else:
+                        # Successfully hit limit
+                        self._clear_fault(1)
                         self.motor1.stop()
-                        if not self.shared.get('close_limit_m1_active', False):
-                            print(f"[MOTOR MGR] M1 EMERGENCY STOP: Exceeded safety margin without hitting limit!")
                 else:
                     # Normal position-based stopping
                     # Use small tolerance to avoid floating point precision issues
@@ -1136,8 +1279,8 @@ class MotorManager:
             self.motor1.stop()
             self.shared['m1_speed'] = 0.0
         
-        # Motor 2
-        if self.shared['m2_move_start']:
+        # Motor 2 (skip if disabled)
+        if self.motor2_enabled and self.shared['m2_move_start']:
             elapsed = now - self.shared['m2_move_start']
 
             # Check if we should ignore position limits for speed calculation
@@ -1153,7 +1296,7 @@ class MotorManager:
                 speed = max(0.0, min(1.0, speed))
             else:
                 # Normal position-based speed calculation
-                remaining = self.run_time - self.shared['m2_position'] if self.shared['movement_command'] == 'OPEN' else self.shared['m2_position']
+                remaining = self.motor2_run_time - self.shared['m2_position'] if self.shared['movement_command'] == 'OPEN' else self.shared['m2_position']
                 remaining = max(0, remaining)
 
                 speed = self._calculate_ramp_speed(elapsed, remaining, ramp_time)
@@ -1187,16 +1330,28 @@ class MotorManager:
             self.shared['m2_speed'] = speed
 
             if self.shared['movement_command'] == 'OPEN':
-                # When limit switches enabled, keep running until limit triggers (with safety margin)
-                safety_margin = 1.2  # Allow 20% overshoot before emergency stop
+                # When limit switches enabled, keep running until limit triggers (with fault detection)
                 if ignore_position_limits_m2:
-                    # Keep running until limit switch OR position exceeds safety margin
-                    if not self.shared.get('open_limit_m2_active', False) and self.shared['m2_position'] < self.motor2_run_time * safety_margin:
+                    # Perform fault checks
+                    open_limit_m2 = self.shared.get('open_limit_m2_active', False)
+                    close_limit_m2 = self.shared.get('close_limit_m2_active', False)
+
+                    # Check for over-travel (120% threshold)
+                    if self._check_over_travel(2, self.shared['m2_position'], self.motor2_run_time, "OPENING"):
+                        self.motor2.stop()
+                    # Check limit release at 50% travel
+                    elif self._check_limit_release(2, self.shared['m2_position'], self.motor2_run_time, "OPENING", close_limit_m2):
+                        self.motor2.forward(speed)  # Continue but fault is logged
+                    # Check limit activation at expected position
+                    elif self._check_limit_activation(2, self.shared['m2_position'], self.motor2_run_time, "OPENING",
+                                                      open_limit_m2, close_limit_m2, close_limit_m2, open_limit_m2):
+                        self.motor2.forward(speed)  # Continue but fault is logged
+                    # Normal operation - keep running until limit hits
+                    elif not open_limit_m2:
                         self.motor2.forward(speed)
                     else:
+                        # Successfully hit limit
                         self.motor2.stop()
-                        if not self.shared.get('open_limit_m2_active', False):
-                            print(f"[MOTOR MGR] M2 EMERGENCY STOP: Exceeded safety margin without hitting limit!")
                 else:
                     # Normal position-based stopping (use M2's actual run time)
                     # Use small tolerance to avoid floating point precision issues
@@ -1210,16 +1365,36 @@ class MotorManager:
                             print(f"[MOTOR MGR] Snapping M2: {self.shared['m2_position']:.10f} -> {self.motor2_run_time}")
                         self.shared['m2_position'] = self.motor2_run_time
             else:
-                # When limit switches enabled, keep running until limit triggers
-                safety_margin_low = -0.2  # Allow some negative overshoot for closing
+                # When limit switches enabled, keep running until limit triggers (with fault detection)
                 if ignore_position_limits_m2:
-                    # Keep running until limit switch OR position goes too negative
-                    if not self.shared.get('close_limit_m2_active', False) and self.shared['m2_position'] > safety_margin_low:
+                    # Perform fault checks
+                    open_limit_m2 = self.shared.get('open_limit_m2_active', False)
+                    close_limit_m2 = self.shared.get('close_limit_m2_active', False)
+
+                    # For closing, position goes from motor2_run_time down to 0
+                    # Check for over-travel (significantly below zero)
+                    if self.shared['m2_position'] < -0.5:  # More than 0.5s below zero is over-travel
+                        self._record_fault(2, "OVER_TRAVEL", f"CLOSING - position {self.shared['m2_position']:.2f}s below zero")
+                        self.motor2.stop()
+                    # Check limit release - at 50% travel from open, open limit should be off
+                    elif self._check_limit_release(2, self.motor2_run_time - self.shared['m2_position'],
+                                                   self.motor2_run_time, "CLOSING", open_limit_m2):
+                        self.motor2.backward(speed)  # Continue but fault is logged
+                    # Check limit activation at expected position
+                    elif self.shared['m2_position'] <= 0.1 and not close_limit_m2:
+                        # Near zero but close limit not active
+                        if open_limit_m2:
+                            self._record_fault(2, "LIMIT_MISSING", "CLOSING - close limit not activated, open still active")
+                        else:
+                            self._record_fault(2, "LIMIT_MISSING", "CLOSING - close limit not activated at position 0")
+                        self.motor2.backward(speed)  # Continue but fault is logged
+                    # Normal operation - keep running until limit hits
+                    elif not close_limit_m2:
                         self.motor2.backward(speed)
                     else:
+                        # Successfully hit limit
+                        self._clear_fault(2)
                         self.motor2.stop()
-                        if not self.shared.get('close_limit_m2_active', False):
-                            print(f"[MOTOR MGR] M2 EMERGENCY STOP: Exceeded safety margin without hitting limit!")
                 else:
                     # Normal position-based stopping
                     # Use small tolerance to avoid floating point precision issues
@@ -1230,10 +1405,16 @@ class MotorManager:
                         self.motor2.stop()
                         # Snap to exact target when stopped
                         self.shared['m2_position'] = 0
-        else:
+        elif self.motor2_enabled:
             # No move command - ensure motor is stopped
             self.motor2.stop()
             self.shared['m2_speed'] = 0.0
+
+        # If motor2 disabled, ensure it's always stopped
+        if not self.motor2_enabled:
+            self.motor2.stop()
+            self.shared['m2_speed'] = 0.0
+            self.shared['m2_position'] = 0.0
     
     def _calculate_ramp_speed(self, elapsed, remaining, ramp_time):
         """Calculate speed with acceleration and deceleration"""

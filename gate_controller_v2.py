@@ -16,9 +16,36 @@ class GateController:
         # Load config
         with open(config_file, 'r') as f:
             config = json.load(f)
-        
+
+        # Migrate old config format if needed (run_time -> motor1_run_time/motor2_run_time)
+        config_modified = False
+        if 'run_time' in config and 'motor1_run_time' not in config:
+            # Old format - migrate to new structure
+            old_run_time = config['run_time']
+            # If learned times exist, use those; otherwise use the old run_time
+            config['motor1_run_time'] = config.get('motor1_learned_run_time', old_run_time)
+            config['motor2_run_time'] = config.get('motor2_learned_run_time', old_run_time)
+            # Remove old fields (keep run_time for backwards compat tools)
+            config.pop('motor1_learned_run_time', None)
+            config.pop('motor2_learned_run_time', None)
+            config_modified = True
+            print(f"Migrated config: motor1_run_time={config['motor1_run_time']:.2f}s, motor2_run_time={config['motor2_run_time']:.2f}s")
+
+        # Add motor2_enabled if not present
+        if 'motor2_enabled' not in config:
+            config['motor2_enabled'] = True
+            config_modified = True
+
+        # Save migrated config
+        if config_modified:
+            with open(config_file, 'w') as f:
+                json.dump(config, f, indent=2)
+            print("Config migrated and saved")
+
         # Config values
-        self.run_time = config['run_time']
+        self.motor1_run_time = config['motor1_run_time']
+        self.motor2_run_time = config['motor2_run_time']
+        self.motor2_enabled = config.get('motor2_enabled', True)
         self.motor1_open_delay = config.get('motor1_open_delay', 0)
         self.motor2_close_delay = config.get('motor2_close_delay', 0)
         self.auto_close_enabled = config.get('auto_close_enabled', False)
@@ -33,18 +60,14 @@ class GateController:
         self.partial_2_auto_close_time = config.get('partial_2_auto_close_time', 10)
         self.partial_return_pause = config.get('partial_return_pause', 2)
 
-        # Limit switch configuration (MUST load learned times BEFORE calculating partial positions)
+        # Limit switch configuration
         self.limit_switches_enabled = config.get('limit_switches_enabled', False)
         self.motor1_use_limit_switches = config.get('motor1_use_limit_switches', False)
         self.motor2_use_limit_switches = config.get('motor2_use_limit_switches', False)
-        self.motor1_learned_run_time = config.get('motor1_learned_run_time', None)
-        self.motor2_learned_run_time = config.get('motor2_learned_run_time', None)
 
-        # Partial positions should be based on M1's actual run time (learned if available, else configured)
-        # This ensures partial percentages are accurate even when M1 has a different learned time
-        motor1_effective_time = self.motor1_learned_run_time if self.motor1_learned_run_time else self.run_time
-        self.partial_1_position = (self.partial_1_percent / 100.0) * motor1_effective_time
-        self.partial_2_position = (self.partial_2_percent / 100.0) * motor1_effective_time
+        # Partial positions are based on M1's run time
+        self.partial_1_position = (self.partial_1_percent / 100.0) * self.motor1_run_time
+        self.partial_2_position = (self.partial_2_percent / 100.0) * self.motor1_run_time
         self.limit_switch_creep_speed = config.get('limit_switch_creep_speed', 0.2)
         self.learning_mode_enabled = config.get('learning_mode_enabled', False)
         self.opening_slowdown_percent = config.get('opening_slowdown_percent', 2.0)
@@ -65,7 +88,9 @@ class GateController:
         
         # Prepare config for motor manager
         motor_config = {
-            'run_time': self.run_time,
+            'motor1_run_time': self.motor1_run_time,
+            'motor2_run_time': self.motor2_run_time,
+            'motor2_enabled': self.motor2_enabled,
             'motor1_open_delay': self.motor1_open_delay,
             'motor2_close_delay': self.motor2_close_delay,
             'partial_1_position': self.partial_1_position,
@@ -74,8 +99,6 @@ class GateController:
             'limit_switches_enabled': self.limit_switches_enabled,
             'motor1_use_limit_switches': self.motor1_use_limit_switches,
             'motor2_use_limit_switches': self.motor2_use_limit_switches,
-            'motor1_learned_run_time': self.motor1_learned_run_time,
-            'motor2_learned_run_time': self.motor2_learned_run_time,
             'limit_switch_creep_speed': self.limit_switch_creep_speed,
             'opening_slowdown_percent': self.opening_slowdown_percent,
             'closing_slowdown_percent': self.closing_slowdown_percent,
@@ -112,7 +135,8 @@ class GateController:
         self.control_thread.start()
 
         print(f"Gate Controller V2 (Step 3 - Three Processes) initialized")
-        print(f"  Full travel time: {self.run_time}s")
+        print(f"  M1 travel time: {self.motor1_run_time}s, M2 travel time: {self.motor2_run_time}s")
+        print(f"  M2 enabled: {self.motor2_enabled}")
         print(f"  Motor Manager PID: {self.motor_process.pid}")
         print(f"  Input Manager PID: {self.input_process.pid}")
         print(f"  Auto-close: {'ENABLED' if self.auto_close_enabled else 'DISABLED'} ({self.auto_close_time}s)")
@@ -123,17 +147,19 @@ class GateController:
     
     def reload_config(self, config_file='/home/doowkcol/Gatetorio_Code/gate_config.json'):
         """Reload configuration from file - updates runtime parameters
-        
+
         Note: UI should stop gate before calling this to avoid mid-movement issues
         """
         print("Reloading configuration...")
-        
+
         try:
             with open(config_file, 'r') as f:
                 config = json.load(f)
-            
+
             # Update config values
-            self.run_time = config['run_time']
+            self.motor1_run_time = config['motor1_run_time']
+            self.motor2_run_time = config['motor2_run_time']
+            self.motor2_enabled = config.get('motor2_enabled', True)
             self.motor1_open_delay = config.get('motor1_open_delay', 0)
             self.motor2_close_delay = config.get('motor2_close_delay', 0)
             self.auto_close_enabled = config.get('auto_close_enabled', False)
@@ -147,18 +173,14 @@ class GateController:
             self.partial_2_auto_close_time = config.get('partial_2_auto_close_time', 10)
             self.partial_return_pause = config.get('partial_return_pause', 2)
 
-            # Limit switch configuration (must load learned times BEFORE calculating partial positions)
+            # Limit switch configuration
             self.limit_switches_enabled = config.get('limit_switches_enabled', False)
             self.motor1_use_limit_switches = config.get('motor1_use_limit_switches', False)
             self.motor2_use_limit_switches = config.get('motor2_use_limit_switches', False)
-            self.motor1_learned_run_time = config.get('motor1_learned_run_time', None)
-            self.motor2_learned_run_time = config.get('motor2_learned_run_time', None)
 
-            # Partial positions should be based on M1's actual run time (learned if available, else configured)
-            # This ensures partial percentages are accurate even when M1 has a different learned time
-            motor1_effective_time = self.motor1_learned_run_time if self.motor1_learned_run_time else self.run_time
-            self.partial_1_position = (self.partial_1_percent / 100.0) * motor1_effective_time
-            self.partial_2_position = (self.partial_2_percent / 100.0) * motor1_effective_time
+            # Partial positions are based on M1's run time
+            self.partial_1_position = (self.partial_1_percent / 100.0) * self.motor1_run_time
+            self.partial_2_position = (self.partial_2_percent / 100.0) * self.motor1_run_time
             self.limit_switch_creep_speed = config.get('limit_switch_creep_speed', 0.2)
             self.learning_mode_enabled = config.get('learning_mode_enabled', False)
             self.opening_slowdown_percent = config.get('opening_slowdown_percent', 2.0)
@@ -171,7 +193,9 @@ class GateController:
             # self.engineer_mode_enabled - keep current runtime value
 
             # Update motor manager config via shared memory
-            self.shared['config_run_time'] = self.run_time
+            self.shared['config_motor1_run_time'] = self.motor1_run_time
+            self.shared['config_motor2_run_time'] = self.motor2_run_time
+            self.shared['config_motor2_enabled'] = self.motor2_enabled
             self.shared['config_motor1_open_delay'] = self.motor1_open_delay
             self.shared['config_motor2_close_delay'] = self.motor2_close_delay
             self.shared['config_partial_1_position'] = self.partial_1_position
@@ -180,8 +204,6 @@ class GateController:
             self.shared['config_limit_switches_enabled'] = self.limit_switches_enabled
             self.shared['config_motor1_use_limit_switches'] = self.motor1_use_limit_switches
             self.shared['config_motor2_use_limit_switches'] = self.motor2_use_limit_switches
-            self.shared['config_motor1_learned_run_time'] = self.motor1_learned_run_time
-            self.shared['config_motor2_learned_run_time'] = self.motor2_learned_run_time
             self.shared['config_limit_switch_creep_speed'] = self.limit_switch_creep_speed
             self.shared['config_opening_slowdown_percent'] = self.opening_slowdown_percent
             self.shared['config_closing_slowdown_percent'] = self.closing_slowdown_percent
@@ -190,12 +212,13 @@ class GateController:
             self.shared['config_open_speed'] = self.open_speed
             self.shared['config_close_speed'] = self.close_speed
             self.shared['config_reload_flag'] = True  # Signal motor manager to reload
-            
+
             print(f"  Config reloaded successfully")
-            print(f"  Run time: {self.run_time}s")
+            print(f"  M1 run time: {self.motor1_run_time}s, M2 run time: {self.motor2_run_time}s")
+            print(f"  M2 enabled: {self.motor2_enabled}")
             print(f"  Auto-close: {'ENABLED' if self.auto_close_enabled else 'DISABLED'} ({self.auto_close_time}s)")
             print(f"  PO1: {self.partial_1_percent}%, PO2: {self.partial_2_percent}%")
-            
+
             return True
             
         except Exception as e:
@@ -304,17 +327,9 @@ class GateController:
         if m1_open and m2_open:
             # Both motors at open limits
             self.shared['state'] = 'OPEN'
-            # Set positions based on learned or configured run times
-            if self.motor1_learned_run_time:
-                self.shared['m1_position'] = self.motor1_learned_run_time
-            else:
-                self.shared['m1_position'] = self.run_time
-
-            if self.motor2_learned_run_time:
-                self.shared['m2_position'] = self.motor2_learned_run_time
-            else:
-                self.shared['m2_position'] = self.run_time
-
+            # Set positions to motor run times
+            self.shared['m1_position'] = self.motor1_run_time
+            self.shared['m2_position'] = self.motor2_run_time
             print("[STARTUP] Detected gate at OPEN position (both open limits active)")
         elif m1_close and m2_close:
             # Both motors at close limits (or default)
@@ -370,10 +385,10 @@ class GateController:
             if self.shared['movement_command'] == 'OPEN':
                 # Debug: Print position check for opening
                 if self.shared['state'] == 'OPENING':
-                    if self.shared['m1_position'] >= self.run_time - 0.1 or self.shared['m2_position'] >= self.run_time - 0.1:
-                        print(f"[COMPLETION CHECK] OPENING: M1={self.shared['m1_position']:.2f}/{self.run_time}, M2={self.shared['m2_position']:.2f}/{self.run_time}, state={self.shared['state']}")
-                        print(f"  EXACT VALUES: M1={self.shared['m1_position']!r}, M2={self.shared['m2_position']!r}, run_time={self.run_time!r}")
-                        print(f"  Check 3 (FULL): M1>={self.run_time-POSITION_TOLERANCE}={self.shared['m1_position'] >= (self.run_time - POSITION_TOLERANCE)}, M2>={self.run_time-POSITION_TOLERANCE}={self.shared['m2_position'] >= (self.run_time - POSITION_TOLERANCE)}")
+                    if self.shared['m1_position'] >= self.motor1_run_time - 0.1 or self.shared['m2_position'] >= self.motor2_run_time - 0.1:
+                        print(f"[COMPLETION CHECK] OPENING: M1={self.shared['m1_position']:.2f}/{self.motor1_run_time}, M2={self.shared['m2_position']:.2f}/{self.motor2_run_time}, state={self.shared['state']}")
+                        print(f"  EXACT VALUES: M1={self.shared['m1_position']!r}, M2={self.shared['m2_position']!r}")
+                        print(f"  Check (FULL): M1>={self.motor1_run_time-POSITION_TOLERANCE}={self.shared['m1_position'] >= (self.motor1_run_time - POSITION_TOLERANCE)}, M2>={self.motor2_run_time-POSITION_TOLERANCE}={self.shared['m2_position'] >= (self.motor2_run_time - POSITION_TOLERANCE)}")
                 
                 if self.shared['state'] == 'OPENING_TO_PARTIAL_1' and self.shared['m1_position'] >= (self.partial_1_position - POSITION_TOLERANCE):
                     self._complete_partial_1()
@@ -393,15 +408,15 @@ class GateController:
                             m1_done = m1_limit_check
                             m1_reason = f"limit={m1_limit_check}"
                         else:
-                            m1_done = self.shared['m1_position'] >= (self.run_time - POSITION_TOLERANCE)
-                            m1_reason = f"pos={self.shared['m1_position']:.2f}>={self.run_time - POSITION_TOLERANCE:.2f}"
+                            m1_done = self.shared['m1_position'] >= (self.motor1_run_time - POSITION_TOLERANCE)
+                            m1_reason = f"pos={self.shared['m1_position']:.2f}>={self.motor1_run_time - POSITION_TOLERANCE:.2f}"
 
                         if self.motor2_use_limit_switches:
                             m2_done = m2_limit_check
                             m2_reason = f"limit={m2_limit_check}"
                         else:
-                            m2_done = self.shared['m2_position'] >= (self.run_time - POSITION_TOLERANCE)
-                            m2_reason = f"pos={self.shared['m2_position']:.2f}>={self.run_time - POSITION_TOLERANCE:.2f}"
+                            m2_done = self.shared['m2_position'] >= (self.motor2_run_time - POSITION_TOLERANCE)
+                            m2_reason = f"pos={self.shared['m2_position']:.2f}>={self.motor2_run_time - POSITION_TOLERANCE:.2f}"
 
                         open_complete = m1_done and m2_done
 
@@ -416,8 +431,8 @@ class GateController:
                             print(f"[COMPLETION] OPEN complete! M1: {m1_reason}, M2: {m2_reason}")
                     else:
                         # Without limit switches: use position
-                        open_complete = (self.shared['m1_position'] >= (self.run_time - POSITION_TOLERANCE) and
-                                       self.shared['m2_position'] >= (self.run_time - POSITION_TOLERANCE))
+                        open_complete = (self.shared['m1_position'] >= (self.motor1_run_time - POSITION_TOLERANCE) and
+                                       self.shared['m2_position'] >= (self.motor2_run_time - POSITION_TOLERANCE))
                         if open_complete:
                             print(f"[COMPLETION] Position reached - M1={self.shared['m1_position']:.2f}, M2={self.shared['m2_position']:.2f}")
 
@@ -1395,14 +1410,14 @@ class GateController:
     def _complete_open(self):
         """Movement complete - gates open"""
         print(f"[_complete_open] BEFORE: state={self.shared['state']}, M1={self.shared['m1_position']:.2f}, M2={self.shared['m2_position']:.2f}")
-        
+
         self.shared['state'] = 'OPEN'
         self.shared['movement_start_time'] = None
         self.shared['movement_command'] = None
         self.shared['m1_move_start'] = None
         self.shared['m2_move_start'] = None
-        self.shared['m1_position'] = self.run_time
-        self.shared['m2_position'] = self.run_time
+        self.shared['m1_position'] = self.motor1_run_time
+        self.shared['m2_position'] = self.motor2_run_time
         self.shared['stopped_after_opening'] = False  # Clear 4-step flag
         
         # Remember this position for photocell reopening
@@ -1988,13 +2003,13 @@ class GateController:
             with open(config_file, 'r') as f:
                 config = json.load(f)
 
-            # Update learned times
+            # Update motor run times directly (no more separate learned times)
             if m1_learned:
-                config['motor1_learned_run_time'] = m1_learned
+                config['motor1_run_time'] = m1_learned
                 print(f"Learned M1 run time: {m1_learned:.2f}s")
 
             if m2_learned:
-                config['motor2_learned_run_time'] = m2_learned
+                config['motor2_run_time'] = m2_learned
                 print(f"Learned M2 run time: {m2_learned:.2f}s")
 
             # Save config
@@ -2078,15 +2093,20 @@ class GateController:
 
     def get_status(self):
         """Get current status"""
+        # Calculate percentage for each motor based on its own run time
+        m1_percent = (self.shared['m1_position'] / self.motor1_run_time) * 100 if self.motor1_run_time > 0 else 0
+        m2_percent = (self.shared['m2_position'] / self.motor2_run_time) * 100 if self.motor2_run_time > 0 else 0
+        avg_percent = (m1_percent + m2_percent) / 2
         avg_pos = (self.shared['m1_position'] + self.shared['m2_position']) / 2
-        
+
         return {
             'state': self.shared['state'],
             'position': avg_pos,
-            'total_time': self.run_time,
-            'position_percent': (avg_pos / self.run_time) * 100,
-            'm1_percent': (self.shared['m1_position'] / self.run_time) * 100,
-            'm2_percent': (self.shared['m2_position'] / self.run_time) * 100,
+            'motor1_run_time': self.motor1_run_time,
+            'motor2_run_time': self.motor2_run_time,
+            'position_percent': avg_percent,
+            'm1_percent': m1_percent,
+            'm2_percent': m2_percent,
             'm1_speed': self.shared['m1_speed'] * 100,  # Convert to percentage
             'm2_speed': self.shared['m2_speed'] * 100,  # Convert to percentage
             'auto_close_active': self.shared['auto_close_active'],
