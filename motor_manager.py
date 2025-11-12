@@ -955,6 +955,11 @@ class MotorManager:
                 self.shared['m1_position'] = self.motor1_run_time
                 self.shared['m1_speed'] = 0.0
 
+                # Clear position unknown flag - we now know where we are
+                if self.shared.get('position_unknown', False):
+                    print("[LIMIT HUNT] Position located - clearing UNKNOWN state")
+                    self.shared['position_unknown'] = False
+
         # Check Motor 1 CLOSE limit switch
         if self.motor1_use_limit_switches and self.shared.get('close_limit_m1_active', False):
             if self.shared['movement_command'] == 'CLOSE' and self.shared['m1_move_start']:
@@ -973,6 +978,11 @@ class MotorManager:
                 print(f"[LIMIT SWITCH] M1 CLOSE limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to 0.0s (0%)")
                 self.shared['m1_position'] = 0.0
                 self.shared['m1_speed'] = 0.0
+
+                # Clear position unknown flag - we now know where we are
+                if self.shared.get('position_unknown', False):
+                    print("[LIMIT HUNT] Position located - clearing UNKNOWN state")
+                    self.shared['position_unknown'] = False
 
         # Check Motor 2 OPEN limit switch
         if self.motor2_use_limit_switches and self.shared.get('open_limit_m2_active', False):
@@ -993,6 +1003,11 @@ class MotorManager:
                 self.shared['m2_position'] = self.motor2_run_time
                 self.shared['m2_speed'] = 0.0
 
+                # Clear position unknown flag - we now know where we are
+                if self.shared.get('position_unknown', False):
+                    print("[LIMIT HUNT] Position located - clearing UNKNOWN state")
+                    self.shared['position_unknown'] = False
+
         # Check Motor 2 CLOSE limit switch
         if self.motor2_use_limit_switches and self.shared.get('close_limit_m2_active', False):
             if self.shared['movement_command'] == 'CLOSE' and self.shared['m2_move_start']:
@@ -1011,6 +1026,11 @@ class MotorManager:
                 print(f"[LIMIT SWITCH] *** M2 CLOSE LIMIT REACHED *** - position was {self.shared['m2_position']:.2f}s ({position_percent:.1f}%), setting to 0.0s (0%)")
                 self.shared['m2_position'] = 0.0
                 self.shared['m2_speed'] = 0.0
+
+                # Clear position unknown flag - we now know where we are
+                if self.shared.get('position_unknown', False):
+                    print("[LIMIT HUNT] Position located - clearing UNKNOWN state")
+                    self.shared['position_unknown'] = False
 
         # Start learning timers when movement begins
         if learning_mode:
@@ -1253,6 +1273,9 @@ class MotorManager:
             # Apply learning speed if in learning mode
             if self.shared.get('learning_mode_enabled', False):
                 speed = min(speed, self.learning_speed)
+            # Apply slow speed if position unknown (limit hunting mode)
+            elif self.shared.get('position_unknown', False):
+                speed = min(speed, 0.3)  # Hunt for limits at 30% speed
             else:
                 # Apply user-configurable speed and gradual slowdown for limit switches
                 if self.shared['movement_command'] == 'OPEN':
@@ -1430,6 +1453,9 @@ class MotorManager:
             # Apply learning speed if in learning mode
             if self.shared.get('learning_mode_enabled', False):
                 speed = min(speed, self.learning_speed)
+            # Apply slow speed if position unknown (limit hunting mode)
+            elif self.shared.get('position_unknown', False):
+                speed = min(speed, 0.3)  # Hunt for limits at 30% speed
             else:
                 # Apply user-configurable speed and gradual slowdown for limit switches
                 if self.shared['movement_command'] == 'OPEN':
