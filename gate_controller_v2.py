@@ -727,6 +727,10 @@ class GateController:
                     # No partial sustained - close fully
                     print("Auto-close pulse - no PO sustained, closing fully")
                     self._execute_close()
+            elif self.shared['state'] == 'UNKNOWN':
+                # Gate in unknown position - close to locate limits
+                print("Auto-close pulse from UNKNOWN - closing to locate limits")
+                self._execute_close()
             return
         
         # PARTIAL 1 AUTO-CLOSE PULSE - Process momentary pulse from PO1 timer
@@ -779,11 +783,15 @@ class GateController:
                     self._execute_close()
                 return
             
-            # If at OPEN, start closing
+            # If at OPEN, UNKNOWN, or STOPPED, start closing
             if self.shared['state'] == 'OPEN':
                 self._execute_close()
                 return
-            
+
+            if self.shared['state'] == 'UNKNOWN':
+                self._execute_close()
+                return
+
             # If at STOPPED, start closing
             if self.shared['state'] == 'STOPPED':
                 self._execute_close()
@@ -814,11 +822,15 @@ class GateController:
                 # Targets are already set correctly, just change state
                 return
             
-            # If at CLOSED, start opening
+            # If at CLOSED, UNKNOWN, or STOPPED, start opening
             if self.shared['state'] == 'CLOSED':
                 self._execute_open()
                 return
-            
+
+            if self.shared['state'] == 'UNKNOWN':
+                self._execute_open()
+                return
+
             # If at STOPPED, start opening
             if self.shared['state'] == 'STOPPED':
                 self._execute_open()
@@ -1953,7 +1965,7 @@ class GateController:
     
     def _step_2(self):
         """2-step logic"""
-        if self.shared['state'] == 'CLOSED':
+        if self.shared['state'] == 'CLOSED' or self.shared['state'] == 'UNKNOWN':
             self.cmd_open()
         elif self.shared['state'] == 'OPEN':
             self.cmd_close()
@@ -1964,7 +1976,7 @@ class GateController:
     
     def _step_3(self):
         """3-step logic"""
-        if self.shared['state'] == 'CLOSED':
+        if self.shared['state'] == 'CLOSED' or self.shared['state'] == 'UNKNOWN':
             self.cmd_open()
         elif self.shared['state'] == 'OPEN':
             self.cmd_close()
@@ -1985,7 +1997,7 @@ class GateController:
     
     def _step_4(self):
         """4-step logic"""
-        if self.shared['state'] == 'CLOSED':
+        if self.shared['state'] == 'CLOSED' or self.shared['state'] == 'UNKNOWN':
             self.cmd_open()
         elif self.shared['state'] == 'OPEN':
             self.cmd_close()
