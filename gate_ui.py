@@ -2012,15 +2012,32 @@ class GateUI:
         
         self.status_label.config(text=status_text)
         
+        # PRIORITY CHECK: Get safety edge states for blocking
+        stop_opening_active = self.controller.shared.get('safety_stop_opening_active', False)
+        stop_opening_reversed = self.controller.shared.get('safety_stop_opening_reversed', False)
+        stop_closing_active = self.controller.shared.get('safety_stop_closing_active', False)
+        stop_closing_reversed = self.controller.shared.get('safety_stop_closing_reversed', False)
+
         # Re-assert sustained command flags every cycle (critical for sustained commands)
-        # BUT: Only set to True if button active - don't clear flags set by controller (like auto-close)
+        # BUT: PRIORITY BLOCKING - safety edges block their respective direction commands at SOURCE
+        # Open-direction commands: Blocked by STOP OPENING
         if self.open_active:
-            self.controller.shared['cmd_open_active'] = True
+            if not (stop_opening_active or stop_opening_reversed):
+                self.controller.shared['cmd_open_active'] = True
+            else:
+                self.controller.shared['cmd_open_active'] = False
+
+        # Close-direction commands: Blocked by STOP CLOSING
         if self.close_active:
-            self.controller.shared['cmd_close_active'] = True
+            if not (stop_closing_active or stop_closing_reversed):
+                self.controller.shared['cmd_close_active'] = True
+            else:
+                self.controller.shared['cmd_close_active'] = False
+
+        # STOP command: Not blocked by safety edges
         if self.stop_active:
             self.controller.shared['cmd_stop_active'] = True
-        
+
         # Clear flags when buttons are released (but only if they were set by us)
         if not self.open_active and self.controller.shared['cmd_open_active']:
             # Only clear if we're not in auto-close or other automated operation
@@ -2032,23 +2049,44 @@ class GateUI:
                 self.controller.shared['cmd_close_active'] = False
         if not self.stop_active:
             self.controller.shared['cmd_stop_active'] = False
-        
-        # Re-assert safety edge flags
+
+        # Re-assert safety edge flags (always - no blocking needed)
         self.controller.shared['safety_stop_closing_active'] = self.stop_closing_active
         self.controller.shared['safety_stop_opening_active'] = self.stop_opening_active
-        
-        # Re-assert photocell flags
+
+        # Re-assert photocell flags (always - no blocking needed)
         self.controller.shared['photocell_closing_active'] = self.closing_photo_active
         self.controller.shared['photocell_opening_active'] = self.opening_photo_active
-        
-        # Re-assert deadman flags
+
+        # Re-assert deadman flags (always - deadman overrides safety edges)
         self.controller.shared['deadman_open_active'] = self.deadman_open_active
         self.controller.shared['deadman_close_active'] = self.deadman_close_active
-        
-        # Re-assert partial and timed open flags
-        self.controller.shared['partial_1_active'] = self.partial_1_active
-        self.controller.shared['partial_2_active'] = self.partial_2_active
-        self.controller.shared['timed_open_active'] = self.timed_open_active
+
+        # Re-assert partial and timed open flags with PRIORITY BLOCKING
+        # Partials and timed open are open-direction: Blocked by STOP OPENING
+        if self.partial_1_active:
+            if not (stop_opening_active or stop_opening_reversed):
+                self.controller.shared['partial_1_active'] = True
+            else:
+                self.controller.shared['partial_1_active'] = False
+        else:
+            self.controller.shared['partial_1_active'] = False
+
+        if self.partial_2_active:
+            if not (stop_opening_active or stop_opening_reversed):
+                self.controller.shared['partial_2_active'] = True
+            else:
+                self.controller.shared['partial_2_active'] = False
+        else:
+            self.controller.shared['partial_2_active'] = False
+
+        if self.timed_open_active:
+            if not (stop_opening_active or stop_opening_reversed):
+                self.controller.shared['timed_open_active'] = True
+            else:
+                self.controller.shared['timed_open_active'] = False
+        else:
+            self.controller.shared['timed_open_active'] = False
         
         # Update input status displays (if on that page)
         self.update_input_displays()

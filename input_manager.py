@@ -412,8 +412,12 @@ class InputManager:
     
     def _trigger_command(self, function, active):
         """Trigger gate controller command function
-        
+
         Maps input function names to shared memory command flags
+
+        PRIORITY BLOCKING: Safety edges block their respective direction commands
+        at the SOURCE before flags are set, preventing commands from ever being
+        evaluated when they should be blocked.
         """
         # Map function names to shared dict flags
         command_map = {
@@ -436,12 +440,39 @@ class InputManager:
             'open_limit_m2': 'open_limit_m2_active',
             'close_limit_m2': 'close_limit_m2_active'
         }
-        
-        # Update shared memory flag
+
+        # PRIORITY CHECK: Safety edges block their respective direction commands
+        # Check if this command is blocked by an active safety edge
+        open_direction_commands = ['cmd_open', 'timed_open', 'partial_1', 'partial_2']
+        close_direction_commands = ['cmd_close']
+
+        # STOP OPENING blocks all open-direction commands (except deadman)
+        if function in open_direction_commands:
+            stop_opening_active = self.shared.get('safety_stop_opening_active', False)
+            stop_opening_reversed = self.shared.get('safety_stop_opening_reversed', False)
+            if stop_opening_active or stop_opening_reversed:
+                # Safety edge is blocking - force command to False regardless of input state
+                flag_name = command_map.get(function)
+                if flag_name:
+                    self.shared[flag_name] = False
+                return
+
+        # STOP CLOSING blocks all close-direction commands (except deadman)
+        if function in close_direction_commands:
+            stop_closing_active = self.shared.get('safety_stop_closing_active', False)
+            stop_closing_reversed = self.shared.get('safety_stop_closing_reversed', False)
+            if stop_closing_active or stop_closing_reversed:
+                # Safety edge is blocking - force command to False regardless of input state
+                flag_name = command_map.get(function)
+                if flag_name:
+                    self.shared[flag_name] = False
+                return
+
+        # No blocking - update shared memory flag normally
         flag_name = command_map.get(function)
         if flag_name:
             self.shared[flag_name] = active
-            
+
             # Debug print (optional)
             # print(f"Input Manager: {function} = {active}")
 
