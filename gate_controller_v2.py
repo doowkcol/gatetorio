@@ -228,7 +228,8 @@ class GateController:
     def _init_shared_state(self):
         """Initialize all shared memory variables"""
         self.shared['state'] = 'CLOSED'
-        self.shared['position_unknown'] = False  # True when position needs to be located via limit hunting
+        self.shared['m1_position_known'] = True  # False when M1 needs to find a limit (synced when hits any limit)
+        self.shared['m2_position_known'] = True  # False when M2 needs to find a limit (synced when hits any limit)
         self.shared['m1_position'] = 0.0
         self.shared['m2_position'] = 0.0
         self.shared['m1_speed'] = 0.0
@@ -314,7 +315,8 @@ class GateController:
         self.shared['auto_learn_status_msg'] = 'Ready'
 
     def _detect_initial_position(self):
-        """Detect initial gate position based on limit switch states at startup"""
+        """Detect initial gate position based on limit switch states at startup
+        Tracks each motor independently - UNKNOWN means motors between limits"""
         if not self.limit_switches_enabled:
             return  # No limit switches, stick with default CLOSED state
 
@@ -324,32 +326,36 @@ class GateController:
         m1_close = self.shared.get('close_limit_m1_active', False)
         m2_close = self.shared.get('close_limit_m2_active', False)
 
+        # Check each motor's position independently
+        m1_known = m1_open or m1_close
+        m2_known = m2_open or m2_close
+
+        self.shared['m1_position_known'] = m1_known
+        self.shared['m2_position_known'] = m2_known
+
         # Determine initial state based on limit switches
         if m1_open and m2_open:
-            # Both motors at open limits
+            # Both motors at open limits - fully open
             self.shared['state'] = 'OPEN'
-            # Set positions to motor run times
             self.shared['m1_position'] = self.motor1_run_time
             self.shared['m2_position'] = self.motor2_run_time
-            self.shared['position_unknown'] = False
-            print("[STARTUP] Detected gate at OPEN position (both open limits active)")
+            print("[STARTUP] Detected gate at OPEN position (both motors at open limits)")
         elif m1_close and m2_close:
-            # Both motors at close limits
+            # Both motors at close limits - fully closed
             self.shared['state'] = 'CLOSED'
             self.shared['m1_position'] = 0.0
             self.shared['m2_position'] = 0.0
-            self.shared['position_unknown'] = False
-            print("[STARTUP] Detected gate at CLOSED position (both close limits active)")
+            print("[STARTUP] Detected gate at CLOSED position (both motors at close limits)")
         else:
-            # Ambiguous position - one or both motors not on known limits
+            # Ambiguous position - motors somewhere between limits
             self.shared['state'] = 'UNKNOWN'
-            self.shared['m1_position'] = 0.0
-            self.shared['m2_position'] = 0.0
-            self.shared['position_unknown'] = True
-            print(f"[STARTUP] Position UNKNOWN - will hunt for limits at slow speed")
-            print(f"  M1: open={m1_open}, close={m1_close}")
-            print(f"  M2: open={m2_open}, close={m2_close}")
-            print(f"  First movement will operate at 30% speed to locate limits")
+            self.shared['m1_position'] = 0.0  # Estimate, will sync on first limit
+            self.shared['m2_position'] = 0.0  # Estimate, will sync on first limit
+            print(f"[STARTUP] Position UNKNOWN - motors between limits")
+            print(f"  M1: open={m1_open}, close={m1_close} → {'SYNCED' if m1_known else 'NEEDS SYNC'}")
+            print(f"  M2: open={m2_open}, close={m2_close} → {'SYNCED' if m2_known else 'NEEDS SYNC'}")
+            print(f"  Commands will operate at 30% speed until both motors synced to limits")
+            print(f"  Normal operation: OPEN/CLOSE work normally, just slower for safety")
 
     def _control_loop(self):
         """Main control loop - decision making only (no motor control)"""
@@ -1746,9 +1752,9 @@ class GateController:
         if active:
             print(f"PARTIAL 1 command received ({self.partial_1_percent}%)")
 
-            # Block if position unknown - need to locate limits first
-            if self.shared.get('position_unknown', False):
-                print("PARTIAL 1 blocked - position unknown, locate limits first")
+            # Block if either motor position unknown - need both synced for partial
+            if not self.shared.get('m1_position_known', True) or not self.shared.get('m2_position_known', True):
+                print("PARTIAL 1 blocked - motor positions not synced, locate limits first")
                 return
 
             # Block if CLOSE command sustained
@@ -1778,9 +1784,9 @@ class GateController:
         if active:
             print(f"PARTIAL 2 command received ({self.partial_2_percent}%)")
 
-            # Block if position unknown - need to locate limits first
-            if self.shared.get('position_unknown', False):
-                print("PARTIAL 2 blocked - position unknown, locate limits first")
+            # Block if either motor position unknown - need both synced for partial
+            if not self.shared.get('m1_position_known', True) or not self.shared.get('m2_position_known', True):
+                print("PARTIAL 2 blocked - motor positions not synced, locate limits first")
                 return
 
             # Block if CLOSE command sustained

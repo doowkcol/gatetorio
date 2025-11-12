@@ -955,10 +955,10 @@ class MotorManager:
                 self.shared['m1_position'] = self.motor1_run_time
                 self.shared['m1_speed'] = 0.0
 
-                # Clear position unknown flag - we now know where we are
-                if self.shared.get('position_unknown', False):
-                    print("[LIMIT HUNT] Position located - clearing UNKNOWN state")
-                    self.shared['position_unknown'] = False
+                # Mark M1 position as known - synced to limit
+                if not self.shared.get('m1_position_known', True):
+                    print("[LIMIT HUNT] M1 synced to OPEN limit")
+                    self.shared['m1_position_known'] = True
 
         # Check Motor 1 CLOSE limit switch
         if self.motor1_use_limit_switches and self.shared.get('close_limit_m1_active', False):
@@ -979,10 +979,10 @@ class MotorManager:
                 self.shared['m1_position'] = 0.0
                 self.shared['m1_speed'] = 0.0
 
-                # Clear position unknown flag - we now know where we are
-                if self.shared.get('position_unknown', False):
-                    print("[LIMIT HUNT] Position located - clearing UNKNOWN state")
-                    self.shared['position_unknown'] = False
+                # Mark M1 position as known - synced to limit
+                if not self.shared.get('m1_position_known', True):
+                    print("[LIMIT HUNT] M1 synced to CLOSE limit")
+                    self.shared['m1_position_known'] = True
 
         # Check Motor 2 OPEN limit switch
         if self.motor2_use_limit_switches and self.shared.get('open_limit_m2_active', False):
@@ -1003,10 +1003,10 @@ class MotorManager:
                 self.shared['m2_position'] = self.motor2_run_time
                 self.shared['m2_speed'] = 0.0
 
-                # Clear position unknown flag - we now know where we are
-                if self.shared.get('position_unknown', False):
-                    print("[LIMIT HUNT] Position located - clearing UNKNOWN state")
-                    self.shared['position_unknown'] = False
+                # Mark M2 position as known - synced to limit
+                if not self.shared.get('m2_position_known', True):
+                    print("[LIMIT HUNT] M2 synced to OPEN limit")
+                    self.shared['m2_position_known'] = True
 
         # Check Motor 2 CLOSE limit switch
         if self.motor2_use_limit_switches and self.shared.get('close_limit_m2_active', False):
@@ -1027,10 +1027,10 @@ class MotorManager:
                 self.shared['m2_position'] = 0.0
                 self.shared['m2_speed'] = 0.0
 
-                # Clear position unknown flag - we now know where we are
-                if self.shared.get('position_unknown', False):
-                    print("[LIMIT HUNT] Position located - clearing UNKNOWN state")
-                    self.shared['position_unknown'] = False
+                # Mark M2 position as known - synced to limit
+                if not self.shared.get('m2_position_known', True):
+                    print("[LIMIT HUNT] M2 synced to CLOSE limit")
+                    self.shared['m2_position_known'] = True
 
         # Start learning timers when movement begins
         if learning_mode:
@@ -1273,8 +1273,8 @@ class MotorManager:
             # Apply learning speed if in learning mode
             if self.shared.get('learning_mode_enabled', False):
                 speed = min(speed, self.learning_speed)
-            # Apply slow speed if position unknown (limit hunting mode)
-            elif self.shared.get('position_unknown', False):
+            # Apply slow speed if M1 position not synced (limit hunting mode)
+            elif not self.shared.get('m1_position_known', True):
                 speed = min(speed, 0.3)  # Hunt for limits at 30% speed
             else:
                 # Apply user-configurable speed and gradual slowdown for limit switches
@@ -1453,8 +1453,8 @@ class MotorManager:
             # Apply learning speed if in learning mode
             if self.shared.get('learning_mode_enabled', False):
                 speed = min(speed, self.learning_speed)
-            # Apply slow speed if position unknown (limit hunting mode)
-            elif self.shared.get('position_unknown', False):
+            # Apply slow speed if M2 position not synced (limit hunting mode)
+            elif not self.shared.get('m2_position_known', True):
                 speed = min(speed, 0.3)  # Hunt for limits at 30% speed
             else:
                 # Apply user-configurable speed and gradual slowdown for limit switches
