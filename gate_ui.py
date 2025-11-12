@@ -37,11 +37,14 @@ class GateUI:
         self.build_command_editor_page()
         # self.build_learning_page()  # Obsolete - learning controls consolidated into settings page
 
+        # Track auto-learn state for completion detection
+        self.auto_learn_was_active = False
+
         # Show main page initially
         self.show_main_page()
-        
+
         print("Window created")
-        
+
         # Start status update loop AFTER window is shown
         self.root.after(100, self.update_status)
         print("Starting mainloop")
@@ -731,6 +734,19 @@ class GateUI:
             bd=5
         )
         save_btn.pack(side='left', expand=True, fill='both', padx=5)
+
+        # Save learned times button
+        save_times_btn = tk.Button(
+            button_frame,
+            text="SAVE LEARNED TIMES",
+            font=('Arial', 12, 'bold'),
+            bg='orange',
+            fg='white',
+            command=self.save_learned_times,
+            relief='raised',
+            bd=5
+        )
+        save_times_btn.pack(side='left', expand=True, fill='both', padx=5)
 
         # Back button
         back_btn = tk.Button(
@@ -2089,6 +2105,39 @@ class GateUI:
         active = auto_learn_status['active']
         status_msg = auto_learn_status['status_msg']
         cycle = auto_learn_status['cycle']
+
+        # Detect completion: was active, now not active, and status contains "Complete"
+        if self.auto_learn_was_active and not active and 'Complete' in status_msg:
+            print("Auto-learn completed - auto-saving times and disabling engineer mode...")
+
+            # Auto-save learned times
+            success = self.controller.save_learned_times()
+            if success:
+                print("Learned times saved successfully")
+
+                # Disable engineer mode
+                self.controller.shared['engineer_mode_enabled'] = False
+                print("Engineer mode disabled")
+
+                # Update the engineer mode checkbox if it exists
+                if hasattr(self, 'engineer_mode_var'):
+                    self.engineer_mode_var.set(False)
+
+                # Reload config to apply new times
+                self.controller.reload_config()
+                print("Config reloaded with new times")
+
+                # Update displays
+                self.update_learned_times_display()
+
+                # Update status message
+                status_msg = "Saved! Times applied, engineer mode off"
+            else:
+                print("Failed to save learned times")
+                status_msg = "Complete but save failed"
+
+        # Track state for next iteration
+        self.auto_learn_was_active = active
 
         # Update status label
         if active:

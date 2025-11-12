@@ -3,7 +3,7 @@
     "IN1": {
       "channel": 0,
       "enabled": true,
-      "type": "NO",
+      "type": "NC",
       "function": "close_limit_m1",
       "description": "Open command button"
     },
@@ -24,7 +24,7 @@
     "IN4": {
       "channel": 3,
       "enabled": true,
-      "type": "NO",
+      "type": "NC",
       "function": "close_limit_m2",
       "description": "Spare input"
     },
@@ -32,7 +32,7 @@
       "channel": 4,
       "enabled": true,
       "type": "NO",
-      "function": "cmd_open",
+      "function": "photocell_closing",
       "description": "ADC2 Channel 0 - Unassigned"
     },
     "IN6": {

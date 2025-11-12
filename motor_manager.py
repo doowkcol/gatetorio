@@ -67,7 +67,7 @@ class MotorManager:
         self.degraded_speed = 0.3   # Speed to use when degraded
 
         # Fault detection thresholds
-        self.over_travel_threshold = 1.20  # 120% of expected position
+        self.over_travel_threshold = 1.50  # 150% of expected position (allows position beyond 100% when seeking limits)
         self.limit_release_check = 0.50    # Check at 50% travel that starting limit released
         self.fault_trigger_count = 5       # Degrade after this many consecutive faults
 
@@ -231,13 +231,15 @@ class MotorManager:
             if self.limit_switches_enabled:
                 self._process_limit_switches(now)
 
-            # Update motor positions if moving (but not during safety reversal)
-            if self.shared['movement_start_time'] and not self.shared['opening_paused'] and not self.shared['safety_reversing'] and not deadman_active:
-                self._update_motor_positions(now)
-
-            # Update motor speeds (ALWAYS - handles safety reversal, deadman, and normal movement)
+            # Update motor speeds FIRST (ALWAYS - handles safety reversal, deadman, and normal movement)
+            # This calculates the speed that motors will run at this cycle
             if not deadman_active:
                 self._update_motor_speeds(now)
+
+            # Update motor positions SECOND using the speed calculated above
+            # This ensures position tracking matches actual motor movement
+            if self.shared['movement_start_time'] and not self.shared['opening_paused'] and not self.shared['safety_reversing'] and not deadman_active:
+                self._update_motor_positions(now)
 
             # Sleep 50ms (20Hz)
             sleep(0.05)
@@ -256,6 +258,9 @@ class MotorManager:
             self.shared['auto_learn_phase_start'] = now
             self.shared['auto_learn_m1_start'] = None
             self.shared['auto_learn_m2_start'] = None
+            # Position tracking (full-speed-equivalent units)
+            self.shared['auto_learn_m1_position'] = 0.0
+            self.shared['auto_learn_m2_position'] = 0.0
             # Running averages for each motor and direction
             self.shared['auto_learn_m1_open_avg'] = 0.0
             self.shared['auto_learn_m1_close_avg'] = 0.0
@@ -577,6 +582,9 @@ class MotorManager:
             self.shared['auto_learn_m2_start'] = now + self.motor1_open_delay
             self.shared['auto_learn_m1_slowdown'] = False
             self.shared['auto_learn_m2_slowdown'] = False
+            # Reset position tracking for this cycle
+            self.shared['auto_learn_m1_position'] = 0.0
+            self.shared['auto_learn_m2_position'] = 0.0
 
         # State: FULL_OPEN - Both motors opening at full speed with minimal slowdown
         elif state == 'FULL_OPEN':
@@ -596,21 +604,26 @@ class MotorManager:
                     # Not at limit yet - keep moving
                     if m1_elapsed < m1_slowdown_point:
                         self.motor1.forward(1.0)  # Full speed
+                        # Update position: position += loop_time * speed
+                        self.shared['auto_learn_m1_position'] += 0.05 * 1.0
                     else:
                         # In slowdown zone - creep to limit
                         if not self.shared.get('auto_learn_m1_slowdown'):
                             print(f"  M1 slowdown at {m1_elapsed:.2f}s (expected {m1_expected:.2f}s)")
                             self.shared['auto_learn_m1_slowdown'] = True
                         self.motor1.forward(self.limit_switch_creep_speed)
+                        # Update position at creep speed
+                        self.shared['auto_learn_m1_position'] += 0.05 * self.limit_switch_creep_speed
                 else:
                     # Hit limit!
                     if self.shared['auto_learn_m1_start']:
-                        total_time = now - self.shared['auto_learn_m1_start']
+                        # Record POSITION (full-speed-equivalent seconds) not wall-clock time
+                        final_position = self.shared['auto_learn_m1_position']
                         count = self.shared['auto_learn_m1_open_count']
                         avg = self.shared['auto_learn_m1_open_avg']
-                        self.shared['auto_learn_m1_open_avg'] = (avg * count + total_time) / (count + 1)
+                        self.shared['auto_learn_m1_open_avg'] = (avg * count + final_position) / (count + 1)
                         self.shared['auto_learn_m1_open_count'] = count + 1
-                        print(f"  M1 open limit: {total_time:.2f}s at full speed")
+                        print(f"  M1 open limit: {final_position:.2f}s position (wall-clock: {m1_elapsed:.2f}s)")
                         print(f"    M1 open average: {self.shared['auto_learn_m1_open_avg']:.2f}s ({self.shared['auto_learn_m1_open_count']} samples)")
                         self.shared['auto_learn_m1_start'] = None
                     self.motor1.stop()
@@ -626,19 +639,24 @@ class MotorManager:
                 if not self.shared.get('open_limit_m2_active', False):
                     if m2_elapsed < m2_slowdown_point:
                         self.motor2.forward(1.0)  # Full speed
+                        # Update position: position += loop_time * speed
+                        self.shared['auto_learn_m2_position'] += 0.05 * 1.0
                     else:
                         if not self.shared.get('auto_learn_m2_slowdown'):
                             print(f"  M2 slowdown at {m2_elapsed:.2f}s (expected {m2_expected:.2f}s)")
                             self.shared['auto_learn_m2_slowdown'] = True
                         self.motor2.forward(self.limit_switch_creep_speed)
+                        # Update position at creep speed
+                        self.shared['auto_learn_m2_position'] += 0.05 * self.limit_switch_creep_speed
                 else:
                     if self.shared['auto_learn_m2_start']:
-                        total_time = now - self.shared['auto_learn_m2_start']
+                        # Record POSITION (full-speed-equivalent seconds) not wall-clock time
+                        final_position = self.shared['auto_learn_m2_position']
                         count = self.shared['auto_learn_m2_open_count']
                         avg = self.shared['auto_learn_m2_open_avg']
-                        self.shared['auto_learn_m2_open_avg'] = (avg * count + total_time) / (count + 1)
+                        self.shared['auto_learn_m2_open_avg'] = (avg * count + final_position) / (count + 1)
                         self.shared['auto_learn_m2_open_count'] = count + 1
-                        print(f"  M2 open limit: {total_time:.2f}s at full speed")
+                        print(f"  M2 open limit: {final_position:.2f}s position (wall-clock: {m2_elapsed:.2f}s)")
                         print(f"    M2 open average: {self.shared['auto_learn_m2_open_avg']:.2f}s ({self.shared['auto_learn_m2_open_count']} samples)")
                         self.shared['auto_learn_m2_start'] = None
                     self.motor2.stop()
@@ -665,6 +683,9 @@ class MotorManager:
                 self.shared['auto_learn_m1_start'] = now + self.motor2_close_delay
                 self.shared['auto_learn_m1_slowdown'] = False
                 self.shared['auto_learn_m2_slowdown'] = False
+                # Reset position tracking for closing
+                self.shared['auto_learn_m1_position'] = 0.0
+                self.shared['auto_learn_m2_position'] = 0.0
 
         # State: FULL_CLOSE - Both motors closing at full speed with minimal slowdown
         elif state == 'FULL_CLOSE':
@@ -683,19 +704,24 @@ class MotorManager:
                 if not self.shared.get('close_limit_m2_active', False):
                     if m2_elapsed < m2_slowdown_point:
                         self.motor2.backward(1.0)  # Full speed
+                        # Update position: position += loop_time * speed
+                        self.shared['auto_learn_m2_position'] += 0.05 * 1.0
                     else:
                         if not self.shared.get('auto_learn_m2_slowdown'):
                             print(f"  M2 slowdown at {m2_elapsed:.2f}s (expected {m2_expected:.2f}s)")
                             self.shared['auto_learn_m2_slowdown'] = True
                         self.motor2.backward(self.limit_switch_creep_speed)
+                        # Update position at creep speed
+                        self.shared['auto_learn_m2_position'] += 0.05 * self.limit_switch_creep_speed
                 else:
                     if self.shared['auto_learn_m2_start']:
-                        total_time = now - self.shared['auto_learn_m2_start']
+                        # Record POSITION (full-speed-equivalent seconds) not wall-clock time
+                        final_position = self.shared['auto_learn_m2_position']
                         count = self.shared['auto_learn_m2_close_count']
                         avg = self.shared['auto_learn_m2_close_avg']
-                        self.shared['auto_learn_m2_close_avg'] = (avg * count + total_time) / (count + 1)
+                        self.shared['auto_learn_m2_close_avg'] = (avg * count + final_position) / (count + 1)
                         self.shared['auto_learn_m2_close_count'] = count + 1
-                        print(f"  M2 close limit: {total_time:.2f}s at full speed")
+                        print(f"  M2 close limit: {final_position:.2f}s position (wall-clock: {m2_elapsed:.2f}s)")
                         print(f"    M2 close average: {self.shared['auto_learn_m2_close_avg']:.2f}s ({self.shared['auto_learn_m2_close_count']} samples)")
                         self.shared['auto_learn_m2_start'] = None
                     self.motor2.stop()
@@ -711,19 +737,24 @@ class MotorManager:
                 if not self.shared.get('close_limit_m1_active', False):
                     if m1_elapsed < m1_slowdown_point:
                         self.motor1.backward(1.0)  # Full speed
+                        # Update position: position += loop_time * speed
+                        self.shared['auto_learn_m1_position'] += 0.05 * 1.0
                     else:
                         if not self.shared.get('auto_learn_m1_slowdown'):
                             print(f"  M1 slowdown at {m1_elapsed:.2f}s (expected {m1_expected:.2f}s)")
                             self.shared['auto_learn_m1_slowdown'] = True
                         self.motor1.backward(self.limit_switch_creep_speed)
+                        # Update position at creep speed
+                        self.shared['auto_learn_m1_position'] += 0.05 * self.limit_switch_creep_speed
                 else:
                     if self.shared['auto_learn_m1_start']:
-                        total_time = now - self.shared['auto_learn_m1_start']
+                        # Record POSITION (full-speed-equivalent seconds) not wall-clock time
+                        final_position = self.shared['auto_learn_m1_position']
                         count = self.shared['auto_learn_m1_close_count']
                         avg = self.shared['auto_learn_m1_close_avg']
-                        self.shared['auto_learn_m1_close_avg'] = (avg * count + total_time) / (count + 1)
+                        self.shared['auto_learn_m1_close_avg'] = (avg * count + final_position) / (count + 1)
                         self.shared['auto_learn_m1_close_count'] = count + 1
-                        print(f"  M1 close limit: {total_time:.2f}s at full speed")
+                        print(f"  M1 close limit: {final_position:.2f}s position (wall-clock: {m1_elapsed:.2f}s)")
                         print(f"    M1 close average: {self.shared['auto_learn_m1_close_avg']:.2f}s ({self.shared['auto_learn_m1_close_count']} samples)")
                         self.shared['auto_learn_m1_start'] = None
                     self.motor1.stop()
@@ -826,7 +857,8 @@ class MotorManager:
 
                 # Stop motor and set to full open position
                 self.motor1.stop()
-                print(f"[LIMIT SWITCH] M1 OPEN limit reached - position was {self.shared['m1_position']:.2f}s, setting to {self.motor1_run_time:.2f}s")
+                position_percent = (self.shared['m1_position'] / self.motor1_run_time * 100.0) if self.motor1_run_time > 0 else 0.0
+                print(f"[LIMIT SWITCH] M1 OPEN limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to {self.motor1_run_time:.2f}s (100%)")
                 self.shared['m1_position'] = self.motor1_run_time
                 self.shared['m1_speed'] = 0.0
 
@@ -844,9 +876,10 @@ class MotorManager:
 
                 # Stop motor and set to fully closed position
                 self.motor1.stop()
+                position_percent = (self.shared['m1_position'] / self.motor1_run_time * 100.0) if self.motor1_run_time > 0 else 0.0
+                print(f"[LIMIT SWITCH] M1 CLOSE limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to 0.0s (0%)")
                 self.shared['m1_position'] = 0.0
                 self.shared['m1_speed'] = 0.0
-                print(f"[LIMIT SWITCH] M1 CLOSE limit reached - position set to 0.0s")
 
         # Check Motor 2 OPEN limit switch
         if self.motor2_use_limit_switches and self.shared.get('open_limit_m2_active', False):
@@ -862,9 +895,10 @@ class MotorManager:
 
                 # Stop motor and set to full open position
                 self.motor2.stop()
+                position_percent = (self.shared['m2_position'] / self.motor2_run_time * 100.0) if self.motor2_run_time > 0 else 0.0
+                print(f"[LIMIT SWITCH] *** M2 OPEN LIMIT REACHED *** - position was {self.shared['m2_position']:.2f}s ({position_percent:.1f}%), setting to {self.motor2_run_time:.2f}s (100%)")
                 self.shared['m2_position'] = self.motor2_run_time
                 self.shared['m2_speed'] = 0.0
-                print(f"[LIMIT SWITCH] M2 OPEN limit reached - position set to {self.motor2_run_time:.2f}s")
 
         # Check Motor 2 CLOSE limit switch
         if self.motor2_use_limit_switches and self.shared.get('close_limit_m2_active', False):
@@ -880,9 +914,10 @@ class MotorManager:
 
                 # Stop motor and set to fully closed position
                 self.motor2.stop()
+                position_percent = (self.shared['m2_position'] / self.motor2_run_time * 100.0) if self.motor2_run_time > 0 else 0.0
+                print(f"[LIMIT SWITCH] *** M2 CLOSE LIMIT REACHED *** - position was {self.shared['m2_position']:.2f}s ({position_percent:.1f}%), setting to 0.0s (0%)")
                 self.shared['m2_position'] = 0.0
                 self.shared['m2_speed'] = 0.0
-                print(f"[LIMIT SWITCH] M2 CLOSE limit reached - position set to 0.0s")
 
         # Start learning timers when movement begins
         if learning_mode:
@@ -949,51 +984,46 @@ class MotorManager:
                     target_position = self.motor1_run_time
 
                 # DEBUG: Log partial position movements
-                if self.shared['state'] in ['OPENING_TO_PARTIAL_1', 'OPENING_TO_PARTIAL_2']:
-                    if not hasattr(self, '_last_partial_open_debug') or (now - self._last_partial_open_debug) > 0.5:
-                        print(f"[PARTIAL DEBUG OPEN] M1: pos={self.shared['m1_position']:.2f}s target={target_position:.2f}s motor1_run_time={self.motor1_run_time:.2f}s")
-                        self._last_partial_open_debug = now
+                # DISABLED - too much spam
+                # if self.shared['state'] in ['OPENING_TO_PARTIAL_1', 'OPENING_TO_PARTIAL_2']:
+                #     if not hasattr(self, '_last_partial_open_debug') or (now - self._last_partial_open_debug) > 0.5:
+                #         print(f"[PARTIAL DEBUG OPEN] M1: pos={self.shared['m1_position']:.2f}s target={target_position:.2f}s motor1_run_time={self.motor1_run_time:.2f}s")
+                #         self._last_partial_open_debug = now
 
-                # Only update if not yet at target
-                if self.shared['m1_position'] < target_position:
-                    # Calculate remaining distance
-                    remaining = target_position - self.shared['m1_position']
-                    remaining = max(0, remaining)
+                # Get actual motor speed to determine if motor is running
+                speed = self.shared.get('m1_speed', 0.0)
 
-                    # Calculate current speed using same ramping logic
-                    speed = self._calculate_ramp_speed(elapsed, remaining, ramp_time)
-                    speed = max(0.0, min(1.0, speed))
-
-                    # Apply speed multiplier (learning mode or user-configured open speed)
-                    if self.shared.get('learning_mode_enabled', False):
-                        speed_multiplier = self.learning_speed
-                    else:
-                        speed_multiplier = self.open_speed
-
-                    # Update position: position += (elapsed_time * current_speed * speed_multiplier)
+                # Only update position if motor is actually running (speed > 0)
+                # This prevents position from incrementing when motor is stopped
+                if speed > 0:
+                    # Update position: position += (loop_interval * actual_motor_speed)
                     # Using 0.05s as the loop interval (20Hz)
-                    self.shared['m1_position'] = min(target_position, self.shared['m1_position'] + (0.05 * speed * speed_multiplier))
+                    # Speed already includes all multipliers and slowdown from _update_motor_speeds
+                    # Allow position to exceed target when limit switches enabled (no clamping to target_position)
+                    if self.motor1_use_limit_switches and self.shared['state'] == 'OPENING':
+                        # With limit switches: allow position to go beyond target until limit hit
+                        self.shared['m1_position'] = self.shared['m1_position'] + (0.05 * speed)
+                    else:
+                        # Without limit switches: clamp to target position
+                        self.shared['m1_position'] = min(target_position, self.shared['m1_position'] + (0.05 * speed))
             
             # Motor 2 position update
             if self.shared['m2_move_start']:
-                # Only update if not yet at target (use M2's actual run time)
-                if self.shared['m2_position'] < self.motor2_run_time:
-                    elapsed = now - self.shared['m2_move_start']
-                    remaining = self.motor2_run_time - self.shared['m2_position']
-                    remaining = max(0, remaining)
+                # Get actual motor speed to determine if motor is running
+                speed = self.shared.get('m2_speed', 0.0)
 
-                    # Calculate current speed
-                    speed = self._calculate_ramp_speed(elapsed, remaining, ramp_time)
-                    speed = max(0.0, min(1.0, speed))
-
-                    # Apply speed multiplier (learning mode or user-configured open speed)
-                    if self.shared.get('learning_mode_enabled', False):
-                        speed_multiplier = self.learning_speed
+                # Only update position if motor is actually running (speed > 0)
+                # This prevents position from incrementing when motor is stopped
+                if speed > 0:
+                    # Update position: position += (loop_interval * actual_motor_speed)
+                    # Speed already includes all multipliers and slowdown from _update_motor_speeds
+                    # Allow position to exceed target when limit switches enabled
+                    if self.motor2_use_limit_switches:
+                        # With limit switches: allow position to go beyond target until limit hit
+                        self.shared['m2_position'] = self.shared['m2_position'] + (0.05 * speed)
                     else:
-                        speed_multiplier = self.open_speed
-
-                    # Update position: position += (elapsed_time * current_speed * speed_multiplier)
-                    self.shared['m2_position'] = min(self.motor2_run_time, self.shared['m2_position'] + (0.05 * speed * speed_multiplier))
+                        # Without limit switches: clamp to target position
+                        self.shared['m2_position'] = min(self.motor2_run_time, self.shared['m2_position'] + (0.05 * speed))
             elif (self.shared['m1_move_start'] and 
                   (now - self.shared['movement_start_time']) >= self.motor1_open_delay and
                   self.shared['state'] not in ['OPENING_TO_PARTIAL_1', 'OPENING_TO_PARTIAL_2']):
@@ -1003,24 +1033,21 @@ class MotorManager:
         elif self.shared['movement_command'] == 'CLOSE':
             # Motor 2 position update (closes first)
             if self.shared['m2_move_start']:
-                # Only update if not yet at target
-                if self.shared['m2_position'] > 0:
-                    elapsed = now - self.shared['m2_move_start']
-                    remaining = self.shared['m2_position']
-                    remaining = max(0, remaining)
+                # Get actual motor speed to determine if motor is running
+                speed = self.shared.get('m2_speed', 0.0)
 
-                    # Calculate current speed
-                    speed = self._calculate_ramp_speed(elapsed, remaining, ramp_time)
-                    speed = max(0.0, min(1.0, speed))
-
-                    # Apply speed multiplier (learning mode or user-configured close speed)
-                    if self.shared.get('learning_mode_enabled', False):
-                        speed_multiplier = self.learning_speed
+                # Only update position if motor is actually running (speed > 0)
+                # This prevents position from decrementing when motor is stopped
+                if speed > 0:
+                    # Update position: position -= (loop_interval * actual_motor_speed)
+                    # Speed already includes all multipliers and slowdown from _update_motor_speeds
+                    # Allow position to go negative when limit switches enabled
+                    if self.motor2_use_limit_switches:
+                        # With limit switches: allow position to go negative until limit hit
+                        self.shared['m2_position'] = self.shared['m2_position'] - (0.05 * speed)
                     else:
-                        speed_multiplier = self.close_speed
-
-                    # Update position: position -= (elapsed_time * current_speed * speed_multiplier)
-                    self.shared['m2_position'] = max(0, self.shared['m2_position'] - (0.05 * speed * speed_multiplier))
+                        # Without limit switches: clamp to zero
+                        self.shared['m2_position'] = max(0, self.shared['m2_position'] - (0.05 * speed))
             
             # Motor 1 position update
             if self.shared['m1_move_start']:
@@ -1033,31 +1060,27 @@ class MotorManager:
                     target_position = 0
 
                 # DEBUG: Log partial position movements
-                if self.shared['state'] in ['CLOSING_TO_PARTIAL_1', 'CLOSING_TO_PARTIAL_2']:
-                    if not hasattr(self, '_last_partial_debug') or (now - self._last_partial_debug) > 0.5:
-                        print(f"[PARTIAL DEBUG] M1: pos={self.shared['m1_position']:.2f}s target={target_position:.2f}s motor1_run_time={self.motor1_run_time:.2f}s")
-                        self._last_partial_debug = now
+                # DISABLED - too much spam
+                # if self.shared['state'] in ['CLOSING_TO_PARTIAL_1', 'CLOSING_TO_PARTIAL_2']:
+                #     if not hasattr(self, '_last_partial_debug') or (now - self._last_partial_debug) > 0.5:
+                #         print(f"[PARTIAL DEBUG] M1: pos={self.shared['m1_position']:.2f}s target={target_position:.2f}s motor1_run_time={self.motor1_run_time:.2f}s")
+                #         self._last_partial_debug = now
 
-                # Only update if not yet at target
-                if self.shared['m1_position'] > target_position:
-                    elapsed = now - self.shared['m1_move_start']
+                # Get actual motor speed to determine if motor is running
+                speed = self.shared.get('m1_speed', 0.0)
 
-                    # Calculate remaining distance
-                    remaining = self.shared['m1_position'] - target_position
-                    remaining = max(0, remaining)
-
-                    # Calculate current speed
-                    speed = self._calculate_ramp_speed(elapsed, remaining, ramp_time)
-                    speed = max(0.0, min(1.0, speed))
-
-                    # Apply speed multiplier (learning mode or user-configured close speed)
-                    if self.shared.get('learning_mode_enabled', False):
-                        speed_multiplier = self.learning_speed
+                # Only update position if motor is actually running (speed > 0)
+                # This prevents position from decrementing when motor is stopped
+                if speed > 0:
+                    # Update position: position -= (loop_interval * actual_motor_speed)
+                    # Speed already includes all multipliers and slowdown from _update_motor_speeds
+                    # Allow position to go negative when limit switches enabled (no clamping to target_position)
+                    if self.motor1_use_limit_switches and self.shared['state'] == 'CLOSING':
+                        # With limit switches: allow position to go negative until limit hit
+                        self.shared['m1_position'] = self.shared['m1_position'] - (0.05 * speed)
                     else:
-                        speed_multiplier = self.close_speed
-
-                    # Update position: position -= (elapsed_time * current_speed * speed_multiplier)
-                    self.shared['m1_position'] = max(target_position, self.shared['m1_position'] - (0.05 * speed * speed_multiplier))
+                        # Without limit switches: clamp to target position
+                        self.shared['m1_position'] = max(target_position, self.shared['m1_position'] - (0.05 * speed))
             elif (self.shared['m2_move_start'] and
                   (now - self.shared['movement_start_time']) >= (0 if not self.motor2_enabled else self.motor2_close_delay)):
                 # Start M1 after delay for ALL closing operations (including partial)
@@ -1148,7 +1171,7 @@ class MotorManager:
                     if (self.motor1_use_limit_switches and self.motor1_run_time and
                         self.shared['state'] not in ['OPENING_TO_PARTIAL_1', 'OPENING_TO_PARTIAL_2']):
                         remaining_distance = self.motor1_run_time - self.shared['m1_position']
-                        speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True)
+                        speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True, 'OPEN', self.motor1_run_time)
 
                 elif self.shared['movement_command'] == 'CLOSE':
                     # Apply user's close speed
@@ -1159,7 +1182,7 @@ class MotorManager:
                     if (self.motor1_use_limit_switches and self.motor1_run_time and
                         self.shared['state'] not in ['CLOSING_TO_PARTIAL_1', 'CLOSING_TO_PARTIAL_2']):
                         remaining_distance = self.shared['m1_position']
-                        speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True)
+                        speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True, 'CLOSE', self.motor1_run_time)
 
             self.shared['m1_speed'] = speed
 
@@ -1185,9 +1208,10 @@ class MotorManager:
                     open_limit_m1 = self.shared.get('open_limit_m1_active', False)
                     close_limit_m1 = self.shared.get('close_limit_m1_active', False)
 
-                    # Check for over-travel (120% threshold)
+                    # Check for over-travel (150% threshold)
                     if self._check_over_travel(1, self.shared['m1_position'], target_position, "OPENING"):
                         self.motor1.stop()
+                        self.shared['m1_speed'] = 0.0  # Reset speed to 0 when stopped
                     # Check limit release at 50% travel
                     elif self._check_limit_release(1, self.shared['m1_position'], target_position, "OPENING", close_limit_m1):
                         self.motor1.forward(speed)  # Continue but fault is logged
@@ -1210,8 +1234,9 @@ class MotorManager:
                     else:
                         self.motor1.stop()
                         # Snap to exact target when stopped
-                        if abs(self.shared['m1_position'] - target_position) > 0.01:
-                            print(f"[MOTOR MGR] Snapping M1: {self.shared['m1_position']:.10f} -> {target_position}")
+                        # DISABLED - too much spam
+                        # if abs(self.shared['m1_position'] - target_position) > 0.01:
+                        #     print(f"[MOTOR MGR] Snapping M1: {self.shared['m1_position']:.10f} -> {target_position}")
                         self.shared['m1_position'] = target_position
             else:
                 target_position = 0
@@ -1222,12 +1247,15 @@ class MotorManager:
 
                 # Partial positions don't have limit switches - always use position-based stopping
                 # Only ignore position limits when closing to FULL close (state = 'CLOSING')
+                # CRITICAL: Use limit switch mode ONLY for full close operations when limit switches enabled
+                #           This ensures motors continue to limits regardless of position tracking
                 use_limit_switch_mode = (ignore_position_limits and
-                                        self.shared['state'] == 'CLOSING')
+                                        self.shared['state'] == 'CLOSING')  # Only full close, not partial
 
                 # DEBUG: Show motor control decisions for M1 closing
-                if self.shared['movement_command'] == 'CLOSE':
-                    print(f"[M1 MOTOR] State={self.shared['state']} Pos={self.shared['m1_position']:.1f} Target={target_position:.1f} LimitMode={use_limit_switch_mode} IgnoreLimits={ignore_position_limits}")
+                # DISABLED - too much spam
+                # if self.shared['movement_command'] == 'CLOSE':
+                #     print(f"[M1 MOTOR] State={self.shared['state']} Pos={self.shared['m1_position']:.1f} Target={target_position:.1f} LimitMode={use_limit_switch_mode} IgnoreLimits={ignore_position_limits}")
 
                 # When limit switches enabled, keep running until limit triggers (with fault detection)
                 if use_limit_switch_mode:
@@ -1235,12 +1263,14 @@ class MotorManager:
                     open_limit_m1 = self.shared.get('open_limit_m1_active', False)
                     close_limit_m1 = self.shared.get('close_limit_m1_active', False)
 
-                    # For closing, position goes from motor1_run_time down to 0
-                    # So over-travel means position going significantly below 0
-                    # Check using absolute position value
-                    if self.shared['m1_position'] < -0.5:  # More than 0.5s below zero is over-travel
-                        self._record_fault(1, "OVER_TRAVEL", f"CLOSING - position {self.shared['m1_position']:.2f}s below zero")
+                    # For closing, position goes from motor1_run_time down to 0 (and can go negative with limit switches)
+                    # Check for excessive over-travel (safety threshold at -50% of expected travel)
+                    # This prevents runaway if limit switch fails
+                    over_travel_threshold = -0.5 * self.motor1_run_time  # -50% of run time
+                    if self.shared['m1_position'] < over_travel_threshold:
+                        self._record_fault(1, "OVER_TRAVEL", f"CLOSING - position {self.shared['m1_position']:.2f}s below {over_travel_threshold:.2f}s (excessive overtravel)")
                         self.motor1.stop()
+                        self.shared['m1_speed'] = 0.0  # Reset speed to 0 when stopped
                     # Check limit release - at 50% travel from open, open limit should be off
                     elif self._check_limit_release(1, self.motor1_run_time - self.shared['m1_position'],
                                                    self.motor1_run_time, "CLOSING", open_limit_m1):
@@ -1266,12 +1296,14 @@ class MotorManager:
                     position_tolerance = 0.05  # One control loop cycle
                     if self.shared['m1_position'] > target_position + position_tolerance:
                         self.motor1.backward(speed)
-                        if self.shared['movement_command'] == 'CLOSE':
-                            print(f"[M1 MOTOR] Running: Pos {self.shared['m1_position']:.2f} > Target {target_position:.2f} (+{position_tolerance})")
+                        # DISABLED - too much spam
+                        # if self.shared['movement_command'] == 'CLOSE':
+                        #     print(f"[M1 MOTOR] Running: Pos {self.shared['m1_position']:.2f} > Target {target_position:.2f} (+{position_tolerance})")
                     else:
                         self.motor1.stop()
-                        if self.shared['movement_command'] == 'CLOSE':
-                            print(f"[M1 MOTOR] STOPPED: Pos {self.shared['m1_position']:.2f} <= Target {target_position:.2f} (+{position_tolerance})")
+                        # DISABLED - too much spam
+                        # if self.shared['movement_command'] == 'CLOSE':
+                        #     print(f"[M1 MOTOR] STOPPED: Pos {self.shared['m1_position']:.2f} <= Target {target_position:.2f} (+{position_tolerance})")
                         # Snap to exact target when stopped
                         self.shared['m1_position'] = target_position
         else:
@@ -1315,7 +1347,7 @@ class MotorManager:
                     # Apply gradual slowdown when approaching open limit (M2 has no partial positions)
                     if self.motor2_use_limit_switches and self.motor2_run_time:
                         remaining_distance = self.motor2_run_time - self.shared['m2_position']
-                        speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True)
+                        speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True, 'OPEN', self.motor2_run_time)
 
                 elif self.shared['movement_command'] == 'CLOSE':
                     # Apply user's close speed
@@ -1325,7 +1357,7 @@ class MotorManager:
                     # Apply gradual slowdown when approaching close limit (M2 has no partial positions)
                     if self.motor2_use_limit_switches and self.motor2_run_time:
                         remaining_distance = self.shared['m2_position']
-                        speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True)
+                        speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True, 'CLOSE', self.motor2_run_time)
 
             self.shared['m2_speed'] = speed
 
@@ -1336,9 +1368,10 @@ class MotorManager:
                     open_limit_m2 = self.shared.get('open_limit_m2_active', False)
                     close_limit_m2 = self.shared.get('close_limit_m2_active', False)
 
-                    # Check for over-travel (120% threshold)
+                    # Check for over-travel (150% threshold)
                     if self._check_over_travel(2, self.shared['m2_position'], self.motor2_run_time, "OPENING"):
                         self.motor2.stop()
+                        self.shared['m2_speed'] = 0.0  # Reset speed to 0 when stopped
                     # Check limit release at 50% travel
                     elif self._check_limit_release(2, self.shared['m2_position'], self.motor2_run_time, "OPENING", close_limit_m2):
                         self.motor2.forward(speed)  # Continue but fault is logged
@@ -1361,8 +1394,9 @@ class MotorManager:
                     else:
                         self.motor2.stop()
                         # Snap to exact target when stopped
-                        if abs(self.shared['m2_position'] - self.motor2_run_time) > 0.01:
-                            print(f"[MOTOR MGR] Snapping M2: {self.shared['m2_position']:.10f} -> {self.motor2_run_time}")
+                        # DISABLED - too much spam
+                        # if abs(self.shared['m2_position'] - self.motor2_run_time) > 0.01:
+                        #     print(f"[MOTOR MGR] Snapping M2: {self.shared['m2_position']:.10f} -> {self.motor2_run_time}")
                         self.shared['m2_position'] = self.motor2_run_time
             else:
                 # When limit switches enabled, keep running until limit triggers (with fault detection)
@@ -1371,11 +1405,14 @@ class MotorManager:
                     open_limit_m2 = self.shared.get('open_limit_m2_active', False)
                     close_limit_m2 = self.shared.get('close_limit_m2_active', False)
 
-                    # For closing, position goes from motor2_run_time down to 0
-                    # Check for over-travel (significantly below zero)
-                    if self.shared['m2_position'] < -0.5:  # More than 0.5s below zero is over-travel
-                        self._record_fault(2, "OVER_TRAVEL", f"CLOSING - position {self.shared['m2_position']:.2f}s below zero")
+                    # For closing, position goes from motor2_run_time down to 0 (and can go negative with limit switches)
+                    # Check for excessive over-travel (safety threshold at -50% of expected travel)
+                    # This prevents runaway if limit switch fails
+                    over_travel_threshold = -0.5 * self.motor2_run_time  # -50% of run time
+                    if self.shared['m2_position'] < over_travel_threshold:
+                        self._record_fault(2, "OVER_TRAVEL", f"CLOSING - position {self.shared['m2_position']:.2f}s below {over_travel_threshold:.2f}s (excessive overtravel)")
                         self.motor2.stop()
+                        self.shared['m2_speed'] = 0.0  # Reset speed to 0 when stopped
                     # Check limit release - at 50% travel from open, open limit should be off
                     elif self._check_limit_release(2, self.motor2_run_time - self.shared['m2_position'],
                                                    self.motor2_run_time, "CLOSING", open_limit_m2):
@@ -1429,12 +1466,16 @@ class MotorManager:
         else:
             return 1.0
 
-    def _apply_gradual_slowdown(self, speed, remaining_distance, max_speed, use_limit_switches):
+    def _apply_gradual_slowdown(self, speed, remaining_distance, max_speed, use_limit_switches, direction, motor_run_time):
         """
         Apply gradual slowdown when approaching limit switches.
 
         Instead of abrupt switch to creep speed, this creates a smooth deceleration
         zone that transitions from max_speed down to creep_speed over slowdown_distance.
+
+        The slowdown_distance is calculated as a percentage of the motor_run_time:
+        - For opening: motor_run_time × (opening_slowdown_percent / 100.0)
+        - For closing: motor_run_time × (closing_slowdown_percent / 100.0)
 
         The slowdown_distance is in POSITION units (seconds at full speed), NOT real time.
         At slower speeds, the slowdown takes proportionally longer in real time, which is correct.
@@ -1444,6 +1485,8 @@ class MotorManager:
             remaining_distance: Distance to target in seconds (position-based time)
             max_speed: Maximum speed for this movement (open_speed or close_speed)
             use_limit_switches: Whether limit switches are enabled for this motor
+            direction: 'OPEN' or 'CLOSE' to determine which slowdown percentage to use
+            motor_run_time: Total run time of the motor to calculate slowdown distance
 
         Returns:
             Adjusted speed with gradual slowdown applied
@@ -1452,16 +1495,38 @@ class MotorManager:
             # No limit switches, no special slowdown
             return speed
 
-        if remaining_distance >= self.slowdown_distance:
+        # Safety check: ensure valid motor_run_time
+        if not motor_run_time or motor_run_time <= 0:
+            return speed
+
+        # Calculate slowdown distance based on direction and percentage of motor runtime
+        # The percentage represents how much of the total travel distance should be slowdown zone
+        # Example: 10% of 10 second run = 1 second slowdown zone at the end
+        if direction == 'OPEN':
+            percent = self.opening_slowdown_percent if self.opening_slowdown_percent else 2.0
+            slowdown_distance = motor_run_time * (percent / 100.0)
+        else:  # CLOSE
+            percent = self.closing_slowdown_percent if self.closing_slowdown_percent else 10.0
+            slowdown_distance = motor_run_time * (percent / 100.0)
+
+        # Prevent zero or negative slowdown distance
+        if slowdown_distance <= 0:
+            return speed
+
+        if remaining_distance >= slowdown_distance:
             # Outside slowdown zone, use normal speed
             return speed
+
+        # Protect against negative remaining_distance (when at or past limit)
+        if remaining_distance <= 0:
+            return self.limit_switch_creep_speed
 
         # Inside slowdown zone - gradual deceleration from max_speed to creep_speed
         # Formula: speed = creep + (max_speed - creep) * (remaining / slowdown_distance)
         # At remaining = slowdown_distance: speed = max_speed
         # At remaining = 0: speed = creep_speed
         speed_range = max_speed - self.limit_switch_creep_speed
-        target_speed = self.limit_switch_creep_speed + (speed_range * (remaining_distance / self.slowdown_distance))
+        target_speed = self.limit_switch_creep_speed + (speed_range * (remaining_distance / slowdown_distance))
 
         # Use minimum of ramp speed and slowdown target
         # This ensures we don't speed up during slowdown

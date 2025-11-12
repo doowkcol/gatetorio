@@ -402,18 +402,28 @@ class GateController:
                         m1_limit_check = self.shared.get('open_limit_m1_active', False)
                         m2_limit_check = self.shared.get('open_limit_m2_active', False)
 
-                        # For motors WITH limit switches: wait for limit
+                        # For motors WITH limit switches: wait for limit, OR check for over-travel fault (failsafe)
                         # For motors WITHOUT limit switches: use position
                         if self.motor1_use_limit_switches:
-                            m1_done = m1_limit_check
-                            m1_reason = f"limit={m1_limit_check}"
+                            # Check if limit reached OR if motor hit over-travel and stopped (failsafe for faulty limit switch)
+                            m1_over_travel = self.shared['m1_position'] >= (self.motor1_run_time * 1.4) and self.shared.get('m1_speed', 0.0) == 0
+                            m1_done = m1_limit_check or m1_over_travel
+                            if m1_over_travel and not m1_limit_check:
+                                m1_reason = f"over-travel={m1_over_travel} (limit may be faulty)"
+                            else:
+                                m1_reason = f"limit={m1_limit_check}"
                         else:
                             m1_done = self.shared['m1_position'] >= (self.motor1_run_time - POSITION_TOLERANCE)
                             m1_reason = f"pos={self.shared['m1_position']:.2f}>={self.motor1_run_time - POSITION_TOLERANCE:.2f}"
 
                         if self.motor2_use_limit_switches:
-                            m2_done = m2_limit_check
-                            m2_reason = f"limit={m2_limit_check}"
+                            # Check if limit reached OR if motor hit over-travel and stopped (failsafe for faulty limit switch)
+                            m2_over_travel = self.shared['m2_position'] >= (self.motor2_run_time * 1.4) and self.shared.get('m2_speed', 0.0) == 0
+                            m2_done = m2_limit_check or m2_over_travel
+                            if m2_over_travel and not m2_limit_check:
+                                m2_reason = f"over-travel={m2_over_travel} (limit may be faulty)"
+                            else:
+                                m2_reason = f"limit={m2_limit_check}"
                         else:
                             m2_done = self.shared['m2_position'] >= (self.motor2_run_time - POSITION_TOLERANCE)
                             m2_reason = f"pos={self.shared['m2_position']:.2f}>={self.motor2_run_time - POSITION_TOLERANCE:.2f}"
@@ -439,10 +449,13 @@ class GateController:
                     if open_complete:
                         self._complete_open()
             elif self.shared['movement_command'] == 'CLOSE':
-                # Debug: Print position check for closing
+                # Debug: Print position check for closing (THROTTLED to reduce spam)
                 if self.shared['state'] == 'CLOSING':
                     if self.shared['m1_position'] <= 0.1 or self.shared['m2_position'] <= 0.1:
-                        print(f"[COMPLETION CHECK] CLOSING: M1={self.shared['m1_position']:.2f}/0, M2={self.shared['m2_position']:.2f}/0")
+                        # Only print every 2 seconds to reduce spam
+                        if not hasattr(self, '_last_close_debug') or (time() - self._last_close_debug) > 2.0:
+                            print(f"[COMPLETION CHECK] CLOSING: M1={self.shared['m1_position']:.2f}/0, M2={self.shared['m2_position']:.2f}/0")
+                            self._last_close_debug = time()
                 
                 if self.shared['state'] == 'CLOSING_TO_PARTIAL_1':
                     # Only complete when BOTH M1 at partial AND M2 fully closed
@@ -468,30 +481,43 @@ class GateController:
                         m1_limit_check = self.shared.get('close_limit_m1_active', False)
                         m2_limit_check = self.shared.get('close_limit_m2_active', False)
 
-                        # For motors WITH limit switches: wait for limit
+                        # For motors WITH limit switches: wait for limit, OR check for over-travel fault (failsafe)
                         # For motors WITHOUT limit switches: use position
                         if self.motor1_use_limit_switches:
-                            m1_done = m1_limit_check
-                            m1_reason = f"limit={m1_limit_check}"
+                            # Check if limit reached OR if motor hit over-travel and stopped (failsafe for faulty limit switch)
+                            m1_over_travel = self.shared['m1_position'] <= (-0.4 * self.motor1_run_time) and self.shared.get('m1_speed', 0.0) == 0
+                            m1_done = m1_limit_check or m1_over_travel
+                            if m1_over_travel and not m1_limit_check:
+                                m1_reason = f"over-travel={m1_over_travel} (limit may be faulty)"
+                            else:
+                                m1_reason = f"limit={m1_limit_check}"
                         else:
                             m1_done = self.shared['m1_position'] <= POSITION_TOLERANCE
                             m1_reason = f"pos={self.shared['m1_position']:.2f}<={POSITION_TOLERANCE:.2f}"
 
                         if self.motor2_use_limit_switches:
-                            m2_done = m2_limit_check
-                            m2_reason = f"limit={m2_limit_check}"
+                            # Check if limit reached OR if motor hit over-travel and stopped (failsafe for faulty limit switch)
+                            m2_over_travel = self.shared['m2_position'] <= (-0.4 * self.motor2_run_time) and self.shared.get('m2_speed', 0.0) == 0
+                            m2_done = m2_limit_check or m2_over_travel
+                            if m2_over_travel and not m2_limit_check:
+                                m2_reason = f"over-travel={m2_over_travel} (limit may be faulty)"
+                            else:
+                                m2_reason = f"limit={m2_limit_check}"
                         else:
                             m2_done = self.shared['m2_position'] <= POSITION_TOLERANCE
                             m2_reason = f"pos={self.shared['m2_position']:.2f}<={POSITION_TOLERANCE:.2f}"
 
                         close_complete = m1_done and m2_done
 
-                        # Debug: show why we're waiting (only print when close to completion)
+                        # Debug: show why we're waiting (only print when close to completion, throttled to reduce spam)
                         if not close_complete and (self.shared['m1_position'] <= 0.5 or self.shared['m2_position'] <= 0.5):
-                            if not m1_done:
-                                print(f"[WAITING] M1 not done: {m1_reason}")
-                            if not m2_done:
-                                print(f"[WAITING] M2 not done: {m2_reason}")
+                            # Only print every 2 seconds to reduce spam
+                            if not hasattr(self, '_last_waiting_debug') or (time() - self._last_waiting_debug) > 2.0:
+                                if not m1_done:
+                                    print(f"[WAITING] M1 not done: {m1_reason}")
+                                if not m2_done:
+                                    print(f"[WAITING] M2 not done: {m2_reason}")
+                                self._last_waiting_debug = time()
 
                         if close_complete:
                             print(f"[COMPLETION] CLOSE complete! M1: {m1_reason}, M2: {m2_reason}")
