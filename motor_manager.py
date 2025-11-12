@@ -63,13 +63,18 @@ class MotorManager:
         # Fault tracking (per motor, degrades globally)
         self.m1_consecutive_faults = 0
         self.m2_consecutive_faults = 0
+        self.m1_fault_this_movement = False  # Track if fault recorded THIS movement
+        self.m2_fault_this_movement = False  # Track if fault recorded THIS movement
         self.degraded_mode = False  # True when in 30% speed fallback mode
         self.degraded_speed = 0.3   # Speed to use when degraded
 
         # Fault detection thresholds
-        self.over_travel_threshold = 1.50  # 150% of expected position (allows position beyond 100% when seeking limits)
+        self.over_travel_threshold = 2.00  # 200% of expected position (allows full travel time at creep speed)
         self.limit_release_check = 0.50    # Check at 50% travel that starting limit released
-        self.fault_trigger_count = 5       # Degrade after this many consecutive faults
+        self.fault_trigger_count = 5       # Degrade after this many consecutive MOVEMENTS with faults
+
+        # Track last movement to detect new movements
+        self.last_movement_command = None
 
         print("Motor Manager initialized")
     
@@ -98,15 +103,24 @@ class MotorManager:
         print(f"Motor Manager: Config reloaded - M1: {self.motor1_run_time}s, M2: {self.motor2_run_time}s (enabled={self.motor2_enabled}), open_speed={self.open_speed}, close_speed={self.close_speed}")
 
     def _record_fault(self, motor_num, fault_type, details=""):
-        """Record a fault for the specified motor and check if degradation needed"""
+        """Record a fault for the specified motor and check if degradation needed
+        Only records ONE fault per movement/maneuver"""
+
+        # Check if we already recorded a fault for THIS movement
         if motor_num == 1:
+            if self.m1_fault_this_movement:
+                return  # Already recorded fault for this movement, don't increment
+            self.m1_fault_this_movement = True
             self.m1_consecutive_faults += 1
             fault_count = self.m1_consecutive_faults
         else:
+            if self.m2_fault_this_movement:
+                return  # Already recorded fault for this movement, don't increment
+            self.m2_fault_this_movement = True
             self.m2_consecutive_faults += 1
             fault_count = self.m2_consecutive_faults
 
-        print(f"[FAULT] M{motor_num} {fault_type}: {details} (consecutive: {fault_count})")
+        print(f"[FAULT] M{motor_num} {fault_type}: {details} (consecutive MOVEMENTS: {fault_count})")
 
         # Check if we need to degrade (either motor hitting fault threshold triggers degradation)
         if fault_count >= self.fault_trigger_count or self.m1_consecutive_faults >= self.fault_trigger_count or self.m2_consecutive_faults >= self.fault_trigger_count:
@@ -119,10 +133,12 @@ class MotorManager:
             if self.m1_consecutive_faults > 0:
                 print(f"[FAULT] M1 fault counter cleared (was {self.m1_consecutive_faults})")
                 self.m1_consecutive_faults = 0
+            self.m1_fault_this_movement = False
         else:
             if self.m2_consecutive_faults > 0:
                 print(f"[FAULT] M2 fault counter cleared (was {self.m2_consecutive_faults})")
                 self.m2_consecutive_faults = 0
+            self.m2_fault_this_movement = False
 
     def _enter_degraded_mode(self, motor_num, fault_type):
         """Enter degraded mode: disable limit switches, set speed to 30%, log fault"""
@@ -217,6 +233,16 @@ class MotorManager:
             if self.shared.get('config_reload_flag', False):
                 self._reload_config()
                 self.shared['config_reload_flag'] = False
+
+            # Detect new movement and reset "fault this movement" flags
+            current_movement = self.shared.get('movement_command')
+            if current_movement != self.last_movement_command:
+                # Movement command changed (new movement started or stopped)
+                if current_movement in ['OPEN', 'CLOSE']:
+                    # Reset fault tracking for new movement
+                    self.m1_fault_this_movement = False
+                    self.m2_fault_this_movement = False
+                self.last_movement_command = current_movement
 
             # If auto-learn is active, handle it exclusively
             if self.shared.get('auto_learn_active', False):
@@ -1264,9 +1290,9 @@ class MotorManager:
                     close_limit_m1 = self.shared.get('close_limit_m1_active', False)
 
                     # For closing, position goes from motor1_run_time down to 0 (and can go negative with limit switches)
-                    # Check for excessive over-travel (safety threshold at -50% of expected travel)
-                    # This prevents runaway if limit switch fails
-                    over_travel_threshold = -0.5 * self.motor1_run_time  # -50% of run time
+                    # Check for excessive over-travel (safety threshold at -100% of expected travel)
+                    # This prevents runaway if limit switch fails - allows full travel time at creep speed
+                    over_travel_threshold = -1.0 * self.motor1_run_time  # -100% of run time
                     if self.shared['m1_position'] < over_travel_threshold:
                         self._record_fault(1, "OVER_TRAVEL", f"CLOSING - position {self.shared['m1_position']:.2f}s below {over_travel_threshold:.2f}s (excessive overtravel)")
                         self.motor1.stop()
@@ -1406,9 +1432,9 @@ class MotorManager:
                     close_limit_m2 = self.shared.get('close_limit_m2_active', False)
 
                     # For closing, position goes from motor2_run_time down to 0 (and can go negative with limit switches)
-                    # Check for excessive over-travel (safety threshold at -50% of expected travel)
-                    # This prevents runaway if limit switch fails
-                    over_travel_threshold = -0.5 * self.motor2_run_time  # -50% of run time
+                    # Check for excessive over-travel (safety threshold at -100% of expected travel)
+                    # This prevents runaway if limit switch fails - allows full travel time at creep speed
+                    over_travel_threshold = -1.0 * self.motor2_run_time  # -100% of run time
                     if self.shared['m2_position'] < over_travel_threshold:
                         self._record_fault(2, "OVER_TRAVEL", f"CLOSING - position {self.shared['m2_position']:.2f}s below {over_travel_threshold:.2f}s (excessive overtravel)")
                         self.motor2.stop()
