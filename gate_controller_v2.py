@@ -666,8 +666,10 @@ class GateController:
             return
         
         # Safety edges before reversal - block their respective directions
-        if self.shared['safety_stop_closing_active']:
-            # Block ANY close-direction movement while sustained
+        # CRITICAL: Check BOTH 'active' (edge currently pressed) AND 'reversed' (edge was pressed and reversed, blocking until released + cleared)
+        # The 'reversed' flag check is essential to prevent commands from re-executing after edge is briefly released
+        if self.shared['safety_stop_closing_active'] or self.shared.get('safety_stop_closing_reversed', False):
+            # Block ANY close-direction movement while sustained OR after reversal
             # This includes: CLOSE command, auto-close, partial auto-close
             # CRITICAL: This must block regardless of current state (STOPPED, CLOSING, OPEN, etc.)
             if self.shared['cmd_close_active'] or self.shared.get('auto_close_pulse', False) or self.shared.get('partial_1_auto_close_pulse', False) or self.shared.get('partial_2_auto_close_pulse', False) or self.shared.get('timed_open_close_pulse', False):
@@ -689,8 +691,9 @@ class GateController:
                 # BLOCK all closing commands completely - return regardless of state
                 return
         
-        if self.shared['safety_stop_opening_active']:
-            # Block ANY open-direction movement while sustained
+        # CRITICAL: Check BOTH 'active' AND 'reversed' flags (same logic as STOP CLOSING above)
+        if self.shared['safety_stop_opening_active'] or self.shared.get('safety_stop_opening_reversed', False):
+            # Block ANY open-direction movement while sustained OR after reversal
             # This includes: OPEN command, TIMED OPEN, PARTIAL commands
             # CRITICAL: This must block regardless of current state (STOPPED, OPENING, PARTIAL, etc.)
             if self.shared['cmd_open_active'] or self.shared['timed_open_active'] or self.shared['partial_1_active'] or self.shared['partial_2_active']:
