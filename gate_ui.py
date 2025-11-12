@@ -2377,7 +2377,7 @@ class GateUI:
     def show_save_confirmation(self):
         """Show a temporary 'Saved!' message"""
         confirm = tk.Label(
-            self.learning_frame,
+            self.settings_frame,
             text="SAVED!",
             font=('Arial', 20, 'bold'),
             bg='green',
