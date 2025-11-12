@@ -850,10 +850,10 @@ class GateController:
             return
         
         # OPEN COMMAND NOT ACTIVE - Check if auto-close should start
-        # If at OPEN state and no OPEN/TIMED_OPEN sustained, start auto-close if enabled
+        # If at OPEN or UNKNOWN state and no OPEN/TIMED_OPEN sustained, start auto-close if enabled
         if not self.shared['cmd_open_active'] and not self.shared['timed_open_active']:
-            if self.shared['state'] == 'OPEN' and self.auto_close_enabled and not self.shared['auto_close_active']:
-                print("Starting auto-close timer (OPEN released)")
+            if (self.shared['state'] == 'OPEN' or self.shared['state'] == 'UNKNOWN') and self.auto_close_enabled and not self.shared['auto_close_active']:
+                print(f"Starting auto-close timer from {self.shared['state']} state")
                 self.shared['auto_close_active'] = True
                 self.shared['auto_close_countdown'] = self.auto_close_time
         
