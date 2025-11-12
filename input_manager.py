@@ -480,10 +480,15 @@ class InputManager:
             stop_opening_reversed = self.shared.get('safety_stop_opening_reversed', False)
             if stop_opening_active or stop_opening_reversed:
                 # Safety edge is blocking - force command to False regardless of input state
+                print(f"[INPUT MANAGER BLOCK] {function}: BLOCKED by stop_opening (active={stop_opening_active}, reversed={stop_opening_reversed})")
                 flag_name = command_map.get(function)
                 if flag_name:
                     self.shared[flag_name] = False
                 return
+            else:
+                # Debug: show when NOT blocking
+                if function == 'cmd_open' and active:
+                    print(f"[INPUT MANAGER] {function}: NOT BLOCKED - setting to {active} (stop_opening_active={stop_opening_active}, reversed={stop_opening_reversed})")
 
         # STOP CLOSING blocks all close-direction commands (except deadman)
         if function in close_direction_commands:
