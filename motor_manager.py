@@ -161,10 +161,13 @@ class MotorManager:
         self.open_speed = self.degraded_speed
         self.close_speed = self.degraded_speed
 
-        # Update shared memory for UI visibility
+        # Update shared memory for UI visibility and controller coordination
         self.shared['degraded_mode'] = True
         self.shared['config_open_speed'] = self.degraded_speed
         self.shared['config_close_speed'] = self.degraded_speed
+        self.shared['config_limit_switches_enabled'] = False
+        self.shared['config_motor1_use_limit_switches'] = False
+        self.shared['config_motor2_use_limit_switches'] = False
 
     def _check_over_travel(self, motor_num, position, expected_time, direction):
         """Check if motor has over-traveled (120% threshold)"""

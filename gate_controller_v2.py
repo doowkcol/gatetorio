@@ -396,8 +396,10 @@ class GateController:
                     self._complete_partial_2()
                 else:
                     # Check for full open - use limit switches if enabled, otherwise use position
+                    # If in degraded mode, always use position (limit switches disabled by motor manager)
                     open_complete = False
-                    if self.limit_switches_enabled and (self.motor1_use_limit_switches or self.motor2_use_limit_switches):
+                    degraded = self.shared.get('degraded_mode', False)
+                    if not degraded and self.limit_switches_enabled and (self.motor1_use_limit_switches or self.motor2_use_limit_switches):
                         # With limit switches: check each motor individually
                         m1_limit_check = self.shared.get('open_limit_m1_active', False)
                         m2_limit_check = self.shared.get('open_limit_m2_active', False)
@@ -475,8 +477,10 @@ class GateController:
                         self._complete_partial_1()
                 else:
                     # Check for full close - use limit switches if enabled, otherwise use position
+                    # If in degraded mode, always use position (limit switches disabled by motor manager)
                     close_complete = False
-                    if self.limit_switches_enabled and (self.motor1_use_limit_switches or self.motor2_use_limit_switches):
+                    degraded = self.shared.get('degraded_mode', False)
+                    if not degraded and self.limit_switches_enabled and (self.motor1_use_limit_switches or self.motor2_use_limit_switches):
                         # With limit switches: check each motor individually
                         m1_limit_check = self.shared.get('close_limit_m1_active', False)
                         m2_limit_check = self.shared.get('close_limit_m2_active', False)
