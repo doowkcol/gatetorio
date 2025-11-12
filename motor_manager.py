@@ -67,6 +67,12 @@ class MotorManager:
         self.m2_fault_this_movement = False  # Track if fault recorded THIS movement
         self.degraded_mode = False  # True when in 30% speed fallback mode
         self.degraded_speed = 0.3   # Speed to use when degraded
+        self.degraded_success_count = 0  # Track successful movements in degraded mode
+        self.degraded_recovery_threshold = 3  # Exit degraded after this many successes
+
+        # Save original speeds for recovery from degraded mode
+        self.original_open_speed = self.open_speed
+        self.original_close_speed = self.close_speed
 
         # Fault detection thresholds
         self.over_travel_threshold = 2.00  # 200% of expected position (allows full travel time at creep speed)
@@ -100,6 +106,12 @@ class MotorManager:
         self.learning_speed = self.shared.get('config_learning_speed', self.learning_speed)
         self.open_speed = self.shared.get('config_open_speed', self.open_speed)
         self.close_speed = self.shared.get('config_close_speed', self.close_speed)
+
+        # Update original speed backup (unless in degraded mode)
+        if not self.degraded_mode:
+            self.original_open_speed = self.open_speed
+            self.original_close_speed = self.close_speed
+
         print(f"Motor Manager: Config reloaded - M1: {self.motor1_run_time}s, M2: {self.motor2_run_time}s (enabled={self.motor2_enabled}), open_speed={self.open_speed}, close_speed={self.close_speed}")
 
     def _record_fault(self, motor_num, fault_type, details=""):
@@ -122,13 +134,20 @@ class MotorManager:
 
         print(f"[FAULT] M{motor_num} {fault_type}: {details} (consecutive MOVEMENTS: {fault_count})")
 
+        # If in degraded mode, reset success counter (fault during recovery)
+        if self.degraded_mode:
+            if self.degraded_success_count > 0:
+                print(f"[DEGRADED] Fault during recovery - resetting success counter (was {self.degraded_success_count})")
+            self.degraded_success_count = 0
+
         # Check if we need to degrade (either motor hitting fault threshold triggers degradation)
         if fault_count >= self.fault_trigger_count or self.m1_consecutive_faults >= self.fault_trigger_count or self.m2_consecutive_faults >= self.fault_trigger_count:
             if not self.degraded_mode:
                 self._enter_degraded_mode(motor_num, fault_type)
 
     def _clear_fault(self, motor_num):
-        """Clear fault counter for a motor after successful movement"""
+        """Clear fault counter for a motor after successful movement
+        Also tracks successful movements in degraded mode for auto-recovery"""
         if motor_num == 1:
             if self.m1_consecutive_faults > 0:
                 print(f"[FAULT] M1 fault counter cleared (was {self.m1_consecutive_faults})")
@@ -140,15 +159,26 @@ class MotorManager:
                 self.m2_consecutive_faults = 0
             self.m2_fault_this_movement = False
 
+        # If in degraded mode and both motors have zero faults, increment success counter
+        if self.degraded_mode and self.m1_consecutive_faults == 0 and self.m2_consecutive_faults == 0:
+            self.degraded_success_count += 1
+            print(f"[DEGRADED] Successful movement {self.degraded_success_count}/{self.degraded_recovery_threshold}")
+
+            # Auto-recover after threshold successful movements
+            if self.degraded_success_count >= self.degraded_recovery_threshold:
+                self._exit_degraded_mode()
+
     def _enter_degraded_mode(self, motor_num, fault_type):
         """Enter degraded mode: disable limit switches, set speed to 30%, log fault"""
         self.degraded_mode = True
+        self.degraded_success_count = 0  # Reset success counter
         print(f"")
         print(f"{'='*60}")
         print(f"[FAULT] ENTERING DEGRADED MODE")
         print(f"  Trigger: M{motor_num} {fault_type}")
         print(f"  M1 faults: {self.m1_consecutive_faults}, M2 faults: {self.m2_consecutive_faults}")
         print(f"  Action: Switching to time-based mode at {self.degraded_speed*100}% speed")
+        print(f"  Recovery: Will auto-recover after {self.degraded_recovery_threshold} successful movements")
         print(f"{'='*60}")
         print(f"")
 
@@ -168,6 +198,40 @@ class MotorManager:
         self.shared['config_limit_switches_enabled'] = False
         self.shared['config_motor1_use_limit_switches'] = False
         self.shared['config_motor2_use_limit_switches'] = False
+
+    def _exit_degraded_mode(self):
+        """Exit degraded mode: restore original speeds and re-enable limit switches"""
+        print(f"")
+        print(f"{'='*60}")
+        print(f"[RECOVERY] EXITING DEGRADED MODE")
+        print(f"  {self.degraded_success_count} successful movements completed")
+        print(f"  Restoring original speeds: open={self.original_open_speed}, close={self.original_close_speed}")
+        print(f"  Re-enabling limit switches")
+        print(f"  NOTE: If faults persist, will re-enter degraded mode")
+        print(f"{'='*60}")
+        print(f"")
+
+        # Restore original speeds
+        self.open_speed = self.original_open_speed
+        self.close_speed = self.original_close_speed
+
+        # Re-enable limit switches from original config
+        # Get values from shared memory config (in case user changed them)
+        self.limit_switches_enabled = self.shared.get('config_limit_switches_enabled', True)
+        self.motor1_use_limit_switches = self.shared.get('config_motor1_use_limit_switches', True)
+        self.motor2_use_limit_switches = self.shared.get('config_motor2_use_limit_switches', True)
+
+        # Exit degraded mode
+        self.degraded_mode = False
+        self.degraded_success_count = 0
+
+        # Update shared memory
+        self.shared['degraded_mode'] = False
+        self.shared['config_open_speed'] = self.open_speed
+        self.shared['config_close_speed'] = self.close_speed
+        self.shared['config_limit_switches_enabled'] = self.limit_switches_enabled
+        self.shared['config_motor1_use_limit_switches'] = self.motor1_use_limit_switches
+        self.shared['config_motor2_use_limit_switches'] = self.motor2_use_limit_switches
 
     def _check_over_travel(self, motor_num, position, expected_time, direction):
         """Check if motor has over-traveled (120% threshold)"""
