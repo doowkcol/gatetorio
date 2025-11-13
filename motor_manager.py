@@ -1159,8 +1159,8 @@ class MotorManager:
             if self.shared['m1_position'] < self.motor1_run_time or self.shared['m2_position'] < self.motor2_run_time:
                 self.motor1.forward(self.deadman_speed)
                 self.motor2.forward(self.deadman_speed)
-                self.shared['m1_position'] = min(self.motor1_run_time, self.shared['m1_position'] + 0.05 * self.deadman_speed)
-                self.shared['m2_position'] = min(self.motor2_run_time, self.shared['m2_position'] + 0.05 * self.deadman_speed)
+                self.shared['m1_position'] = min(self.motor1_run_time, self.shared['m1_position'] + 0.005 * self.deadman_speed)
+                self.shared['m2_position'] = min(self.motor2_run_time, self.shared['m2_position'] + 0.005 * self.deadman_speed)
             else:
                 self.motor1.stop()
                 self.motor2.stop()
@@ -1171,8 +1171,8 @@ class MotorManager:
             if self.shared['m1_position'] > 0 or self.shared['m2_position'] > 0:
                 self.motor1.backward(self.deadman_speed)
                 self.motor2.backward(self.deadman_speed)
-                self.shared['m1_position'] = max(0, self.shared['m1_position'] - 0.05 * self.deadman_speed)
-                self.shared['m2_position'] = max(0, self.shared['m2_position'] - 0.05 * self.deadman_speed)
+                self.shared['m1_position'] = max(0, self.shared['m1_position'] - 0.005 * self.deadman_speed)
+                self.shared['m2_position'] = max(0, self.shared['m2_position'] - 0.005 * self.deadman_speed)
             else:
                 self.motor1.stop()
                 self.motor2.stop()
@@ -1214,15 +1214,15 @@ class MotorManager:
                 # This prevents position from incrementing when motor is stopped
                 if speed > 0:
                     # Update position: position += (loop_interval * actual_motor_speed)
-                    # Using 0.05s as the loop interval (20Hz)
+                    # Using 0.005s as the loop interval (200Hz)
                     # Speed already includes all multipliers and slowdown from _update_motor_speeds
                     # Allow position to exceed target when limit switches enabled (no clamping to target_position)
                     if self.motor1_use_limit_switches and self.shared['state'] == 'OPENING':
                         # With limit switches: allow position to go beyond target until limit hit
-                        self.shared['m1_position'] = self.shared['m1_position'] + (0.05 * speed)
+                        self.shared['m1_position'] = self.shared['m1_position'] + (0.005 * speed)
                     else:
                         # Without limit switches: clamp to target position
-                        self.shared['m1_position'] = min(target_position, self.shared['m1_position'] + (0.05 * speed))
+                        self.shared['m1_position'] = min(target_position, self.shared['m1_position'] + (0.005 * speed))
             
             # Motor 2 position update
             if self.shared['m2_move_start']:
@@ -1237,10 +1237,10 @@ class MotorManager:
                     # Allow position to exceed target when limit switches enabled
                     if self.motor2_use_limit_switches:
                         # With limit switches: allow position to go beyond target until limit hit
-                        self.shared['m2_position'] = self.shared['m2_position'] + (0.05 * speed)
+                        self.shared['m2_position'] = self.shared['m2_position'] + (0.005 * speed)
                     else:
                         # Without limit switches: clamp to target position
-                        self.shared['m2_position'] = min(self.motor2_run_time, self.shared['m2_position'] + (0.05 * speed))
+                        self.shared['m2_position'] = min(self.motor2_run_time, self.shared['m2_position'] + (0.005 * speed))
             elif (self.shared['m1_move_start'] and 
                   (now - self.shared['movement_start_time']) >= self.motor1_open_delay and
                   self.shared['state'] not in ['OPENING_TO_PARTIAL_1', 'OPENING_TO_PARTIAL_2']):
@@ -1261,10 +1261,10 @@ class MotorManager:
                     # Allow position to go negative when limit switches enabled
                     if self.motor2_use_limit_switches:
                         # With limit switches: allow position to go negative until limit hit
-                        self.shared['m2_position'] = self.shared['m2_position'] - (0.05 * speed)
+                        self.shared['m2_position'] = self.shared['m2_position'] - (0.005 * speed)
                     else:
                         # Without limit switches: clamp to zero
-                        self.shared['m2_position'] = max(0, self.shared['m2_position'] - (0.05 * speed))
+                        self.shared['m2_position'] = max(0, self.shared['m2_position'] - (0.005 * speed))
             
             # Motor 1 position update
             if self.shared['m1_move_start']:
@@ -1294,10 +1294,10 @@ class MotorManager:
                     # Allow position to go negative when limit switches enabled (no clamping to target_position)
                     if self.motor1_use_limit_switches and self.shared['state'] == 'CLOSING':
                         # With limit switches: allow position to go negative until limit hit
-                        self.shared['m1_position'] = self.shared['m1_position'] - (0.05 * speed)
+                        self.shared['m1_position'] = self.shared['m1_position'] - (0.005 * speed)
                     else:
                         # Without limit switches: clamp to target position
-                        self.shared['m1_position'] = max(target_position, self.shared['m1_position'] - (0.05 * speed))
+                        self.shared['m1_position'] = max(target_position, self.shared['m1_position'] - (0.005 * speed))
             elif (self.shared['m2_move_start'] and
                   (now - self.shared['movement_start_time']) >= (0 if not self.motor2_enabled else self.motor2_close_delay)):
                 # Start M1 after delay for ALL closing operations (including partial)
