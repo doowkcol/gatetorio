@@ -176,6 +176,19 @@ class InputManager:
         """Main input manager loop - runs continuously"""
         print("Input Manager: Starting main loop")
 
+        # Diagnostic: Show all configured inputs
+        print(f"\n{'='*80}")
+        print(f"CONFIGURED INPUTS ({len(self.input_config)} total):")
+        print(f"{'='*80}")
+        for input_name, cfg in self.input_config.items():
+            enabled = cfg.get('enabled', True)
+            function = cfg.get('function', 'None')
+            channel = cfg.get('channel', '?')
+            input_type = cfg.get('type', 'NO')
+            status = "ENABLED" if enabled else "DISABLED"
+            print(f"  {input_name:20s} Ch={channel:2} Type={input_type:3s} Func={function:20s} [{status}]")
+        print(f"{'='*80}\n")
+
         last_sample = time.time()
 
         # Track consecutive samples for debouncing ALL inputs
@@ -274,10 +287,24 @@ class InputManager:
         is_active_raw = self._determine_active_state(voltage, resistance, input_type,
                                                 learned_resistance, tolerance_percent)
 
-        # Debug: Show raw input changes (before debouncing)
+        # Debug: Show voltage changes for enabled inputs with functions
         function = input_cfg.get('function')
-        if function and is_active_raw != was_active:
-            print(f"[INPUT RAW] {input_name:20s} func={function:20s} raw={'ACTIVE' if is_active_raw else 'inactive'} was={'ACTIVE' if was_active else 'inactive'} V={voltage:.2f}")
+        if function:
+            # Track previous voltage to detect changes
+            if not hasattr(self, '_voltage_monitor'):
+                self._voltage_monitor = {}
+
+            prev_voltage = self._voltage_monitor.get(input_name, voltage)
+            voltage_change = abs(voltage - prev_voltage)
+
+            # Show significant voltage changes (> 0.5V)
+            if voltage_change > 0.5:
+                print(f"[INPUT VOLTAGE] {input_name:20s} V={prev_voltage:.2f}→{voltage:.2f} (Δ{voltage_change:.2f}V)")
+                self._voltage_monitor[input_name] = voltage
+
+            # Show raw state changes (before debouncing)
+            if is_active_raw != was_active:
+                print(f"[INPUT RAW] {input_name:20s} func={function:20s} raw={'ACTIVE' if is_active_raw else 'inactive'} was={'ACTIVE' if was_active else 'inactive'} V={voltage:.2f}")
 
         # UNIVERSAL DEBOUNCING: All inputs require multiple consecutive samples to change state
         # This prevents race conditions with faster control loop and filters electrical noise
