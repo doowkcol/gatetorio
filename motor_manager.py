@@ -1687,6 +1687,18 @@ class MotorManager:
         speed_range = max_speed - self.limit_switch_creep_speed
         target_speed = self.limit_switch_creep_speed + (speed_range * (remaining_distance / slowdown_distance))
 
+        # DEBUG: Log slowdown details every 0.5s
+        now = time()
+        if not hasattr(self, '_last_slowdown_log'):
+            self._last_slowdown_log = {}
+
+        key = f"{direction}_slowdown"
+        if key not in self._last_slowdown_log or (now - self._last_slowdown_log[key]) > 0.5:
+            print(f"[SLOWDOWN {direction}] motor_run_time={motor_run_time:.2f}s, percent={percent:.1f}%, "
+                  f"slowdown_zone={slowdown_distance:.2f}s, remaining={remaining_distance:.2f}s, "
+                  f"target_speed={target_speed:.2f}, ramp_speed={speed:.2f}, final={min(speed, target_speed):.2f}")
+            self._last_slowdown_log[key] = now
+
         # Use minimum of ramp speed and slowdown target
         # This ensures we don't speed up during slowdown
         return min(speed, target_speed)
