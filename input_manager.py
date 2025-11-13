@@ -274,6 +274,11 @@ class InputManager:
         is_active_raw = self._determine_active_state(voltage, resistance, input_type,
                                                 learned_resistance, tolerance_percent)
 
+        # Debug: Show raw input changes (before debouncing)
+        function = input_cfg.get('function')
+        if function and is_active_raw != was_active:
+            print(f"[INPUT RAW] {input_name:20s} func={function:20s} raw={'ACTIVE' if is_active_raw else 'inactive'} was={'ACTIVE' if was_active else 'inactive'} V={voltage:.2f}")
+
         # UNIVERSAL DEBOUNCING: All inputs require multiple consecutive samples to change state
         # This prevents race conditions with faster control loop and filters electrical noise
         # Safety inputs need more samples (more conservative) than command inputs
@@ -328,8 +333,9 @@ class InputManager:
         # Track state changes for logging/timestamps
         if is_active != was_active:
             self.shared[f'{input_name}_last_change'] = now
-            # Log state change (optional)
-            # print(f"Input {input_name}: {was_active} -> {is_active}")
+            # Debug: Show debounced state changes
+            if function:
+                print(f"[INPUT DEBOUNCED] {input_name:20s} func={function:20s} → {'ACTIVE' if is_active else 'inactive'}")
 
         # ALWAYS trigger command function with current state (every cycle)
         # This ensures sustained commands stay active even if something clears the flag
