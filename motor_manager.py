@@ -290,8 +290,17 @@ class MotorManager:
         """Main motor control loop - runs at 200Hz (fast response, matches input manager)"""
         print("Motor Manager process started")
 
+        last_loop_time = time()  # Track actual loop timing
+
         while self.shared['running']:
             now = time()
+
+            # Calculate actual loop interval (not assuming fixed 200Hz)
+            delta_time = now - last_loop_time
+            last_loop_time = now
+
+            # Store delta for position updates (use actual time, not assumed 0.005)
+            self.loop_delta = delta_time
 
             # Update heartbeat
             self.shared['motor_manager_heartbeat'] = now
@@ -707,7 +716,7 @@ class MotorManager:
                     if m1_elapsed < m1_slowdown_point:
                         self.motor1.forward(1.0)  # Full speed
                         # Update position: position += loop_time * speed
-                        self.shared['auto_learn_m1_position'] += 0.005 * 1.0
+                        self.shared['auto_learn_m1_position'] += self.loop_delta *1.0
                     else:
                         # In slowdown zone - GRADUAL ramp from full speed to creep speed
                         if not self.shared.get('auto_learn_m1_slowdown'):
@@ -729,7 +738,7 @@ class MotorManager:
 
                         self.motor1.forward(speed)
                         # Update position at current speed
-                        self.shared['auto_learn_m1_position'] += 0.005 * speed
+                        self.shared['auto_learn_m1_position'] += self.loop_delta *speed
                 else:
                     # Hit limit!
                     if self.shared['auto_learn_m1_start']:
@@ -756,7 +765,7 @@ class MotorManager:
                     if m2_elapsed < m2_slowdown_point:
                         self.motor2.forward(1.0)  # Full speed
                         # Update position: position += loop_time * speed
-                        self.shared['auto_learn_m2_position'] += 0.005 * 1.0
+                        self.shared['auto_learn_m2_position'] += self.loop_delta *1.0
                     else:
                         # In slowdown zone - GRADUAL ramp from full speed to creep speed
                         if not self.shared.get('auto_learn_m2_slowdown'):
@@ -776,7 +785,7 @@ class MotorManager:
 
                         self.motor2.forward(speed)
                         # Update position at current speed
-                        self.shared['auto_learn_m2_position'] += 0.005 * speed
+                        self.shared['auto_learn_m2_position'] += self.loop_delta *speed
                 else:
                     if self.shared['auto_learn_m2_start']:
                         # Record POSITION (full-speed-equivalent seconds) not wall-clock time
@@ -836,7 +845,7 @@ class MotorManager:
                     if m2_elapsed < m2_slowdown_point:
                         self.motor2.backward(1.0)  # Full speed
                         # Update position: position += loop_time * speed
-                        self.shared['auto_learn_m2_position'] += 0.005 * 1.0
+                        self.shared['auto_learn_m2_position'] += self.loop_delta *1.0
                     else:
                         # In slowdown zone - GRADUAL ramp from full speed to creep speed
                         if not self.shared.get('auto_learn_m2_slowdown'):
@@ -856,7 +865,7 @@ class MotorManager:
 
                         self.motor2.backward(speed)
                         # Update position at current speed
-                        self.shared['auto_learn_m2_position'] += 0.005 * speed
+                        self.shared['auto_learn_m2_position'] += self.loop_delta *speed
                 else:
                     if self.shared['auto_learn_m2_start']:
                         # Record POSITION (full-speed-equivalent seconds) not wall-clock time
@@ -902,7 +911,7 @@ class MotorManager:
 
                         self.motor1.backward(speed)
                         # Update position at current speed
-                        self.shared['auto_learn_m1_position'] += 0.005 * speed
+                        self.shared['auto_learn_m1_position'] += self.loop_delta *speed
                 else:
                     if self.shared['auto_learn_m1_start']:
                         # Record POSITION (full-speed-equivalent seconds) not wall-clock time
@@ -1179,8 +1188,8 @@ class MotorManager:
             if self.shared['m1_position'] < self.motor1_run_time or self.shared['m2_position'] < self.motor2_run_time:
                 self.motor1.forward(self.deadman_speed)
                 self.motor2.forward(self.deadman_speed)
-                self.shared['m1_position'] = min(self.motor1_run_time, self.shared['m1_position'] + 0.005 * self.deadman_speed)
-                self.shared['m2_position'] = min(self.motor2_run_time, self.shared['m2_position'] + 0.005 * self.deadman_speed)
+                self.shared['m1_position'] = min(self.motor1_run_time, self.shared['m1_position'] + self.loop_delta * self.deadman_speed)
+                self.shared['m2_position'] = min(self.motor2_run_time, self.shared['m2_position'] + self.loop_delta * self.deadman_speed)
             else:
                 self.motor1.stop()
                 self.motor2.stop()
@@ -1191,8 +1200,8 @@ class MotorManager:
             if self.shared['m1_position'] > 0 or self.shared['m2_position'] > 0:
                 self.motor1.backward(self.deadman_speed)
                 self.motor2.backward(self.deadman_speed)
-                self.shared['m1_position'] = max(0, self.shared['m1_position'] - 0.005 * self.deadman_speed)
-                self.shared['m2_position'] = max(0, self.shared['m2_position'] - 0.005 * self.deadman_speed)
+                self.shared['m1_position'] = max(0, self.shared['m1_position'] - self.loop_delta * self.deadman_speed)
+                self.shared['m2_position'] = max(0, self.shared['m2_position'] - self.loop_delta * self.deadman_speed)
             else:
                 self.motor1.stop()
                 self.motor2.stop()
@@ -1239,10 +1248,10 @@ class MotorManager:
                     # Allow position to exceed target when limit switches enabled (no clamping to target_position)
                     if self.motor1_use_limit_switches and self.shared['state'] == 'OPENING':
                         # With limit switches: allow position to go beyond target until limit hit
-                        self.shared['m1_position'] = self.shared['m1_position'] + (0.005 * speed)
+                        self.shared['m1_position'] = self.shared['m1_position'] + (self.loop_delta * speed)
                     else:
                         # Without limit switches: clamp to target position
-                        self.shared['m1_position'] = min(target_position, self.shared['m1_position'] + (0.005 * speed))
+                        self.shared['m1_position'] = min(target_position, self.shared['m1_position'] + (self.loop_delta * speed))
             
             # Motor 2 position update
             if self.shared['m2_move_start']:
@@ -1257,10 +1266,10 @@ class MotorManager:
                     # Allow position to exceed target when limit switches enabled
                     if self.motor2_use_limit_switches:
                         # With limit switches: allow position to go beyond target until limit hit
-                        self.shared['m2_position'] = self.shared['m2_position'] + (0.005 * speed)
+                        self.shared['m2_position'] = self.shared['m2_position'] + (self.loop_delta * speed)
                     else:
                         # Without limit switches: clamp to target position
-                        self.shared['m2_position'] = min(self.motor2_run_time, self.shared['m2_position'] + (0.005 * speed))
+                        self.shared['m2_position'] = min(self.motor2_run_time, self.shared['m2_position'] + (self.loop_delta * speed))
             elif (self.shared['m1_move_start'] and 
                   (now - self.shared['movement_start_time']) >= self.motor1_open_delay and
                   self.shared['state'] not in ['OPENING_TO_PARTIAL_1', 'OPENING_TO_PARTIAL_2']):
@@ -1281,10 +1290,10 @@ class MotorManager:
                     # Allow position to go negative when limit switches enabled
                     if self.motor2_use_limit_switches:
                         # With limit switches: allow position to go negative until limit hit
-                        self.shared['m2_position'] = self.shared['m2_position'] - (0.005 * speed)
+                        self.shared['m2_position'] = self.shared['m2_position'] - (self.loop_delta * speed)
                     else:
                         # Without limit switches: clamp to zero
-                        self.shared['m2_position'] = max(0, self.shared['m2_position'] - (0.005 * speed))
+                        self.shared['m2_position'] = max(0, self.shared['m2_position'] - (self.loop_delta * speed))
             
             # Motor 1 position update
             if self.shared['m1_move_start']:
@@ -1312,19 +1321,20 @@ class MotorManager:
                     # Debug: Show position update details every 0.5s
                     if not hasattr(self, '_pos_update_debug_close') or (now - self._pos_update_debug_close) > 0.5:
                         old_pos = self.shared['m1_position']
-                        delta = 0.005 * speed
-                        print(f"[M1 POS UPDATE CLOSE] pos={old_pos:.3f}, speed={speed:.3f}, delta=-{delta:.6f}, will_be={old_pos - delta:.3f}")
+                        delta = self.loop_delta * speed
+                        print(f"[M1 POS UPDATE CLOSE] pos={old_pos:.3f}, speed={speed:.3f}, delta=-{delta:.6f}, will_be={old_pos - delta:.3f}, loop_time={self.loop_delta*1000:.1f}ms")
                         self._pos_update_debug_close = now
 
                     # Update position: position -= (loop_interval * actual_motor_speed)
+                    # Use actual loop delta instead of assumed 0.005 to handle variable loop timing
                     # Speed already includes all multipliers and slowdown from _update_motor_speeds
                     # Allow position to go negative when limit switches enabled (no clamping to target_position)
                     if self.motor1_use_limit_switches and self.shared['state'] == 'CLOSING':
                         # With limit switches: allow position to go negative until limit hit
-                        self.shared['m1_position'] = self.shared['m1_position'] - (0.005 * speed)
+                        self.shared['m1_position'] = self.shared['m1_position'] - (self.loop_delta * speed)
                     else:
                         # Without limit switches: clamp to target position
-                        self.shared['m1_position'] = max(target_position, self.shared['m1_position'] - (0.005 * speed))
+                        self.shared['m1_position'] = max(target_position, self.shared['m1_position'] - (self.loop_delta * speed))
             elif (self.shared['m2_move_start'] and
                   (now - self.shared['movement_start_time']) >= (0 if not self.motor2_enabled else self.motor2_close_delay)):
                 # Start M1 after delay for ALL closing operations (including partial)
