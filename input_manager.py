@@ -49,12 +49,12 @@ class InputManager:
             shared_dict: Multiprocessing shared dictionary
             config: Configuration dict with:
                 - num_inputs: Number of analog inputs (8 for dual ADS1115)
-                - input_sample_rate: Sampling rate in seconds (default 0.01 = 100Hz for safety-critical response)
+                - input_sample_rate: Sampling rate in seconds (default 0.005 = 200Hz for fast safety-critical response)
         """
         self.shared = shared_dict
         self.config = config
         self.num_inputs = config.get('num_inputs', 8)
-        self.sample_rate = config.get('input_sample_rate', 0.01)  # 100Hz default for safety-critical inputs
+        self.sample_rate = config.get('input_sample_rate', 0.005)  # 200Hz default for fast safety-critical inputs
 
         # Initialize ADCs if available
         self.adc1 = None  # First ADC at 0x48 (ADDR->GND, default)
@@ -193,14 +193,14 @@ class InputManager:
             # Update heartbeat
             self.shared['input_manager_heartbeat'] = now
 
-            # Sample all inputs at configured rate (default 0.01s = 100Hz for safety-critical response)
+            # Sample all inputs at configured rate (default 0.005s = 200Hz for fast safety-critical response)
             # Much faster than previous 0.1s = 10Hz to prevent race conditions with controller
             if (now - last_sample) >= self.sample_rate:
                 self._sample_all_inputs(consecutive_active, consecutive_inactive)
                 last_sample = now
 
             # Sleep briefly to avoid CPU hammering (but much less than sample rate)
-            time.sleep(0.005)  # 5ms sleep, allows up to 200Hz sampling if configured
+            time.sleep(0.002)  # 2ms sleep, allows up to 500Hz sampling if configured
 
         print("Input Manager: Shutting down")
     
@@ -282,11 +282,11 @@ class InputManager:
                           'safety_stop_closing', 'safety_stop_opening']
 
         if function in safety_functions:
-            # Safety inputs: Immediate activation, 3-sample deactivation (30ms @ 100Hz)
+            # Safety inputs: Immediate activation, 3-sample deactivation (15ms @ 200Hz)
             activate_samples = 1
             deactivate_samples = 3
         else:
-            # Command inputs: 2-sample activation, 2-sample deactivation (20ms @ 100Hz)
+            # Command inputs: 2-sample activation, 2-sample deactivation (10ms @ 200Hz)
             activate_samples = 2
             deactivate_samples = 2
 
