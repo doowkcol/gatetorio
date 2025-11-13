@@ -182,11 +182,12 @@ class InputManager:
         print(f"{'='*80}")
         for input_name, cfg in self.input_config.items():
             enabled = cfg.get('enabled', True)
-            function = cfg.get('function', 'None')
+            function = cfg.get('function', None)
+            function_str = str(function) if function else 'None'
             channel = cfg.get('channel', '?')
             input_type = cfg.get('type', 'NO')
             status = "ENABLED" if enabled else "DISABLED"
-            print(f"  {input_name:20s} Ch={channel:2} Type={input_type:3s} Func={function:20s} [{status}]")
+            print(f"  {input_name:20s} Ch={channel:2} Type={input_type:3s} Func={function_str:20s} [{status}]")
         print(f"{'='*80}\n")
 
         last_sample = time.time()
