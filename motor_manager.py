@@ -686,15 +686,17 @@ class MotorManager:
             self.shared['auto_learn_m1_position'] = 0.0
             self.shared['auto_learn_m2_position'] = 0.0
 
-        # State: FULL_OPEN - Both motors opening at full speed with minimal slowdown
+        # State: FULL_OPEN - Both motors opening at full speed with configured slowdown
         elif state == 'FULL_OPEN':
             # Get expected times for slowdown calculation
             m1_expected = self.shared.get('auto_learn_m1_open_avg', 10.0)
             m2_expected = self.shared.get('auto_learn_m2_open_avg', 10.0)
 
-            # Very short slowdown zone (2% of expected time)
-            m1_slowdown_point = m1_expected * 0.98
-            m2_slowdown_point = m2_expected * 0.98
+            # Use configured slowdown percentage (e.g., 20% means slowdown starts at 80% of travel)
+            # Convert percentage to decimal: 20% → 0.20, then calculate trigger point
+            slowdown_fraction = self.opening_slowdown_percent / 100.0
+            m1_slowdown_point = m1_expected * (1.0 - slowdown_fraction)
+            m2_slowdown_point = m2_expected * (1.0 - slowdown_fraction)
 
             # M1 control
             m1_done = False
@@ -787,15 +789,17 @@ class MotorManager:
                 self.shared['auto_learn_m1_position'] = 0.0
                 self.shared['auto_learn_m2_position'] = 0.0
 
-        # State: FULL_CLOSE - Both motors closing at full speed with minimal slowdown
+        # State: FULL_CLOSE - Both motors closing at full speed with configured slowdown
         elif state == 'FULL_CLOSE':
             # Get expected times for slowdown calculation
             m1_expected = self.shared.get('auto_learn_m1_close_avg', 10.0)
             m2_expected = self.shared.get('auto_learn_m2_close_avg', 10.0)
 
-            # Very short slowdown zone
-            m1_slowdown_point = m1_expected * 0.98
-            m2_slowdown_point = m2_expected * 0.98
+            # Use configured slowdown percentage (e.g., 20% means slowdown starts at 80% of travel)
+            # Convert percentage to decimal: 20% → 0.20, then calculate trigger point
+            slowdown_fraction = self.closing_slowdown_percent / 100.0
+            m1_slowdown_point = m1_expected * (1.0 - slowdown_fraction)
+            m2_slowdown_point = m2_expected * (1.0 - slowdown_fraction)
 
             # M2 control (closes first)
             m2_done = False
