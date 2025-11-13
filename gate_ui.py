@@ -1725,14 +1725,19 @@ class GateUI:
                 self.m2_ls_var.set(config.get('motor2_use_limit_switches', False))
             if hasattr(self, 'open_slowdown_var'):
                 self.open_slowdown_var.set(config.get('opening_slowdown_percent', 2.0))
+                self.update_open_slowdown_label(None)  # Update label to match slider
             if hasattr(self, 'close_slowdown_var'):
                 self.close_slowdown_var.set(config.get('closing_slowdown_percent', 10.0))
+                self.update_close_slowdown_label(None)  # Update label to match slider
             if hasattr(self, 'learning_speed_var'):
                 self.learning_speed_var.set(config.get('learning_speed', 0.3))
+                self.update_learning_speed_label(None)  # Update label to match slider
             if hasattr(self, 'open_speed_var'):
                 self.open_speed_var.set(config.get('open_speed', 1.0))
+                self.update_open_speed_label(None)  # Update label to match slider
             if hasattr(self, 'close_speed_var'):
                 self.close_speed_var.set(config.get('close_speed', 1.0))
+                self.update_close_speed_label(None)  # Update label to match slider
 
         except Exception as e:
             print(f"Error loading config: {e}")
