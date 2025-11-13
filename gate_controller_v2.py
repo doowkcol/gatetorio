@@ -82,10 +82,30 @@ class GateController:
         # Create shared memory dict
         self.manager = multiprocessing.Manager()
         self.shared = self.manager.dict()
-        
+
         # Initialize shared state
         self._init_shared_state()
-        
+
+        # Write initial config values to shared memory (for UI and motor_manager reload)
+        self.shared['config_motor1_run_time'] = self.motor1_run_time
+        self.shared['config_motor2_run_time'] = self.motor2_run_time
+        self.shared['config_motor2_enabled'] = self.motor2_enabled
+        self.shared['config_motor1_open_delay'] = self.motor1_open_delay
+        self.shared['config_motor2_close_delay'] = self.motor2_close_delay
+        self.shared['config_partial_1_position'] = self.partial_1_position
+        self.shared['config_partial_2_position'] = self.partial_2_position
+        self.shared['config_deadman_speed'] = self.deadman_speed
+        self.shared['config_limit_switches_enabled'] = self.limit_switches_enabled
+        self.shared['config_motor1_use_limit_switches'] = self.motor1_use_limit_switches
+        self.shared['config_motor2_use_limit_switches'] = self.motor2_use_limit_switches
+        self.shared['config_limit_switch_creep_speed'] = self.limit_switch_creep_speed
+        self.shared['config_opening_slowdown_percent'] = self.opening_slowdown_percent
+        self.shared['config_closing_slowdown_percent'] = self.closing_slowdown_percent
+        self.shared['config_slowdown_distance'] = self.slowdown_distance
+        self.shared['config_learning_speed'] = self.learning_speed
+        self.shared['config_open_speed'] = self.open_speed
+        self.shared['config_close_speed'] = self.close_speed
+
         # Prepare config for motor manager
         motor_config = {
             'motor1_run_time': self.motor1_run_time,
