@@ -1187,8 +1187,9 @@ class MotorManager:
         
         if self.shared['movement_command'] == 'OPEN':
             # Motor 1 position update
-            if self.shared['m1_move_start']:
-                elapsed = now - self.shared['m1_move_start']
+            m1_move_start = self.shared.get('m1_move_start')
+            if m1_move_start:
+                elapsed = now - m1_move_start
                 
                 # Determine target position based on state
                 if self.shared['state'] == 'OPENING_TO_PARTIAL_1':
@@ -1342,8 +1343,9 @@ class MotorManager:
             return
         
         # Motor 1
-        if self.shared['m1_move_start']:
-            elapsed = now - self.shared['m1_move_start']
+        m1_move_start = self.shared.get('m1_move_start')
+        if m1_move_start:
+            elapsed = now - m1_move_start
 
             # Check if we should ignore position limits for speed calculation
             # When using limit switches, we don't decelerate based on position
@@ -1528,8 +1530,9 @@ class MotorManager:
             self.shared['m1_speed'] = 0.0
         
         # Motor 2 (skip if disabled)
-        if self.motor2_enabled and self.shared['m2_move_start']:
-            elapsed = now - self.shared['m2_move_start']
+        m2_move_start = self.shared.get('m2_move_start')
+        if self.motor2_enabled and m2_move_start:
+            elapsed = now - m2_move_start
 
             # Check if we should ignore position limits for speed calculation
             # When using limit switches, we don't decelerate based on position
