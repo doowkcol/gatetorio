@@ -618,9 +618,9 @@ class GateController:
             # Clear timed open close pulse after 200ms
             if self.shared.get('timed_open_close_pulse', False) and (now - self.shared.get('timed_open_close_pulse_time', 0)) >= 0.2:
                 self.shared['timed_open_close_pulse'] = False
-            
-            # Sleep 50ms (20Hz)
-            threading.Event().wait(0.05)
+
+            # Sleep 5ms (200Hz) - matches input manager for fast response
+            threading.Event().wait(0.005)
 
     def _evaluate_commands(self, now):
         """

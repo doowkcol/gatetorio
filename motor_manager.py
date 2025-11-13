@@ -287,7 +287,7 @@ class MotorManager:
         return False
 
     def run(self):
-        """Main motor control loop - runs at 20Hz"""
+        """Main motor control loop - runs at 200Hz (fast response, matches input manager)"""
         print("Motor Manager process started")
 
         while self.shared['running']:
@@ -341,8 +341,8 @@ class MotorManager:
             if self.shared['movement_start_time'] and not self.shared['opening_paused'] and not self.shared['safety_reversing'] and not deadman_active:
                 self._update_motor_positions(now)
 
-            # Sleep 50ms (20Hz)
-            sleep(0.05)
+            # Sleep 5ms (200Hz)
+            sleep(0.005)
         
         # Cleanup on exit
         self.motor1.stop()
