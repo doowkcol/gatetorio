@@ -398,8 +398,8 @@ class GateUI:
             ('motor2_run_time', 'Motor 2 Travel Time (s)', 'Time for M2 to fully open/close'),
             ('motor2_enabled', 'Motor 2 Enabled', 'Enable/disable motor 2 (for single-motor systems)'),
             ('pause_time', 'Pause Time (s)', 'Pause between movements'),
-            ('motor1_open_delay', 'Motor 1 Open Delay (s)', 'Delay before M1 starts opening'),
-            ('motor2_close_delay', 'Motor 2 Close Delay (s)', 'Delay before M2 starts closing'),
+            ('motor1_open_delay', 'M2 Opening Delay (s)', 'Delay before M2 starts opening (M1 goes first)'),
+            ('motor2_close_delay', 'M1 Closing Delay (s)', 'Delay before M1 starts closing (M2 goes first)'),
             ('auto_close_time', 'Auto-Close Time (s)', 'Seconds before auto-close from OPEN'),
             ('safety_reverse_time', 'Safety Reverse Time (s)', 'Reverse duration on safety trigger'),
             ('deadman_speed', 'Deadman Speed (0-1)', 'Speed multiplier for deadman control'),
@@ -1762,18 +1762,26 @@ class GateUI:
 
             # Update only the fields from the UI (preserves learned times, learning settings, etc.)
             for key, entry in self.config_entries.items():
-                value = entry.get()
-                # Convert to appropriate type
-                if key in ['motor1_run_time', 'motor2_run_time', 'pause_time', 'motor1_open_delay', 'motor2_close_delay',
-                          'auto_close_time', 'safety_reverse_time', 'partial_auto_close_time',
-                          'partial_return_pause', 'partial_1_auto_close_time', 'partial_2_auto_close_time']:
-                    config[key] = float(value)
-                elif key in ['step_logic_mode', 'partial_1_percent', 'partial_2_percent']:
-                    config[key] = int(value)
-                elif key == 'deadman_speed':
-                    config[key] = float(value)
-                elif key == 'motor2_enabled':
-                    config[key] = bool(value)
+                try:
+                    value = entry.get()
+                    # Convert to appropriate type
+                    if key in ['motor1_run_time', 'motor2_run_time', 'pause_time', 'motor1_open_delay', 'motor2_close_delay',
+                              'auto_close_time', 'safety_reverse_time', 'partial_auto_close_time',
+                              'partial_return_pause', 'partial_1_auto_close_time', 'partial_2_auto_close_time']:
+                        config[key] = float(value)
+                    elif key in ['step_logic_mode', 'partial_1_percent', 'partial_2_percent']:
+                        config[key] = int(value)
+                    elif key == 'deadman_speed':
+                        config[key] = float(value)
+                    elif key == 'motor2_enabled':
+                        # Handle string boolean conversion properly
+                        config[key] = value.lower() in ['true', '1', 'yes', 'on'] if isinstance(value, str) else bool(value)
+                    else:
+                        # Unknown key - save as string
+                        config[key] = value
+                except ValueError as e:
+                    print(f"Error converting field '{key}' with value '{value}': {e}")
+                    raise  # Re-raise to show user there's a problem
 
             config['auto_close_enabled'] = self.auto_close_var.get()
 
@@ -1798,9 +1806,11 @@ class GateUI:
             # Write to file
             with open(config_file, 'w') as f:
                 json.dump(config, f, indent=2)
-            
+
             print("Config saved successfully!")
-            
+            print(f"  motor1_open_delay (M2 opening delay): {config.get('motor1_open_delay', 'NOT SET')}")
+            print(f"  motor2_close_delay (M1 closing delay): {config.get('motor2_close_delay', 'NOT SET')}")
+
             # Reload config in the controller
             if self.controller.reload_config():
                 print("Controller config reloaded!")
