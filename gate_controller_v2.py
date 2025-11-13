@@ -844,11 +844,16 @@ class GateController:
                 # Targets are already set correctly, just change state
                 return
             
-            # If at CLOSED, start opening
+            # If at CLOSED, UNKNOWN, or STOPPED, start opening
             if self.shared['state'] == 'CLOSED':
                 self._execute_open()
                 return
-            
+
+            if self.shared['state'] == 'UNKNOWN':
+                print("OPEN from UNKNOWN - opening to locate limits")
+                self._execute_open()
+                return
+
             # If at STOPPED, start opening
             if self.shared['state'] == 'STOPPED':
                 self._execute_open()
@@ -904,8 +909,12 @@ class GateController:
                     self._execute_open()
                 return
             
-            # If at CLOSED or STOPPED, start opening
+            # If at CLOSED, UNKNOWN, or STOPPED, start opening
             if self.shared['state'] == 'CLOSED':
+                self._execute_open()
+                return
+            elif self.shared['state'] == 'UNKNOWN':
+                print("TIMED OPEN from UNKNOWN - opening to locate limits")
                 self._execute_open()
                 return
             elif self.shared['state'] == 'STOPPED':
@@ -967,6 +976,11 @@ class GateController:
             if self.shared['cmd_close_active']:
                 return
 
+            # Block if gate in UNKNOWN state - must reach limits first to sync position
+            if self.shared['state'] == 'UNKNOWN':
+                print("PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first")
+                return
+
             # If closing from PO1 to fully closed, reverse back to PO1
             if self.shared['state'] == 'CLOSING' and self.shared['m1_position'] > self.partial_1_position:
                 print("PO1 command while closing from PO1 - reversing M1 back to PO1")
@@ -995,6 +1009,11 @@ class GateController:
         if self.shared['partial_2_active']:
             # Block if CLOSE sustained
             if self.shared['cmd_close_active']:
+                return
+
+            # Block if gate in UNKNOWN state - must reach limits first to sync position
+            if self.shared['state'] == 'UNKNOWN':
+                print("PARTIAL 2 blocked - gate in UNKNOWN state, must reach limits first")
                 return
 
             # If closing from PO2 to fully closed, reverse back to PO2
