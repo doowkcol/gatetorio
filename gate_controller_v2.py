@@ -301,6 +301,12 @@ class GateController:
         self.shared['learning_m2_close_time'] = None
         self.shared['engineer_mode_enabled'] = False
 
+        # Engineer mode direct motor control flags
+        self.shared['engineer_motor1_open'] = False
+        self.shared['engineer_motor1_close'] = False
+        self.shared['engineer_motor2_open'] = False
+        self.shared['engineer_motor2_close'] = False
+
         # Auto-learn state machine
         self.shared['auto_learn_active'] = False
         self.shared['auto_learn_state'] = 'IDLE'
@@ -1984,7 +1990,115 @@ class GateController:
             else:
                 # Default to opening if unknown
                 self.cmd_open()
-    
+
+    # ========================================================================
+    # ENGINEER MODE COMMANDS - Direct motor control (bypasses all safety)
+    # ========================================================================
+
+    def cmd_engineer_motor1_open(self, active):
+        """
+        Engineer mode: Drive Motor 1 OPEN direction
+        WARNING: Bypasses ALL safety systems and normal control logic.
+        Will drive past limit switches. Use only for recovery/diagnostics.
+        Requires engineer_mode_enabled flag.
+        """
+        if not self.engineer_mode_enabled:
+            print("[ENGINEER] Motor 1 Open command rejected - engineer mode not enabled")
+            return
+
+        self.shared['engineer_motor1_open'] = active
+        if active:
+            print("[ENGINEER] Motor 1 OPENING (hold-to-run)")
+        else:
+            print("[ENGINEER] Motor 1 OPEN released")
+
+    def cmd_engineer_motor1_close(self, active):
+        """
+        Engineer mode: Drive Motor 1 CLOSE direction
+        WARNING: Bypasses ALL safety systems and normal control logic.
+        Will drive past limit switches. Use only for recovery/diagnostics.
+        Requires engineer_mode_enabled flag.
+        """
+        if not self.engineer_mode_enabled:
+            print("[ENGINEER] Motor 1 Close command rejected - engineer mode not enabled")
+            return
+
+        self.shared['engineer_motor1_close'] = active
+        if active:
+            print("[ENGINEER] Motor 1 CLOSING (hold-to-run)")
+        else:
+            print("[ENGINEER] Motor 1 CLOSE released")
+
+    def cmd_engineer_motor2_open(self, active):
+        """
+        Engineer mode: Drive Motor 2 OPEN direction
+        WARNING: Bypasses ALL safety systems and normal control logic.
+        Will drive past limit switches. Use only for recovery/diagnostics.
+        Requires engineer_mode_enabled flag.
+        """
+        if not self.engineer_mode_enabled:
+            print("[ENGINEER] Motor 2 Open command rejected - engineer mode not enabled")
+            return
+
+        if not self.motor2_enabled:
+            print("[ENGINEER] Motor 2 Open command rejected - motor 2 disabled")
+            return
+
+        self.shared['engineer_motor2_open'] = active
+        if active:
+            print("[ENGINEER] Motor 2 OPENING (hold-to-run)")
+        else:
+            print("[ENGINEER] Motor 2 OPEN released")
+
+    def cmd_engineer_motor2_close(self, active):
+        """
+        Engineer mode: Drive Motor 2 CLOSE direction
+        WARNING: Bypasses ALL safety systems and normal control logic.
+        Will drive past limit switches. Use only for recovery/diagnostics.
+        Requires engineer_mode_enabled flag.
+        """
+        if not self.engineer_mode_enabled:
+            print("[ENGINEER] Motor 2 Close command rejected - engineer mode not enabled")
+            return
+
+        if not self.motor2_enabled:
+            print("[ENGINEER] Motor 2 Close command rejected - motor 2 disabled")
+            return
+
+        self.shared['engineer_motor2_close'] = active
+        if active:
+            print("[ENGINEER] Motor 2 CLOSING (hold-to-run)")
+        else:
+            print("[ENGINEER] Motor 2 CLOSE released")
+
+    def enable_engineer_mode(self):
+        """
+        Enable engineer mode for direct motor control
+        WARNING: Engineer mode allows commands that bypass ALL safety systems
+        """
+        self.engineer_mode_enabled = True
+        self.shared['engineer_mode_enabled'] = True
+        print("=" * 60)
+        print("⚠️  ENGINEER MODE ENABLED ⚠️")
+        print("Direct motor controls are now available.")
+        print("WARNING: These commands bypass ALL safety systems!")
+        print("=" * 60)
+
+    def disable_engineer_mode(self):
+        """Disable engineer mode"""
+        self.engineer_mode_enabled = False
+        self.shared['engineer_mode_enabled'] = False
+        # Clear any active engineer commands
+        self.shared['engineer_motor1_open'] = False
+        self.shared['engineer_motor1_close'] = False
+        self.shared['engineer_motor2_open'] = False
+        self.shared['engineer_motor2_close'] = False
+        print("Engineer mode DISABLED - direct motor controls locked")
+
+    # ========================================================================
+    # LEARNING MODE
+    # ========================================================================
+
     def enable_learning_mode(self):
         """Enable learning mode to record motor travel times"""
         self.shared['learning_mode_enabled'] = True
