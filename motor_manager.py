@@ -1289,6 +1289,13 @@ class MotorManager:
                 # Only update position if motor is actually running (speed > 0)
                 # This prevents position from decrementing when motor is stopped
                 if speed > 0:
+                    # Debug: Show position update details every 0.5s
+                    if not hasattr(self, '_pos_update_debug_close') or (now - self._pos_update_debug_close) > 0.5:
+                        old_pos = self.shared['m1_position']
+                        delta = 0.005 * speed
+                        print(f"[M1 POS UPDATE CLOSE] pos={old_pos:.3f}, speed={speed:.3f}, delta=-{delta:.6f}, will_be={old_pos - delta:.3f}")
+                        self._pos_update_debug_close = now
+
                     # Update position: position -= (loop_interval * actual_motor_speed)
                     # Speed already includes all multipliers and slowdown from _update_motor_speeds
                     # Allow position to go negative when limit switches enabled (no clamping to target_position)
