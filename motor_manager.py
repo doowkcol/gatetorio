@@ -1389,6 +1389,11 @@ class MotorManager:
                     if (self.motor1_use_limit_switches and self.motor1_run_time and
                         self.shared['state'] not in ['OPENING_TO_PARTIAL_1', 'OPENING_TO_PARTIAL_2']):
                         remaining_distance = self.motor1_run_time - self.shared['m1_position']
+                        # Debug: Show slowdown call
+                        if not hasattr(self, '_slowdown_debug_open') or (time() - self._slowdown_debug_open) > 0.5:
+                            print(f"[M1 OPEN SLOWDOWN CALL] pos={self.shared['m1_position']:.2f}, remaining={remaining_distance:.2f}, "
+                                  f"run_time={self.motor1_run_time:.2f}, speed_before={speed:.3f}")
+                            self._slowdown_debug_open = time()
                         speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True, 'OPEN', self.motor1_run_time)
 
                 elif self.shared['movement_command'] == 'CLOSE':
@@ -1400,6 +1405,11 @@ class MotorManager:
                     if (self.motor1_use_limit_switches and self.motor1_run_time and
                         self.shared['state'] not in ['CLOSING_TO_PARTIAL_1', 'CLOSING_TO_PARTIAL_2']):
                         remaining_distance = self.shared['m1_position']
+                        # Debug: Show slowdown call
+                        if not hasattr(self, '_slowdown_debug_close') or (time() - self._slowdown_debug_close) > 0.5:
+                            print(f"[M1 CLOSE SLOWDOWN CALL] pos={self.shared['m1_position']:.2f}, remaining={remaining_distance:.2f}, "
+                                  f"run_time={self.motor1_run_time:.2f}, speed_before={speed:.3f}")
+                            self._slowdown_debug_close = time()
                         speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True, 'CLOSE', self.motor1_run_time)
 
             self.shared['m1_speed'] = speed
