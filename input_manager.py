@@ -319,8 +319,9 @@ class InputManager:
             activate_samples = 1
             deactivate_samples = 3
         else:
-            # Command inputs: 2-sample activation, 2-sample deactivation (10ms @ 200Hz)
-            activate_samples = 2
+            # Command inputs: 1-sample activation, 2-sample deactivation (5ms/10ms @ 200Hz)
+            # Fast activation for responsive button presses, slower deactivation filters bounce
+            activate_samples = 1
             deactivate_samples = 2
 
         # Debouncing state machine
