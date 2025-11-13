@@ -707,7 +707,7 @@ class MotorManager:
                     if m1_elapsed < m1_slowdown_point:
                         self.motor1.forward(1.0)  # Full speed
                         # Update position: position += loop_time * speed
-                        self.shared['auto_learn_m1_position'] += 0.05 * 1.0
+                        self.shared['auto_learn_m1_position'] += 0.005 * 1.0
                     else:
                         # In slowdown zone - GRADUAL ramp from full speed to creep speed
                         if not self.shared.get('auto_learn_m1_slowdown'):
@@ -729,7 +729,7 @@ class MotorManager:
 
                         self.motor1.forward(speed)
                         # Update position at current speed
-                        self.shared['auto_learn_m1_position'] += 0.05 * speed
+                        self.shared['auto_learn_m1_position'] += 0.005 * speed
                 else:
                     # Hit limit!
                     if self.shared['auto_learn_m1_start']:
@@ -756,7 +756,7 @@ class MotorManager:
                     if m2_elapsed < m2_slowdown_point:
                         self.motor2.forward(1.0)  # Full speed
                         # Update position: position += loop_time * speed
-                        self.shared['auto_learn_m2_position'] += 0.05 * 1.0
+                        self.shared['auto_learn_m2_position'] += 0.005 * 1.0
                     else:
                         # In slowdown zone - GRADUAL ramp from full speed to creep speed
                         if not self.shared.get('auto_learn_m2_slowdown'):
@@ -776,7 +776,7 @@ class MotorManager:
 
                         self.motor2.forward(speed)
                         # Update position at current speed
-                        self.shared['auto_learn_m2_position'] += 0.05 * speed
+                        self.shared['auto_learn_m2_position'] += 0.005 * speed
                 else:
                     if self.shared['auto_learn_m2_start']:
                         # Record POSITION (full-speed-equivalent seconds) not wall-clock time
@@ -836,7 +836,7 @@ class MotorManager:
                     if m2_elapsed < m2_slowdown_point:
                         self.motor2.backward(1.0)  # Full speed
                         # Update position: position += loop_time * speed
-                        self.shared['auto_learn_m2_position'] += 0.05 * 1.0
+                        self.shared['auto_learn_m2_position'] += 0.005 * 1.0
                     else:
                         # In slowdown zone - GRADUAL ramp from full speed to creep speed
                         if not self.shared.get('auto_learn_m2_slowdown'):
@@ -856,7 +856,7 @@ class MotorManager:
 
                         self.motor2.backward(speed)
                         # Update position at current speed
-                        self.shared['auto_learn_m2_position'] += 0.05 * speed
+                        self.shared['auto_learn_m2_position'] += 0.005 * speed
                 else:
                     if self.shared['auto_learn_m2_start']:
                         # Record POSITION (full-speed-equivalent seconds) not wall-clock time
@@ -902,7 +902,7 @@ class MotorManager:
 
                         self.motor1.backward(speed)
                         # Update position at current speed
-                        self.shared['auto_learn_m1_position'] += 0.05 * speed
+                        self.shared['auto_learn_m1_position'] += 0.005 * speed
                 else:
                     if self.shared['auto_learn_m1_start']:
                         # Record POSITION (full-speed-equivalent seconds) not wall-clock time
