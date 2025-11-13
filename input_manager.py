@@ -440,7 +440,7 @@ class InputManager:
     
     def _trigger_command(self, function, active):
         """Trigger gate controller command function
-        
+
         Maps input function names to shared memory command flags
         """
         # Map function names to shared dict flags
@@ -464,14 +464,33 @@ class InputManager:
             'open_limit_m2': 'open_limit_m2_active',
             'close_limit_m2': 'close_limit_m2_active'
         }
-        
+
         # Update shared memory flag
         flag_name = command_map.get(function)
         if flag_name:
+            # Track previous state to detect transitions
+            if not hasattr(self, '_command_states'):
+                self._command_states = {}
+
+            previous_state = self._command_states.get(function, None)
             self.shared[flag_name] = active
-            
-            # Debug print (optional)
-            # print(f"Input Manager: {function} = {active}")
+            self._command_states[function] = active
+
+            # Debug: Show state transitions for command inputs (not limit switches or every cycle)
+            # This helps diagnose if switches are being ignored
+            command_inputs = ['cmd_open', 'cmd_close', 'cmd_stop', 'partial_1', 'partial_2',
+                            'timed_open', 'step_logic', 'deadman_open', 'deadman_close',
+                            'safety_stop_opening', 'safety_stop_closing']
+
+            if function in command_inputs:
+                # Only print when state changes (transitions)
+                if previous_state is not None and previous_state != active:
+                    state_str = "ACTIVE" if active else "inactive"
+                    print(f"[INPUT] {function:20s} → {state_str}")
+                elif previous_state is None and active:
+                    # First time seeing this command and it's active
+                    print(f"[INPUT] {function:20s} → ACTIVE (first activation)")
+
 
 
 def input_manager_process(shared_dict, config):
