@@ -1,0 +1,16 @@
+# Bluetooth BLE dependencies for Gatetorio
+# Install with: pip3 install -r requirements_bluetooth.txt
+
+# Primary BLE library for GATT server (Linux/BlueZ)
+# Note: Requires system packages first:
+#   sudo apt-get install python3-pip python3-dbus libdbus-1-dev libglib2.0-dev
+bluezero>=0.7.0
+
+# Alternative BLE library (for development/testing)
+# bleak>=0.21.0
+
+# System information (CPU serial, temperature, memory)
+psutil>=5.9.0
+
+# Additional asyncio utilities (if needed)
+aiofiles>=23.0.0

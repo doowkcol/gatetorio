@@ -224,6 +224,13 @@ class MotorManager:
                 sleep(0.05)
                 continue
 
+            # Check engineer mode controls (HIGHEST PRIORITY - bypasses ALL safety)
+            engineer_active = self._process_engineer_controls(now)
+            if engineer_active:
+                # Skip all normal control logic when engineer mode is active
+                sleep(0.05)
+                continue
+
             # Check deadman controls (direct motor control)
             deadman_active = self._process_deadman_controls(now)
 
@@ -932,6 +939,45 @@ class MotorManager:
                 if not self.shared.get('learning_m2_start_time'):
                     self.shared['learning_m2_start_time'] = now
                     print(f"[LEARNING] M2 learning timer started")
+
+    def _process_engineer_controls(self, now):
+        """
+        Handle engineer mode direct motor control - BYPASSES ALL SAFETY
+        WARNING: This completely bypasses safety systems, position tracking,
+        and limit switches. Motors will drive continuously while button held.
+        Use only for recovery and diagnostics.
+        """
+        if not self.shared.get('engineer_mode_enabled', False):
+            return False
+
+        any_active = False
+
+        # Motor 1 Open (forward direction)
+        if self.shared.get('engineer_motor1_open', False):
+            self.motor1.forward(0.3)  # Fixed 30% speed for safety
+            any_active = True
+        # Motor 1 Close (backward direction)
+        elif self.shared.get('engineer_motor1_close', False):
+            self.motor1.backward(0.3)  # Fixed 30% speed for safety
+            any_active = True
+        else:
+            # Stop motor 1 if no engineer command
+            self.motor1.stop()
+
+        # Motor 2 Open (forward direction)
+        if self.motor2_enabled:
+            if self.shared.get('engineer_motor2_open', False):
+                self.motor2.forward(0.3)  # Fixed 30% speed for safety
+                any_active = True
+            # Motor 2 Close (backward direction)
+            elif self.shared.get('engineer_motor2_close', False):
+                self.motor2.backward(0.3)  # Fixed 30% speed for safety
+                any_active = True
+            else:
+                # Stop motor 2 if no engineer command
+                self.motor2.stop()
+
+        return any_active
 
     def _process_deadman_controls(self, now):
         """Handle deadman controls - direct motor operation"""
