@@ -214,114 +214,142 @@ class InputManager:
         All inputs use debouncing to prevent state changes from noise/glitches.
         Requires multiple consecutive samples in the new state before changing.
         Safety inputs use more aggressive debouncing than command inputs.
+
+        TWO-PASS PROCESSING:
+        Pass 1: Process safety edges FIRST (safety_stop_opening, safety_stop_closing, photocells)
+        Pass 2: Process command inputs SECOND (cmd_open, cmd_close, etc.)
+        This ensures safety edge flags are updated BEFORE command blocking checks run.
         """
         now = time.time()
 
+        # PASS 1: Process safety edges first to update their flags before blocking checks
+        safety_functions = ['safety_stop_opening', 'safety_stop_closing',
+                           'photocell_closing', 'photocell_opening']
+
         for input_name, input_cfg in self.input_config.items():
-            # Skip disabled inputs
-            if not input_cfg.get('enabled', True):
-                continue
-
-            channel = input_cfg['channel']
-            input_type = input_cfg.get('type', 'NO')  # NO or NC or 8K2
-
-            # Read ADC value
-            if self.adc_available and channel < len(self.analog_inputs) and self.analog_inputs[channel] is not None:
-                voltage = self.analog_inputs[channel].voltage
-                value = self.analog_inputs[channel].value
-            else:
-                # Simulation mode - read from shared dict if UI set it
-                voltage = self.shared.get(f'{input_name}_sim_voltage', 0.0)
-                value = int((voltage / 3.3) * 32767)  # Simulate 15-bit ADC
-
-            # Calculate resistance if pullup present
-            resistance = self._calculate_resistance(voltage, pullup_ohms=10000, vcc=3.3)
-
-            # Get learned resistance parameters if configured
-            learned_resistance = input_cfg.get('learned_resistance', None)
-            tolerance_percent = input_cfg.get('tolerance_percent', None)
-
-            # Determine raw active state based on type
-            was_active = self.shared[f'{input_name}_state']
-            is_active_raw = self._determine_active_state(voltage, resistance, input_type,
-                                                    learned_resistance, tolerance_percent)
-
-            # UNIVERSAL DEBOUNCING: All inputs require multiple consecutive samples to change state
-            # This prevents race conditions with faster control loop and filters electrical noise
-            # Safety inputs need more samples (more conservative) than command inputs
             function = input_cfg.get('function')
-            safety_functions = ['photocell_closing', 'photocell_opening',
-                              'safety_stop_closing', 'safety_stop_opening']
+            if function not in safety_functions:
+                continue  # Skip non-safety inputs in pass 1
 
+            self._process_single_input(input_name, input_cfg, consecutive_active,
+                                      consecutive_inactive, now)
+
+        # PASS 2: Process all other inputs (commands, limits, deadman, etc.)
+        for input_name, input_cfg in self.input_config.items():
+            function = input_cfg.get('function')
             if function in safety_functions:
-                # Safety inputs: Immediate activation, 3-sample deactivation (30ms @ 100Hz)
-                activate_samples = 1
-                deactivate_samples = 3
+                continue  # Skip safety inputs in pass 2 (already processed)
+
+            self._process_single_input(input_name, input_cfg, consecutive_active,
+                                      consecutive_inactive, now)
+
+    def _process_single_input(self, input_name, input_cfg, consecutive_active,
+                             consecutive_inactive, now):
+        """Process a single input - extracted from _sample_all_inputs for two-pass processing"""
+        # Skip disabled inputs
+        if not input_cfg.get('enabled', True):
+            return
+
+        channel = input_cfg['channel']
+        input_type = input_cfg.get('type', 'NO')  # NO or NC or 8K2
+
+        # Read ADC value
+        if self.adc_available and channel < len(self.analog_inputs) and self.analog_inputs[channel] is not None:
+            voltage = self.analog_inputs[channel].voltage
+            value = self.analog_inputs[channel].value
+        else:
+            # Simulation mode - read from shared dict if UI set it
+            voltage = self.shared.get(f'{input_name}_sim_voltage', 0.0)
+            value = int((voltage / 3.3) * 32767)  # Simulate 15-bit ADC
+
+        # Calculate resistance if pullup present
+        resistance = self._calculate_resistance(voltage, pullup_ohms=10000, vcc=3.3)
+
+        # Get learned resistance parameters if configured
+        learned_resistance = input_cfg.get('learned_resistance', None)
+        tolerance_percent = input_cfg.get('tolerance_percent', None)
+
+        # Determine raw active state based on type
+        was_active = self.shared[f'{input_name}_state']
+        is_active_raw = self._determine_active_state(voltage, resistance, input_type,
+                                                learned_resistance, tolerance_percent)
+
+        # UNIVERSAL DEBOUNCING: All inputs require multiple consecutive samples to change state
+        # This prevents race conditions with faster control loop and filters electrical noise
+        # Safety inputs need more samples (more conservative) than command inputs
+        function = input_cfg.get('function')
+        safety_functions = ['photocell_closing', 'photocell_opening',
+                          'safety_stop_closing', 'safety_stop_opening']
+
+        if function in safety_functions:
+            # Safety inputs: Immediate activation, 3-sample deactivation (30ms @ 100Hz)
+            activate_samples = 1
+            deactivate_samples = 3
+        else:
+            # Command inputs: 2-sample activation, 2-sample deactivation (20ms @ 100Hz)
+            activate_samples = 2
+            deactivate_samples = 2
+
+        # Debouncing state machine
+        if is_active_raw:
+            # Raw signal is active
+            consecutive_inactive[input_name] = 0
+            consecutive_active[input_name] += 1
+
+            if was_active:
+                # Already active, stay active
+                is_active = True
             else:
-                # Command inputs: 2-sample activation, 2-sample deactivation (20ms @ 100Hz)
-                activate_samples = 2
-                deactivate_samples = 2
-
-            # Debouncing state machine
-            if is_active_raw:
-                # Raw signal is active
-                consecutive_inactive[input_name] = 0
-                consecutive_active[input_name] += 1
-
-                if was_active:
-                    # Already active, stay active
-                    is_active = True
+                # Was inactive, check if enough consecutive samples to activate
+                if consecutive_active[input_name] >= activate_samples:
+                    is_active = True  # Activate now
                 else:
-                    # Was inactive, check if enough consecutive samples to activate
-                    if consecutive_active[input_name] >= activate_samples:
-                        is_active = True  # Activate now
-                    else:
-                        is_active = False  # Still debouncing, stay inactive
-            else:
-                # Raw signal is inactive
-                consecutive_active[input_name] = 0
-                consecutive_inactive[input_name] += 1
+                    is_active = False  # Still debouncing, stay inactive
+        else:
+            # Raw signal is inactive
+            consecutive_active[input_name] = 0
+            consecutive_inactive[input_name] += 1
 
-                if not was_active:
-                    # Already inactive, stay inactive
-                    is_active = False
+            if not was_active:
+                # Already inactive, stay inactive
+                is_active = False
+            else:
+                # Was active, check if enough consecutive samples to deactivate
+                if consecutive_inactive[input_name] >= deactivate_samples:
+                    is_active = False  # Deactivate now
                 else:
-                    # Was active, check if enough consecutive samples to deactivate
-                    if consecutive_inactive[input_name] >= deactivate_samples:
-                        is_active = False  # Deactivate now
-                    else:
-                        is_active = True  # Still debouncing, stay active (latch-on)
+                    is_active = True  # Still debouncing, stay active (latch-on)
 
-            # Update shared memory
-            self.shared[f'{input_name}_voltage'] = voltage
-            self.shared[f'{input_name}_resistance'] = resistance
-            self.shared[f'{input_name}_state'] = is_active
-            
-            # Track state changes for logging/timestamps
-            if is_active != was_active:
-                self.shared[f'{input_name}_last_change'] = now
-                # Log state change (optional)
-                # print(f"Input {input_name}: {was_active} -> {is_active}")
-            
-            # ALWAYS trigger command function with current state (every cycle)
-            # This ensures sustained commands stay active even if something clears the flag
-            function = input_cfg.get('function')
-            if function:
-                self._trigger_command(function, is_active)
-            
-            # Update active duration
-            if is_active:
-                last_change = self.shared[f'{input_name}_last_change']
-                self.shared[f'{input_name}_active_duration'] = now - last_change
-            else:
-                self.shared[f'{input_name}_active_duration'] = 0.0
-            
-            # Store resistance in history for trending
-            if resistance is not None:
-                self.resistance_history[input_name].append({
-                    'timestamp': now,
-                    'resistance': resistance
-                })
+        # Update shared memory
+        self.shared[f'{input_name}_voltage'] = voltage
+        self.shared[f'{input_name}_resistance'] = resistance
+        self.shared[f'{input_name}_state'] = is_active
+
+        # Track state changes for logging/timestamps
+        if is_active != was_active:
+            self.shared[f'{input_name}_last_change'] = now
+            # Log state change (optional)
+            # print(f"Input {input_name}: {was_active} -> {is_active}")
+
+        # ALWAYS trigger command function with current state (every cycle)
+        # This ensures sustained commands stay active even if something clears the flag
+        function = input_cfg.get('function')
+        if function:
+            self._trigger_command(function, is_active)
+
+        # Update active duration
+        if is_active:
+            last_change = self.shared[f'{input_name}_last_change']
+            self.shared[f'{input_name}_active_duration'] = now - last_change
+        else:
+            self.shared[f'{input_name}_active_duration'] = 0.0
+
+        # Store resistance in history for trending
+        if resistance is not None:
+            self.resistance_history[input_name].append({
+                'timestamp': now,
+                'resistance': resistance
+            })
     
     def _calculate_resistance(self, voltage, pullup_ohms=10000, vcc=3.3):
         """Calculate resistance from voltage divider

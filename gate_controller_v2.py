@@ -228,6 +228,8 @@ class GateController:
     def _init_shared_state(self):
         """Initialize all shared memory variables"""
         self.shared['state'] = 'CLOSED'
+        self.shared['m1_position_known'] = True  # False when M1 needs to find a limit (synced when hits any limit)
+        self.shared['m2_position_known'] = True  # False when M2 needs to find a limit (synced when hits any limit)
         self.shared['m1_position'] = 0.0
         self.shared['m2_position'] = 0.0
         self.shared['m1_speed'] = 0.0
@@ -319,7 +321,8 @@ class GateController:
         self.shared['auto_learn_status_msg'] = 'Ready'
 
     def _detect_initial_position(self):
-        """Detect initial gate position based on limit switch states at startup"""
+        """Detect initial gate position based on limit switch states at startup
+        Tracks each motor independently - UNKNOWN means motors between limits"""
         if not self.limit_switches_enabled:
             return  # No limit switches, stick with default CLOSED state
 
@@ -329,32 +332,36 @@ class GateController:
         m1_close = self.shared.get('close_limit_m1_active', False)
         m2_close = self.shared.get('close_limit_m2_active', False)
 
+        # Check each motor's position independently
+        m1_known = m1_open or m1_close
+        m2_known = m2_open or m2_close
+
+        self.shared['m1_position_known'] = m1_known
+        self.shared['m2_position_known'] = m2_known
+
         # Determine initial state based on limit switches
         if m1_open and m2_open:
-            # Both motors at open limits
+            # Both motors at open limits - fully open
             self.shared['state'] = 'OPEN'
-            # Set positions to motor run times
             self.shared['m1_position'] = self.motor1_run_time
             self.shared['m2_position'] = self.motor2_run_time
-            print("[STARTUP] Detected gate at OPEN position (both open limits active)")
+            print("[STARTUP] Detected gate at OPEN position (both motors at open limits)")
         elif m1_close and m2_close:
-            # Both motors at close limits (or default)
+            # Both motors at close limits - fully closed
             self.shared['state'] = 'CLOSED'
             self.shared['m1_position'] = 0.0
             self.shared['m2_position'] = 0.0
-            print("[STARTUP] Detected gate at CLOSED position (both close limits active)")
-        elif not m1_open and not m2_open and not m1_close and not m2_close:
-            # No limits active - assume closed (default)
-            self.shared['state'] = 'CLOSED'
-            self.shared['m1_position'] = 0.0
-            self.shared['m2_position'] = 0.0
-            print("[STARTUP] No limits active - defaulting to CLOSED position")
+            print("[STARTUP] Detected gate at CLOSED position (both motors at close limits)")
         else:
-            # Partial position or inconsistent state - keep default but warn
-            print(f"[STARTUP] WARNING: Inconsistent limit switch state detected:")
-            print(f"  M1: open={m1_open}, close={m1_close}")
-            print(f"  M2: open={m2_open}, close={m2_close}")
-            print(f"  Defaulting to CLOSED position")
+            # Ambiguous position - motors somewhere between limits
+            self.shared['state'] = 'UNKNOWN'
+            self.shared['m1_position'] = 0.0  # Estimate, will sync on first limit
+            self.shared['m2_position'] = 0.0  # Estimate, will sync on first limit
+            print(f"[STARTUP] Position UNKNOWN - motors between limits")
+            print(f"  M1: open={m1_open}, close={m1_close} → {'SYNCED' if m1_known else 'NEEDS SYNC'}")
+            print(f"  M2: open={m2_open}, close={m2_close} → {'SYNCED' if m2_known else 'NEEDS SYNC'}")
+            print(f"  Commands will operate at 30% speed until both motors synced to limits")
+            print(f"  Normal operation: OPEN/CLOSE work normally, just slower for safety")
 
     def _control_loop(self):
         """Main control loop - decision making only (no motor control)"""
@@ -402,8 +409,10 @@ class GateController:
                     self._complete_partial_2()
                 else:
                     # Check for full open - use limit switches if enabled, otherwise use position
+                    # If in degraded mode, always use position (limit switches disabled by motor manager)
                     open_complete = False
-                    if self.limit_switches_enabled and (self.motor1_use_limit_switches or self.motor2_use_limit_switches):
+                    degraded = self.shared.get('degraded_mode', False)
+                    if not degraded and self.limit_switches_enabled and (self.motor1_use_limit_switches or self.motor2_use_limit_switches):
                         # With limit switches: check each motor individually
                         m1_limit_check = self.shared.get('open_limit_m1_active', False)
                         m2_limit_check = self.shared.get('open_limit_m2_active', False)
@@ -481,8 +490,10 @@ class GateController:
                         self._complete_partial_1()
                 else:
                     # Check for full close - use limit switches if enabled, otherwise use position
+                    # If in degraded mode, always use position (limit switches disabled by motor manager)
                     close_complete = False
-                    if self.limit_switches_enabled and (self.motor1_use_limit_switches or self.motor2_use_limit_switches):
+                    degraded = self.shared.get('degraded_mode', False)
+                    if not degraded and self.limit_switches_enabled and (self.motor1_use_limit_switches or self.motor2_use_limit_switches):
                         # With limit switches: check each motor individually
                         m1_limit_check = self.shared.get('close_limit_m1_active', False)
                         m2_limit_check = self.shared.get('close_limit_m2_active', False)
@@ -661,8 +672,10 @@ class GateController:
             return
         
         # Safety edges before reversal - block their respective directions
-        if self.shared['safety_stop_closing_active']:
-            # Block ANY close-direction movement while sustained
+        # CRITICAL: Check BOTH 'active' (edge currently pressed) AND 'reversed' (edge was pressed and reversed, blocking until released + cleared)
+        # The 'reversed' flag check is essential to prevent commands from re-executing after edge is briefly released
+        if self.shared['safety_stop_closing_active'] or self.shared.get('safety_stop_closing_reversed', False):
+            # Block ANY close-direction movement while sustained OR after reversal
             # This includes: CLOSE command, auto-close, partial auto-close
             # CRITICAL: This must block regardless of current state (STOPPED, CLOSING, OPEN, etc.)
             if self.shared['cmd_close_active'] or self.shared.get('auto_close_pulse', False) or self.shared.get('partial_1_auto_close_pulse', False) or self.shared.get('partial_2_auto_close_pulse', False) or self.shared.get('timed_open_close_pulse', False):
@@ -673,12 +686,20 @@ class GateController:
                         # Only stop if reversal already happened (triggered flag is set)
                         self._execute_stop()
 
+                # CLEAR all close-direction command flags to prevent re-execution
+                # This prevents the infinite cycle: close>reverse>stop>close when sustained
+                self.shared['cmd_close_active'] = False
+                self.shared['auto_close_pulse'] = False
+                self.shared['partial_1_auto_close_pulse'] = False
+                self.shared['partial_2_auto_close_pulse'] = False
+                self.shared['timed_open_close_pulse'] = False
+
                 # BLOCK all closing commands completely - return regardless of state
-                # NOTE: Flags stay active (not cleared) so safety edge continuously blocks while sustained
                 return
-        
-        if self.shared['safety_stop_opening_active']:
-            # Block ANY open-direction movement while sustained
+
+        # CRITICAL: Check BOTH 'active' AND 'reversed' flags (same logic as STOP CLOSING above)
+        if self.shared['safety_stop_opening_active'] or self.shared.get('safety_stop_opening_reversed', False):
+            # Block ANY open-direction movement while sustained OR after reversal
             # This includes: OPEN command, TIMED OPEN, PARTIAL commands
             # CRITICAL: This must block regardless of current state (STOPPED, OPENING, PARTIAL, etc.)
             if self.shared['cmd_open_active'] or self.shared['timed_open_active'] or self.shared['partial_1_active'] or self.shared['partial_2_active']:
@@ -689,8 +710,14 @@ class GateController:
                         # Only stop if reversal already happened (triggered flag is set)
                         self._execute_stop()
 
+                # CLEAR all open-direction command flags to prevent re-execution
+                # This prevents the infinite cycle: open>reverse>stop>open when sustained
+                self.shared['cmd_open_active'] = False
+                self.shared['timed_open_active'] = False
+                self.shared['partial_1_active'] = False
+                self.shared['partial_2_active'] = False
+
                 # BLOCK all opening commands completely - return regardless of state
-                # NOTE: Flags stay active (not cleared) so safety edge continuously blocks while sustained
                 return
         
         # SUSTAINED STOP - Blocks everything
@@ -722,6 +749,10 @@ class GateController:
                     # No partial sustained - close fully
                     print("Auto-close pulse - no PO sustained, closing fully")
                     self._execute_close()
+            elif self.shared['state'] == 'UNKNOWN':
+                # Gate in unknown position - close to locate limits
+                print("Auto-close pulse from UNKNOWN - closing to locate limits")
+                self._execute_close()
             return
         
         # PARTIAL 1 AUTO-CLOSE PULSE - Process momentary pulse from PO1 timer
@@ -774,11 +805,15 @@ class GateController:
                     self._execute_close()
                 return
             
-            # If at OPEN, start closing
+            # If at OPEN, UNKNOWN, or STOPPED, start closing
             if self.shared['state'] == 'OPEN':
                 self._execute_close()
                 return
-            
+
+            if self.shared['state'] == 'UNKNOWN':
+                self._execute_close()
+                return
+
             # If at STOPPED, start closing
             if self.shared['state'] == 'STOPPED':
                 self._execute_close()
