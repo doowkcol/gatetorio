@@ -709,13 +709,27 @@ class MotorManager:
                         # Update position: position += loop_time * speed
                         self.shared['auto_learn_m1_position'] += 0.05 * 1.0
                     else:
-                        # In slowdown zone - creep to limit
+                        # In slowdown zone - GRADUAL ramp from full speed to creep speed
                         if not self.shared.get('auto_learn_m1_slowdown'):
                             print(f"  M1 slowdown at {m1_elapsed:.2f}s (expected {m1_expected:.2f}s)")
                             self.shared['auto_learn_m1_slowdown'] = True
-                        self.motor1.forward(self.limit_switch_creep_speed)
-                        # Update position at creep speed
-                        self.shared['auto_learn_m1_position'] += 0.05 * self.limit_switch_creep_speed
+
+                        # Calculate gradual slowdown speed (same formula as normal operation)
+                        # remaining = how far we are from expected end
+                        # slowdown_zone = total slowdown distance
+                        remaining = m1_expected - m1_elapsed
+                        slowdown_zone = m1_expected - m1_slowdown_point
+                        if remaining <= 0:
+                            speed = self.limit_switch_creep_speed
+                        else:
+                            # Linear ramp: speed = creep + (1.0 - creep) * (remaining / zone)
+                            speed_range = 1.0 - self.limit_switch_creep_speed
+                            speed = self.limit_switch_creep_speed + (speed_range * (remaining / slowdown_zone))
+                            speed = max(self.limit_switch_creep_speed, min(1.0, speed))
+
+                        self.motor1.forward(speed)
+                        # Update position at current speed
+                        self.shared['auto_learn_m1_position'] += 0.05 * speed
                 else:
                     # Hit limit!
                     if self.shared['auto_learn_m1_start']:
@@ -744,12 +758,25 @@ class MotorManager:
                         # Update position: position += loop_time * speed
                         self.shared['auto_learn_m2_position'] += 0.05 * 1.0
                     else:
+                        # In slowdown zone - GRADUAL ramp from full speed to creep speed
                         if not self.shared.get('auto_learn_m2_slowdown'):
                             print(f"  M2 slowdown at {m2_elapsed:.2f}s (expected {m2_expected:.2f}s)")
                             self.shared['auto_learn_m2_slowdown'] = True
-                        self.motor2.forward(self.limit_switch_creep_speed)
-                        # Update position at creep speed
-                        self.shared['auto_learn_m2_position'] += 0.05 * self.limit_switch_creep_speed
+
+                        # Calculate gradual slowdown speed (same formula as normal operation)
+                        remaining = m2_expected - m2_elapsed
+                        slowdown_zone = m2_expected - m2_slowdown_point
+                        if remaining <= 0:
+                            speed = self.limit_switch_creep_speed
+                        else:
+                            # Linear ramp: speed = creep + (1.0 - creep) * (remaining / zone)
+                            speed_range = 1.0 - self.limit_switch_creep_speed
+                            speed = self.limit_switch_creep_speed + (speed_range * (remaining / slowdown_zone))
+                            speed = max(self.limit_switch_creep_speed, min(1.0, speed))
+
+                        self.motor2.forward(speed)
+                        # Update position at current speed
+                        self.shared['auto_learn_m2_position'] += 0.05 * speed
                 else:
                     if self.shared['auto_learn_m2_start']:
                         # Record POSITION (full-speed-equivalent seconds) not wall-clock time
@@ -811,12 +838,25 @@ class MotorManager:
                         # Update position: position += loop_time * speed
                         self.shared['auto_learn_m2_position'] += 0.05 * 1.0
                     else:
+                        # In slowdown zone - GRADUAL ramp from full speed to creep speed
                         if not self.shared.get('auto_learn_m2_slowdown'):
                             print(f"  M2 slowdown at {m2_elapsed:.2f}s (expected {m2_expected:.2f}s)")
                             self.shared['auto_learn_m2_slowdown'] = True
-                        self.motor2.backward(self.limit_switch_creep_speed)
-                        # Update position at creep speed
-                        self.shared['auto_learn_m2_position'] += 0.05 * self.limit_switch_creep_speed
+
+                        # Calculate gradual slowdown speed (same formula as normal operation)
+                        remaining = m2_expected - m2_elapsed
+                        slowdown_zone = m2_expected - m2_slowdown_point
+                        if remaining <= 0:
+                            speed = self.limit_switch_creep_speed
+                        else:
+                            # Linear ramp: speed = creep + (1.0 - creep) * (remaining / zone)
+                            speed_range = 1.0 - self.limit_switch_creep_speed
+                            speed = self.limit_switch_creep_speed + (speed_range * (remaining / slowdown_zone))
+                            speed = max(self.limit_switch_creep_speed, min(1.0, speed))
+
+                        self.motor2.backward(speed)
+                        # Update position at current speed
+                        self.shared['auto_learn_m2_position'] += 0.05 * speed
                 else:
                     if self.shared['auto_learn_m2_start']:
                         # Record POSITION (full-speed-equivalent seconds) not wall-clock time
@@ -844,12 +884,25 @@ class MotorManager:
                         # Update position: position += loop_time * speed
                         self.shared['auto_learn_m1_position'] += 0.05 * 1.0
                     else:
+                        # In slowdown zone - GRADUAL ramp from full speed to creep speed
                         if not self.shared.get('auto_learn_m1_slowdown'):
                             print(f"  M1 slowdown at {m1_elapsed:.2f}s (expected {m1_expected:.2f}s)")
                             self.shared['auto_learn_m1_slowdown'] = True
-                        self.motor1.backward(self.limit_switch_creep_speed)
-                        # Update position at creep speed
-                        self.shared['auto_learn_m1_position'] += 0.05 * self.limit_switch_creep_speed
+
+                        # Calculate gradual slowdown speed (same formula as normal operation)
+                        remaining = m1_expected - m1_elapsed
+                        slowdown_zone = m1_expected - m1_slowdown_point
+                        if remaining <= 0:
+                            speed = self.limit_switch_creep_speed
+                        else:
+                            # Linear ramp: speed = creep + (1.0 - creep) * (remaining / zone)
+                            speed_range = 1.0 - self.limit_switch_creep_speed
+                            speed = self.limit_switch_creep_speed + (speed_range * (remaining / slowdown_zone))
+                            speed = max(self.limit_switch_creep_speed, min(1.0, speed))
+
+                        self.motor1.backward(speed)
+                        # Update position at current speed
+                        self.shared['auto_learn_m1_position'] += 0.05 * speed
                 else:
                     if self.shared['auto_learn_m1_start']:
                         # Record POSITION (full-speed-equivalent seconds) not wall-clock time
