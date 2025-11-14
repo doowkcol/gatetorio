@@ -778,11 +778,48 @@ def main():
     print("[Main] Initializing Gatetorio gate controller...")
     print("[Main] WARNING: Make sure no other controller instance is running!")
     print("[Main] Close the desktop launcher before starting BLE server.")
-    print("[Main] Waiting 2 seconds for hardware to initialize...")
-    time.sleep(2)  # Give GPIO/ADC time to initialize
+    print()
+    print("[Main] Step 1: Waiting for hardware initialization...")
+    time.sleep(2)  # Give GPIO/ADC time to initialize at kernel level
 
     try:
+        print("[Main] Step 2: Creating controller instance...")
         controller = GateController()
+
+        # CRITICAL: Wait for input manager to stabilize ADC readings
+        # The input_manager process starts immediately but needs time
+        # for ADC to take stable readings before safety systems engage
+        print("[Main] Step 3: Waiting for input manager to stabilize (5 seconds)...")
+        print("[Main]   This allows ADC readings to settle before safety checks")
+        time.sleep(5)
+
+        # Verify we're getting valid inputs
+        print("[Main] Step 4: Verifying input readings...")
+        safety_check_count = 0
+        max_safety_checks = 3
+
+        while safety_check_count < max_safety_checks:
+            # Check if safety system is constantly triggered (indicates bad ADC)
+            stop_opening = controller.shared.get('stop_opening_active', False)
+            stop_closing = controller.shared.get('stop_closing_active', False)
+
+            if stop_opening or stop_closing:
+                safety_check_count += 1
+                print(f"[Main]   ⚠ Safety triggered ({safety_check_count}/{max_safety_checks}) - waiting...")
+                time.sleep(1)
+            else:
+                print(f"[Main]   ✓ Inputs stable - safety system nominal")
+                break
+
+        if safety_check_count >= max_safety_checks:
+            print("[Main] ERROR: Safety system constantly triggered!")
+            print("[Main] This indicates ADC/input readings are invalid.")
+            print("[Main] Run diagnostic: sudo python3 test_hardware_root.py")
+            raise RuntimeError("Input manager not getting valid ADC readings")
+
+        print("[Main] ✓ Controller initialized and stable")
+        print()
+
     except Exception as e:
         print(f"[Main] ERROR: Failed to initialize controller: {e}")
         print("[Main] This is likely because:")
