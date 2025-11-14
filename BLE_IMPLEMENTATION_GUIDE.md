@@ -28,22 +28,96 @@ Gate Motors & Sensors
 
 ---
 
+## Implementation Status
+
+### Phase 1a: Foundation ✅ COMPLETE
+- BLE architecture designed
+- Engineer mode added to gate controller
+- GATT services and characteristics defined
+- Documentation created
+
+### Phase 1b: bluezero GATT Server ✅ COMPLETE
+- Full GATT server implementation using bluezero
+- All 5 services with 15 characteristics
+- Read/write/notify handlers implemented
+- Pairing window and whitelist management
+- Installation script created
+- Testing guide created
+
+### Phase 2: Flutter App (PENDING)
+- BLE client implementation
+- UI/UX design
+- State management
+- Testing and deployment
+
+---
+
 ## Files Created/Modified
 
 ### New Files
 
 | File | Purpose |
 |------|---------|
-| `bluetooth_bridge_ble.py` | BLE GATT server (placeholder - needs bluezero) |
+| `ble_server_bluezero.py` | **Full bluezero BLE GATT server implementation** |
+| `bluetooth_bridge_ble.py` | Original placeholder (deprecated, use bluezero version) |
 | `requirements_bluetooth.txt` | Python dependencies for BLE support |
-| `BLE_IMPLEMENTATION_GUIDE.md` | This document |
+| `install_ble_dependencies.sh` | **Automated installation script** |
+| `BLE_IMPLEMENTATION_GUIDE.md` | This document - architecture and design |
+| `BLE_TESTING_GUIDE.md` | **Step-by-step testing with nRF Connect/LightBlue** |
+| `systemd/gatetorio-ble.service` | Systemd service configuration |
 
 ### Modified Files
 
 | File | Changes |
 |------|---------|
-| `gate_controller_v2.py` | Added engineer mode commands (lines 1988-2094) |
-| `motor_manager.py` | Added engineer motor control processing (lines 943-980) |
+| `gate_controller_v2.py` | Added engineer mode commands and enable/disable methods |
+| `motor_manager.py` | Added engineer motor control processing (highest priority) |
+
+---
+
+## Quick Start
+
+### Installation (Raspberry Pi)
+
+```bash
+cd /home/doowkcol/Gatetorio_Code
+
+# Install all dependencies automatically
+sudo ./install_ble_dependencies.sh
+
+# Or manual installation:
+sudo apt-get install bluez python3-dbus libdbus-1-dev libglib2.0-dev
+pip3 install bluezero psutil
+```
+
+### Running the BLE Server
+
+**Manual testing:**
+```bash
+sudo python3 ble_server_bluezero.py
+```
+
+**As systemd service:**
+```bash
+sudo cp systemd/gatetorio-ble.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable gatetorio-ble
+sudo systemctl start gatetorio-ble
+```
+
+### Testing with Mobile App
+
+See **[BLE_TESTING_GUIDE.md](BLE_TESTING_GUIDE.md)** for complete step-by-step instructions.
+
+Quick test:
+1. Start BLE server (see above)
+2. Install **nRF Connect** on Android or **LightBlue** on iOS
+3. Scan for device: **Gatetorio-XXXX**
+4. Connect and explore GATT services
+5. Send test command to `Command TX` characteristic:
+   ```json
+   {"cmd":"pulse","key":"cmd_open"}
+   ```
 
 ---
 

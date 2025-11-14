@@ -6,7 +6,7 @@ Wants=bluetooth.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 /home/doowkcol/Gatetorio_Code/bluetooth_bridge_ble.py
+ExecStart=/usr/bin/python3 /home/doowkcol/Gatetorio_Code/ble_server_bluezero.py
 WorkingDirectory=/home/doowkcol/Gatetorio_Code
 StandardOutput=journal
 StandardError=journal
