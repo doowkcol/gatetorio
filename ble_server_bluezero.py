@@ -751,8 +751,51 @@ class GatetorioBLEServer:
 
 def main():
     """Main entry point"""
+    import sys
+
+    # Check for standalone mode (don't create controller)
+    standalone = '--standalone' in sys.argv or '-s' in sys.argv
+
+    if standalone:
+        print("=" * 60)
+        print("ERROR: Standalone mode not yet implemented")
+        print("=" * 60)
+        print()
+        print("The BLE server currently requires creating its own")
+        print("GateController instance, which conflicts with an")
+        print("already-running controller.")
+        print()
+        print("WORKAROUND FOR TESTING:")
+        print("1. Stop any running gate controller (close desktop launcher)")
+        print("2. Start BLE server: sudo python3 ble_server_bluezero.py")
+        print("3. BLE server will manage the gate controller")
+        print()
+        print("PERMANENT SOLUTION (Phase 2):")
+        print("Modify BLE server to connect to existing controller via IPC")
+        print()
+        sys.exit(1)
+
     print("[Main] Initializing Gatetorio gate controller...")
-    controller = GateController()
+    print("[Main] WARNING: Make sure no other controller instance is running!")
+    print("[Main] Close the desktop launcher before starting BLE server.")
+    print("[Main] Waiting 2 seconds for hardware to initialize...")
+    time.sleep(2)  # Give GPIO/ADC time to initialize
+
+    try:
+        controller = GateController()
+    except Exception as e:
+        print(f"[Main] ERROR: Failed to initialize controller: {e}")
+        print("[Main] This is likely because:")
+        print("  1. Another controller instance is already running")
+        print("  2. GPIO/ADC permissions issue")
+        print("  3. Hardware not properly initialized")
+        print()
+        print("TROUBLESHOOTING:")
+        print("  - Close any running gate controller instances")
+        print("  - Check: ls -la /dev/spidev* /dev/gpiomem")
+        print("  - Verify: sudo usermod -aG gpio,spi root")
+        print("  - Wait 5 seconds and try again")
+        sys.exit(1)
 
     print("[Main] Initializing BLE server...")
     ble_server = GatetorioBLEServer(controller)
