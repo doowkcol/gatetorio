@@ -57,10 +57,14 @@ fi
 # Restart Bluetooth service to clear advertisements
 echo "  Restarting Bluetooth service to clear old advertisements..."
 systemctl restart bluetooth
+sleep 2
 
-# Wait for Bluetooth to stabilize
-echo "  Waiting for Bluetooth to stabilize (3 seconds)..."
-sleep 3
+# Power cycle the Bluetooth adapter (more aggressive cleanup)
+echo "  Power cycling Bluetooth adapter..."
+hciconfig hci0 down 2>/dev/null || true
+sleep 1
+hciconfig hci0 up 2>/dev/null || true
+sleep 2
 
 # Verify Bluetooth is running
 if systemctl is-active --quiet bluetooth; then
