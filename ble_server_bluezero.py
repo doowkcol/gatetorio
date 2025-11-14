@@ -725,8 +725,61 @@ class GatetorioBLEServer:
         try:
             ble_peripheral = self.build_gatt_server()
             print("[BLE] Starting GATT server...")
-            print("[BLE] Ready for connections!")
-            ble_peripheral.publish()
+
+            # Try to publish (register advertisement)
+            try:
+                print("[BLE] Registering BLE advertisement...")
+                ble_peripheral.publish()
+                print("[BLE] ✓ Advertisement registered successfully!")
+                print("[BLE] Ready for connections!")
+
+            except Exception as adv_error:
+                print(f"[BLE] ⚠ Advertisement registration failed: {adv_error}")
+                print("[BLE] This is often caused by:")
+                print("[BLE]   1. Another BLE advertisement already registered")
+                print("[BLE]   2. BlueZ caching old advertisements")
+                print("[BLE]   3. Bluetooth adapter in wrong state")
+                print()
+                print("[BLE] ATTEMPTING WORKAROUND...")
+                print("[BLE] Restarting Bluetooth service to clear old advertisements...")
+
+                # Try to restart Bluetooth to clear advertisements
+                import subprocess
+                try:
+                    subprocess.run(['systemctl', 'restart', 'bluetooth'],
+                                 check=True, timeout=10,
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    print("[BLE] ✓ Bluetooth service restarted")
+                    print("[BLE] Waiting 3 seconds for Bluetooth to stabilize...")
+                    time.sleep(3)
+
+                    # Rebuild peripheral after Bluetooth restart
+                    print("[BLE] Rebuilding GATT server...")
+                    ble_peripheral = self.build_gatt_server()
+
+                    # Try publish again
+                    print("[BLE] Attempting advertisement registration again...")
+                    ble_peripheral.publish()
+                    print("[BLE] ✓ Advertisement registered successfully (after restart)!")
+                    print("[BLE] Ready for connections!")
+
+                except subprocess.TimeoutExpired:
+                    print("[BLE] ERROR: Bluetooth restart timed out")
+                    raise RuntimeError("Could not restart Bluetooth service")
+                except subprocess.CalledProcessError as e:
+                    print(f"[BLE] ERROR: Bluetooth restart failed: {e}")
+                    print("[BLE] Try manually: sudo systemctl restart bluetooth")
+                    raise
+                except Exception as retry_error:
+                    print(f"[BLE] ERROR: Advertisement still failing after restart: {retry_error}")
+                    print()
+                    print("[BLE] MANUAL TROUBLESHOOTING REQUIRED:")
+                    print("[BLE]   1. Stop this script (Ctrl+C)")
+                    print("[BLE]   2. Restart Bluetooth: sudo systemctl restart bluetooth")
+                    print("[BLE]   3. Check status: sudo systemctl status bluetooth")
+                    print("[BLE]   4. Check for other BLE apps: ps aux | grep ble")
+                    print("[BLE]   5. Reboot if necessary: sudo reboot")
+                    raise
 
             # Keep running
             print("[BLE] Press Ctrl+C to stop")
