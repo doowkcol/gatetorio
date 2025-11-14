@@ -710,11 +710,15 @@ class GatetorioBLEServer:
         print(f"Stealth mode: {self.config.stealth_mode}")
         print(f"Whitelist enabled: {self.config.whitelist_enabled}")
 
-        # Check for unexpected reboot
-        if self._check_reboot_flag():
-            self.start_pairing_window()
-        else:
-            print("[BLE] Skipping pairing window (expected reboot)")
+        # TESTING MODE: Keep pairing window open permanently
+        # TODO: Re-enable timed pairing window after testing
+        print("[BLE] TESTING MODE: Pairing window ALWAYS OPEN (device always visible)")
+        print(f"[BLE] Device will be discoverable as: Gatetorio-{self.hardware_id[-4:]}")
+        self.pairing_window_active = True  # Keep open for testing
+        self.config.pairing_mode = True
+
+        # Note: Normally we would call start_pairing_window() which auto-closes after 30s
+        # For testing, we keep it permanently open so device is always discoverable
 
         # Start status update thread
         self.status_running = True
