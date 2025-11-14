@@ -32,7 +32,7 @@
       "channel": 4,
       "enabled": true,
       "type": "NO",
-      "function": "photocell_closing",
+      "function": "cmd_open",
       "description": "ADC2 Channel 0 - Unassigned"
     },
     "IN6": {
