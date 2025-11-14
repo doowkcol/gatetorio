@@ -494,9 +494,17 @@ class GatetorioBLEServer:
         # Get device name based on pairing mode
         device_name = f"Gatetorio-{self.hardware_id[-4:]}" if self.pairing_window_active else "Gatetorio"
 
+        # Get first available Bluetooth adapter
+        try:
+            ble_adapter = next(adapter.Adapter.available())
+            adapter_address = ble_adapter.address
+            print(f"[BLE] Using Bluetooth adapter: {adapter_address}")
+        except StopIteration:
+            raise RuntimeError("No Bluetooth adapter found! Check: sudo hciconfig hci0 up")
+
         # Create peripheral
         ble_peripheral = peripheral.Peripheral(
-            adapter.Adapter.available()[0].address,
+            adapter_address,
             local_name=device_name,
             appearance=0x0000  # Generic
         )
