@@ -1024,7 +1024,11 @@ class MotorManager:
                 # Stop motor and set to full open position
                 self.motor1.stop()
                 position_percent = (self.shared['m1_position'] / self.motor1_run_time * 100.0) if self.motor1_run_time > 0 else 0.0
-                print(f"[LIMIT SWITCH] M1 OPEN limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to {self.motor1_run_time:.2f}s (100%)")
+
+                # Only print if position wasn't already at the limit (avoid spam)
+                if abs(self.shared['m1_position'] - self.motor1_run_time) > 0.01:
+                    print(f"[LIMIT SWITCH] M1 OPEN limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to {self.motor1_run_time:.2f}s (100%)")
+
                 self.shared['m1_position'] = self.motor1_run_time
                 self.shared['m1_speed'] = 0.0
 
@@ -1048,7 +1052,11 @@ class MotorManager:
                 # Stop motor and set to fully closed position
                 self.motor1.stop()
                 position_percent = (self.shared['m1_position'] / self.motor1_run_time * 100.0) if self.motor1_run_time > 0 else 0.0
-                print(f"[LIMIT SWITCH] M1 CLOSE limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to 0.0s (0%)")
+
+                # Only print if position wasn't already at the limit (avoid spam)
+                if abs(self.shared['m1_position'] - 0.0) > 0.01:
+                    print(f"[LIMIT SWITCH] M1 CLOSE limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to 0.0s (0%)")
+
                 self.shared['m1_position'] = 0.0
                 self.shared['m1_speed'] = 0.0
 
@@ -1319,11 +1327,13 @@ class MotorManager:
                 # This prevents position from decrementing when motor is stopped
                 if speed > 0:
                     # Debug: Show position update details every 0.5s
-                    if not hasattr(self, '_pos_update_debug_close') or (now - self._pos_update_debug_close) > 0.5:
-                        old_pos = self.shared['m1_position']
-                        delta = self.loop_delta * speed
-                        print(f"[M1 POS UPDATE CLOSE] pos={old_pos:.3f}, speed={speed:.3f}, delta=-{delta:.6f}, will_be={old_pos - delta:.3f}, loop_time={self.loop_delta*1000:.1f}ms")
-                        self._pos_update_debug_close = now
+                    # (Commented out to reduce log spam - uncomment for debugging)
+                    # if not hasattr(self, '_pos_update_debug_close') or (now - self._pos_update_debug_close) > 0.5:
+                    #     old_pos = self.shared['m1_position']
+                    #     delta = self.loop_delta * speed
+                    #     print(f"[M1 POS UPDATE CLOSE] pos={old_pos:.3f}, speed={speed:.3f}, delta=-{delta:.6f}, will_be={old_pos - delta:.3f}, loop_time={self.loop_delta*1000:.1f}ms")
+                    #     self._pos_update_debug_close = now
+                    pass
 
                     # Update position: position -= (loop_interval * actual_motor_speed)
                     # Use actual loop delta instead of assumed 0.005 to handle variable loop timing
@@ -1427,10 +1437,11 @@ class MotorManager:
                         self.shared['state'] not in ['OPENING_TO_PARTIAL_1', 'OPENING_TO_PARTIAL_2']):
                         remaining_distance = self.motor1_run_time - self.shared['m1_position']
                         # Debug: Show slowdown call
-                        if not hasattr(self, '_slowdown_debug_open') or (time() - self._slowdown_debug_open) > 0.5:
-                            print(f"[M1 OPEN SLOWDOWN CALL] pos={self.shared['m1_position']:.2f}, remaining={remaining_distance:.2f}, "
-                                  f"run_time={self.motor1_run_time:.2f}, speed_before={speed:.3f}")
-                            self._slowdown_debug_open = time()
+                        # (Commented out to reduce log spam - uncomment for debugging)
+                        # if not hasattr(self, '_slowdown_debug_open') or (time() - self._slowdown_debug_open) > 0.5:
+                        #     print(f"[M1 OPEN SLOWDOWN CALL] pos={self.shared['m1_position']:.2f}, remaining={remaining_distance:.2f}, "
+                        #           f"run_time={self.motor1_run_time:.2f}, speed_before={speed:.3f}")
+                        #     self._slowdown_debug_open = time()
                         speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True, 'OPEN', self.motor1_run_time)
 
                 elif self.shared['movement_command'] == 'CLOSE':
@@ -1443,10 +1454,11 @@ class MotorManager:
                         self.shared['state'] not in ['CLOSING_TO_PARTIAL_1', 'CLOSING_TO_PARTIAL_2']):
                         remaining_distance = self.shared['m1_position']
                         # Debug: Show slowdown call
-                        if not hasattr(self, '_slowdown_debug_close') or (time() - self._slowdown_debug_close) > 0.5:
-                            print(f"[M1 CLOSE SLOWDOWN CALL] pos={self.shared['m1_position']:.2f}, remaining={remaining_distance:.2f}, "
-                                  f"run_time={self.motor1_run_time:.2f}, speed_before={speed:.3f}")
-                            self._slowdown_debug_close = time()
+                        # (Commented out to reduce log spam - uncomment for debugging)
+                        # if not hasattr(self, '_slowdown_debug_close') or (time() - self._slowdown_debug_close) > 0.5:
+                        #     print(f"[M1 CLOSE SLOWDOWN CALL] pos={self.shared['m1_position']:.2f}, remaining={remaining_distance:.2f}, "
+                        #           f"run_time={self.motor1_run_time:.2f}, speed_before={speed:.3f}")
+                        #     self._slowdown_debug_close = time()
                         speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True, 'CLOSE', self.motor1_run_time)
 
             self.shared['m1_speed'] = speed
@@ -1799,12 +1811,15 @@ class MotorManager:
         if not hasattr(self, '_last_slowdown_log'):
             self._last_slowdown_log = {}
 
-        key = f"{direction}_slowdown"
-        if key not in self._last_slowdown_log or (now - self._last_slowdown_log[key]) > 0.5:
-            print(f"[SLOWDOWN {direction}] motor_run_time={motor_run_time:.2f}s, percent={percent:.1f}%, "
-                  f"slowdown_zone={slowdown_distance:.2f}s, remaining={remaining_distance:.2f}s, "
-                  f"target_speed={target_speed:.2f}, ramp_speed={speed:.2f}, final={min(speed, target_speed):.2f}")
-            self._last_slowdown_log[key] = now
+        # Debug: Show slowdown calculation details
+        # (Commented out to reduce log spam - uncomment for debugging)
+        # key = f"{direction}_slowdown"
+        # if key not in self._last_slowdown_log or (now - self._last_slowdown_log[key]) > 0.5:
+        #     print(f"[SLOWDOWN {direction}] motor_run_time={motor_run_time:.2f}s, percent={percent:.1f}%, "
+        #           f"slowdown_zone={slowdown_distance:.2f}s, remaining={remaining_distance:.2f}s, "
+        #           f"target_speed={target_speed:.2f}, ramp_speed={speed:.2f}, final={min(speed, target_speed):.2f}")
+        #     self._last_slowdown_log[key] = now
+        pass
 
         # Use minimum of ramp speed and slowdown target
         # This ensures we don't speed up during slowdown

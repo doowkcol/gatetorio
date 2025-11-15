@@ -1,0 +1,1 @@
+sudo: ./gate_ui.py: command not found

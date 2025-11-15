@@ -418,10 +418,13 @@ class GateController:
             if self.shared['movement_command'] == 'OPEN':
                 # Debug: Print position check for opening
                 if self.shared['state'] == 'OPENING':
-                    if self.shared['m1_position'] >= self.motor1_run_time - 0.1 or self.shared['m2_position'] >= self.motor2_run_time - 0.1:
-                        print(f"[COMPLETION CHECK] OPENING: M1={self.shared['m1_position']:.2f}/{self.motor1_run_time}, M2={self.shared['m2_position']:.2f}/{self.motor2_run_time}, state={self.shared['state']}")
-                        print(f"  EXACT VALUES: M1={self.shared['m1_position']!r}, M2={self.shared['m2_position']!r}")
-                        print(f"  Check (FULL): M1>={self.motor1_run_time-POSITION_TOLERANCE}={self.shared['m1_position'] >= (self.motor1_run_time - POSITION_TOLERANCE)}, M2>={self.motor2_run_time-POSITION_TOLERANCE}={self.shared['m2_position'] >= (self.motor2_run_time - POSITION_TOLERANCE)}")
+                    # Debug: Show completion check details
+                    # (Commented out to reduce log spam - uncomment for debugging)
+                    # if self.shared['m1_position'] >= self.motor1_run_time - 0.1 or self.shared['m2_position'] >= self.motor2_run_time - 0.1:
+                    #     print(f"[COMPLETION CHECK] OPENING: M1={self.shared['m1_position']:.2f}/{self.motor1_run_time}, M2={self.shared['m2_position']:.2f}/{self.motor2_run_time}, state={self.shared['state']}")
+                    #     print(f"  EXACT VALUES: M1={self.shared['m1_position']!r}, M2={self.shared['m2_position']!r}")
+                    #     print(f"  Check (FULL): M1>={self.motor1_run_time-POSITION_TOLERANCE}={self.shared['m1_position'] >= (self.motor1_run_time - POSITION_TOLERANCE)}, M2>={self.motor2_run_time-POSITION_TOLERANCE}={self.shared['m2_position'] >= (self.motor2_run_time - POSITION_TOLERANCE)}")
+                    pass
                 
                 if self.shared['state'] == 'OPENING_TO_PARTIAL_1' and self.shared['m1_position'] >= (self.partial_1_position - POSITION_TOLERANCE):
                     self._complete_partial_1()
@@ -466,11 +469,13 @@ class GateController:
                         open_complete = m1_done and m2_done
 
                         # Debug: show why we're waiting (only print when close to completion)
-                        if not open_complete and (self.shared['m1_position'] >= 11.5 or self.shared['m2_position'] >= 11.5):
-                            if not m1_done:
-                                print(f"[WAITING] M1 not done: {m1_reason}")
-                            if not m2_done:
-                                print(f"[WAITING] M2 not done: {m2_reason}")
+                        # (Commented out to reduce log spam - uncomment for debugging)
+                        # if not open_complete and (self.shared['m1_position'] >= 11.5 or self.shared['m2_position'] >= 11.5):
+                        #     if not m1_done:
+                        #         print(f"[WAITING] M1 not done: {m1_reason}")
+                        #     if not m2_done:
+                        #         print(f"[WAITING] M2 not done: {m2_reason}")
+                        pass
 
                         if open_complete:
                             print(f"[COMPLETION] OPEN complete! M1: {m1_reason}, M2: {m2_reason}")
@@ -487,10 +492,12 @@ class GateController:
                 # Debug: Print position check for closing (THROTTLED to reduce spam)
                 if self.shared['state'] == 'CLOSING':
                     if self.shared['m1_position'] <= 0.1 or self.shared['m2_position'] <= 0.1:
-                        # Only print every 2 seconds to reduce spam
-                        if not hasattr(self, '_last_close_debug') or (time() - self._last_close_debug) > 2.0:
-                            print(f"[COMPLETION CHECK] CLOSING: M1={self.shared['m1_position']:.2f}/0, M2={self.shared['m2_position']:.2f}/0")
-                            self._last_close_debug = time()
+                        # Debug: Show completion check details
+                        # (Commented out to reduce log spam - uncomment for debugging)
+                        # if not hasattr(self, '_last_close_debug') or (time() - self._last_close_debug) > 2.0:
+                        #     print(f"[COMPLETION CHECK] CLOSING: M1={self.shared['m1_position']:.2f}/0, M2={self.shared['m2_position']:.2f}/0")
+                        #     self._last_close_debug = time()
+                        pass
                 
                 if self.shared['state'] == 'CLOSING_TO_PARTIAL_1':
                     # Only complete when BOTH M1 at partial AND M2 fully closed
@@ -547,14 +554,16 @@ class GateController:
                         close_complete = m1_done and m2_done
 
                         # Debug: show why we're waiting (only print when close to completion, throttled to reduce spam)
-                        if not close_complete and (self.shared['m1_position'] <= 0.5 or self.shared['m2_position'] <= 0.5):
-                            # Only print every 2 seconds to reduce spam
-                            if not hasattr(self, '_last_waiting_debug') or (time() - self._last_waiting_debug) > 2.0:
-                                if not m1_done:
-                                    print(f"[WAITING] M1 not done: {m1_reason}")
-                                if not m2_done:
-                                    print(f"[WAITING] M2 not done: {m2_reason}")
-                                self._last_waiting_debug = time()
+                        # (Commented out to reduce log spam - uncomment for debugging)
+                        # if not close_complete and (self.shared['m1_position'] <= 0.5 or self.shared['m2_position'] <= 0.5):
+                        #     # Only print every 2 seconds to reduce spam
+                        #     if not hasattr(self, '_last_waiting_debug') or (time() - self._last_waiting_debug) > 2.0:
+                        #         if not m1_done:
+                        #             print(f"[WAITING] M1 not done: {m1_reason}")
+                        #         if not m2_done:
+                        #             print(f"[WAITING] M2 not done: {m2_reason}")
+                        #         self._last_waiting_debug = time()
+                        pass
 
                         if close_complete:
                             print(f"[COMPLETION] CLOSE complete! M1: {m1_reason}, M2: {m2_reason}")
@@ -630,22 +639,23 @@ class GateController:
         """
         
         # DEBUG: Print ALL command flags every cycle when any safety edge active
-        if self.shared['safety_stop_opening_active'] or self.shared['safety_stop_closing_active']:
-            print(f"\n[CYCLE DEBUG] state={self.shared['state']}, "
-                  f"reversing={self.shared['safety_reversing']}, "
-                  f"movement_cmd={self.shared['movement_command']}")
-            print(f"  Commands: open={self.shared['cmd_open_active']}, "
-                  f"close={self.shared['cmd_close_active']}, "
-                  f"stop={self.shared['cmd_stop_active']}")
-            print(f"  Photocells: closing={self.shared['photocell_closing_active']}, "
-                  f"opening={self.shared['photocell_opening_active']}")
-            print(f"  Safety: stop_opening_active={self.shared['safety_stop_opening_active']}, "
-                  f"stop_opening_reversed={self.shared.get('safety_stop_opening_reversed', False)}, "
-                  f"stop_opening_triggered={self.shared.get('safety_stop_opening_triggered', False)}")
-            print(f"  Safety: stop_closing_active={self.shared['safety_stop_closing_active']}, "
-                  f"stop_closing_reversed={self.shared.get('safety_stop_closing_reversed', False)}, "
-                  f"stop_closing_triggered={self.shared.get('safety_stop_closing_triggered', False)}")
-        
+        # (Commented out to reduce log spam - uncomment for debugging)
+        # if self.shared['safety_stop_opening_active'] or self.shared['safety_stop_closing_active']:
+        #     print(f"\n[CYCLE DEBUG] state={self.shared['state']}, "
+        #           f"reversing={self.shared['safety_reversing']}, "
+        #           f"movement_cmd={self.shared['movement_command']}")
+        #     print(f"  Commands: open={self.shared['cmd_open_active']}, "
+        #           f"close={self.shared['cmd_close_active']}, "
+        #           f"stop={self.shared['cmd_stop_active']}")
+        #     print(f"  Photocells: closing={self.shared['photocell_closing_active']}, "
+        #           f"opening={self.shared['photocell_opening_active']}")
+        #     print(f"  Safety: stop_opening_active={self.shared['safety_stop_opening_active']}, "
+        #           f"stop_opening_reversed={self.shared.get('safety_stop_opening_reversed', False)}, "
+        #           f"stop_opening_triggered={self.shared.get('safety_stop_opening_triggered', False)}")
+        #     print(f"  Safety: stop_closing_active={self.shared['safety_stop_closing_active']}, "
+        #           f"stop_closing_reversed={self.shared.get('safety_stop_closing_reversed', False)}, "
+        #           f"stop_closing_triggered={self.shared.get('safety_stop_closing_triggered', False)}")
+        pass
         # Debug: Print flag states when any command is active (DISABLED - too spammy)
         # if self.shared['cmd_open_active'] or self.shared['cmd_close_active'] or self.shared['cmd_stop_active']:
         #     print(f"[EVAL] State:{self.shared['state']} Open:{self.shared['cmd_open_active']} Close:{self.shared['cmd_close_active']} Stop:{self.shared['cmd_stop_active']}")
@@ -671,25 +681,33 @@ class GateController:
         )
         
         # DEBUG: Print flag states when safety edges active
-        if self.shared['safety_stop_opening_active'] or self.shared['safety_stop_closing_active']:
-            print(f"[SAFETY DEBUG] stop_opening_active={self.shared['safety_stop_opening_active']}, "
-                  f"stop_opening_reversed={self.shared.get('safety_stop_opening_reversed', False)}, "
-                  f"stop_closing_active={self.shared['safety_stop_closing_active']}, "
-                  f"stop_closing_reversed={self.shared.get('safety_stop_closing_reversed', False)}, "
-                  f"safety_reversing={self.shared['safety_reversing']}, "
-                  f"acting_as_stop={safety_edge_acting_as_stop}, "
-                  f"state={self.shared['state']}, "
-                  f"cmd_open={self.shared['cmd_open_active']}, "
-                  f"cmd_close={self.shared['cmd_close_active']}")
-        
+        # (Commented out to reduce log spam - uncomment for debugging)
+        # if self.shared['safety_stop_opening_active'] or self.shared['safety_stop_closing_active']:
+        #     print(f"[SAFETY DEBUG] stop_opening_active={self.shared['safety_stop_opening_active']}, "
+        #           f"stop_opening_reversed={self.shared.get('safety_stop_opening_reversed', False)}, "
+        #           f"stop_closing_active={self.shared['safety_stop_closing_active']}, "
+        #           f"stop_closing_reversed={self.shared.get('safety_stop_closing_reversed', False)}, "
+        #           f"safety_reversing={self.shared['safety_reversing']}, "
+        #           f"acting_as_stop={safety_edge_acting_as_stop}, "
+        #           f"state={self.shared['state']}, "
+        #           f"cmd_open={self.shared['cmd_open_active']}, "
+        #           f"cmd_close={self.shared['cmd_close_active']}")
+        pass
         if safety_edge_acting_as_stop:
             # Act exactly like sustained STOP - block everything
-            print(f"[SAFETY BLOCK] Safety edge acting as STOP - blocking all commands")
+            # Only print once when safety first engages (avoid spam)
+            if not hasattr(self, '_safety_block_logged') or not self._safety_block_logged:
+                print(f"[SAFETY BLOCK] Safety edge acting as STOP - blocking all commands")
+                self._safety_block_logged = True
+
             # Stop any active movement
             if self.shared['state'] not in ['STOPPED', 'CLOSED', 'OPEN', 'PARTIAL_1', 'PARTIAL_2', 'REVERSING_FROM_OPEN', 'REVERSING_FROM_CLOSE']:
                 self._execute_stop()
             # Block ALL command processing - don't let anything through
             return
+        else:
+            # Reset the flag when safety is no longer blocking
+            self._safety_block_logged = False
         
         # Safety edges before reversal - block their respective directions
         # CRITICAL: Check BOTH 'active' (edge currently pressed) AND 'reversed' (edge was pressed and reversed, blocking until released + cleared)
