@@ -110,21 +110,27 @@ class _FleetManagementScreenState extends State<FleetManagementScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Text(
-                fleetService.serverConnected
-                    ? 'Fleet Server Connected'
-                    : 'Fleet Server Disconnected',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+              Expanded(
+                child: Text(
+                  fleetService.serverConnected
+                      ? 'Fleet Server Connected'
+                      : 'Fleet Server Disconnected',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Spacer(),
-              Text(
-                'Last sync: ${_formatTime(fleetService.lastSync)}',
-                style: TextStyle(
-                  color: Colors.grey.shade400,
-                  fontSize: 12,
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Last sync: ${_formatTime(fleetService.lastSync)}',
+                  style: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 12,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

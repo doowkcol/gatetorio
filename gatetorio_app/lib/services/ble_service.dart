@@ -360,13 +360,19 @@ class BleService extends ChangeNotifier {
       // Listen to status updates
       _statusSubscription?.cancel();
       _statusSubscription = _statusChar!.lastValueStream.listen((value) {
+        debugPrint("Status notification received: ${value.length} bytes");
         if (value.isNotEmpty) {
           try {
+            final jsonString = utf8.decode(value);
+            debugPrint("Status JSON: $jsonString");
             _currentStatus = GateStatus.fromBytes(value);
+            debugPrint("Status parsed successfully: $_currentStatus");
             notifyListeners();
           } catch (e) {
             debugPrint("Failed to parse status: $e");
           }
+        } else {
+          debugPrint("Status notification was empty");
         }
       });
 
@@ -382,13 +388,21 @@ class BleService extends ChangeNotifier {
     if (_statusChar == null) return null;
 
     try {
+      debugPrint("Reading status characteristic...");
       final value = await _statusChar!.read();
+      debugPrint("Status read: ${value.length} bytes");
       if (value.isNotEmpty) {
+        final jsonString = utf8.decode(value);
+        debugPrint("Status JSON: $jsonString");
         _currentStatus = GateStatus.fromBytes(value);
+        debugPrint("Status parsed: $_currentStatus");
         notifyListeners();
         return _currentStatus;
+      } else {
+        debugPrint("Status read was empty");
       }
     } catch (e) {
+      debugPrint("Failed to read status: $e");
       _lastError = "Failed to read status: $e";
     }
     return null;
