@@ -28,6 +28,7 @@ try:
     from bluezero import adapter
     from bluezero import peripheral
     from bluezero import dbus_tools
+    from bluezero import async_tools
 except ImportError:
     print("ERROR: bluezero not installed")
     print("Install system packages first:")
@@ -139,9 +140,8 @@ class GatetorioBLEServer:
         self.last_diagnostics = b'{}'
         self.recent_logs = []
 
-        # Status update thread
-        self.status_thread = None
-        self.status_running = False
+        # Note: Status updates now use bluezero's async_tools timer (no threading needed)
+        # Old thread-based approach removed in favor of notify_callback pattern
 
         # Load configuration
         self._load_config()
@@ -469,17 +469,9 @@ class GatetorioBLEServer:
 
         return status
 
-    def _status_update_loop(self):
-        """Background thread to update status"""
-        print("[BLE] Status update thread started")
-        while self.status_running:
-            try:
-                self.last_status = self._get_status_json()
-                time.sleep(STATUS_UPDATE_INTERVAL)
-            except Exception as e:
-                print(f"[BLE] Error in status update: {e}")
-                time.sleep(1.0)
-        print("[BLE] Status update thread stopped")
+    # Note: Old threading-based status update loop removed
+    # Status notifications now handled by async_tools timer in notify_callback
+    # See _add_gate_control_service() for the new implementation
 
     # ========================================================================
     # GATT SERVER CREATION
@@ -611,10 +603,36 @@ class GatetorioBLEServer:
         def read_status():
             return list(self._get_status_json())
 
+        def update_status(characteristic):
+            """Timer callback to send status notifications (called every 1 second)"""
+            try:
+                # Get latest status
+                status_json = self._get_status_json()
+                # Send notification by updating characteristic value
+                characteristic.set_value(list(status_json))
+                # Continue timer while notifications are active
+                return characteristic.is_notifying
+            except Exception as e:
+                print(f"[BLE] Error sending status notification: {e}")
+                import traceback
+                traceback.print_exc()
+                # Stop timer on error
+                return False
+
+        def notify_status(notifying, characteristic):
+            """Called when client enables/disables status notifications"""
+            if notifying:
+                print("[BLE] Status notifications enabled - starting 1Hz update timer")
+                # Start timer: calls update_status() every 1 second
+                async_tools.add_timer_seconds(STATUS_UPDATE_INTERVAL, update_status, characteristic)
+            else:
+                print("[BLE] Status notifications disabled")
+
         ble_peripheral.add_characteristic(
             srv_id=2, chr_id=3, uuid=CHAR_STATUS,
-            value=[], notifying=True, flags=['read', 'notify'],
-            read_callback=read_status
+            value=[], notifying=False, flags=['read', 'notify'],
+            read_callback=read_status,
+            notify_callback=notify_status
         )
 
     def _add_configuration_service(self, ble_peripheral):
@@ -738,10 +756,9 @@ class GatetorioBLEServer:
         # Note: Normally we would call start_pairing_window() which auto-closes after 30s
         # For testing, we keep it permanently open so device is always discoverable
 
-        # Start status update thread
-        self.status_running = True
-        self.status_thread = threading.Thread(target=self._status_update_loop, daemon=True)
-        self.status_thread.start()
+        # Note: Status updates are now handled by bluezero's async_tools timer
+        # (started automatically when client subscribes to notifications)
+        # Old threading.Thread approach removed - notifications now use notify_callback
 
         # Build and run GATT server
         try:
@@ -810,14 +827,12 @@ class GatetorioBLEServer:
 
         except KeyboardInterrupt:
             print("\n[BLE] Shutting down...")
-            self.status_running = False
-            if self.status_thread:
-                self.status_thread.join(timeout=2)
+            # Note: Status notifications stop automatically when connection closes
+            # (async_tools timer checks characteristic.is_notifying)
         except Exception as e:
             print(f"[BLE] Error: {e}")
             import traceback
             traceback.print_exc()
-            self.status_running = False
 
 
 # ============================================================================
