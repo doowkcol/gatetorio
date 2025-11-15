@@ -380,6 +380,111 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     }),
                   ),
 
+                  const SizedBox(height: 24),
+
+                  // Auto-Learn Travel Times Section
+                  _buildSectionHeader('🤖 Auto-Learn Travel Times', Icons.auto_fix_high),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: Text(
+                      'Automatically measure motor travel times using limit switches',
+                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                    ),
+                  ),
+
+                  // Learned Times Display
+                  Consumer<BleService>(
+                    builder: (context, bleService, child) {
+                      final config = bleService.currentConfig;
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.blue.shade300),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.schedule, color: Colors.blue.shade700, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Learned Travel Times',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue.shade900,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            _buildLearnedTime('M1 Open', config?.learnedM1Open),
+                            _buildLearnedTime('M1 Close', config?.learnedM1Close),
+                            _buildLearnedTime('M2 Open', config?.learnedM2Open),
+                            _buildLearnedTime('M2 Close', config?.learnedM2Close),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+
+                  // Engineer Mode Warning
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.shade300, width: 2),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber, color: Colors.orange.shade900, size: 24),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Engineer Mode Required',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange.shade900,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Auto-learn requires engineer mode and configured limit switches. Enable via BLE security service.',
+                                style: TextStyle(
+                                  color: Colors.orange.shade800,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Auto-learn note
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Text(
+                      'Note: Auto-learn control is available through the main Python UI or BLE commands when engineer mode is enabled.',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+
                   const SizedBox(height: 32),
 
                   // Save Button
@@ -545,6 +650,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
       value: value,
       onChanged: onChanged,
       activeColor: Theme.of(context).colorScheme.primary,
+    );
+  }
+
+  Widget _buildLearnedTime(String label, double? time) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.blue.shade700,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: time != null ? Colors.green.shade100 : Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: time != null ? Colors.green.shade300 : Colors.grey.shade400,
+              ),
+            ),
+            child: Text(
+              time != null ? '${time.toStringAsFixed(2)}s' : 'Not learned',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: time != null ? Colors.green.shade900 : Colors.grey.shade600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

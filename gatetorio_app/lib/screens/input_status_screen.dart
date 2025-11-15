@@ -24,11 +24,14 @@ class _InputStatusScreenState extends State<InputStatusScreen> {
 
     final bleService = Provider.of<BleService>(context, listen: false);
 
-    // Load both input config and input states
-    await Future.wait([
-      bleService.readInputConfig(),
-      bleService.readInputStates(),
-    ]);
+    // In demo mode, data is already available
+    if (!bleService.isDemoMode) {
+      // Load both input config and input states from BLE
+      await Future.wait([
+        bleService.readInputConfig(),
+        bleService.readInputStates(),
+      ]);
+    }
 
     if (mounted) {
       setState(() => _isLoading = false);
