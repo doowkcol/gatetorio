@@ -24,6 +24,11 @@ class _InputStatusScreenState extends State<InputStatusScreen> {
 
     final bleService = Provider.of<BleService>(context, listen: false);
 
+    // Debug: Check demo mode and data availability
+    print('InputStatusScreen: isDemoMode = ${bleService.isDemoMode}');
+    print('InputStatusScreen: inputConfig = ${bleService.inputConfig}');
+    print('InputStatusScreen: inputStates = ${bleService.inputStates}');
+
     // In demo mode, data is already available
     if (!bleService.isDemoMode) {
       // Load both input config and input states from BLE
