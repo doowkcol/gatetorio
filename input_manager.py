@@ -8,6 +8,9 @@ import time
 import json
 from collections import deque
 
+# Import log levels and categories for logging
+from log_manager import INFO, WARNING, ERROR, INPUT
+
 # Don't import board/busio at module level - only when actually needed
 # This prevents GPIO chip from being claimed when module is imported
 ADC_AVAILABLE = False
@@ -42,7 +45,7 @@ def check_adc_hardware():
 
 
 class InputManager:
-    def __init__(self, shared_dict, config):
+    def __init__(self, shared_dict, config, log_queue=None):
         """Initialize input manager
 
         Args:
@@ -50,9 +53,11 @@ class InputManager:
             config: Configuration dict with:
                 - num_inputs: Number of analog inputs (8 for dual ADS1115)
                 - input_sample_rate: Sampling rate in seconds (default 0.005 = 200Hz for fast safety-critical response)
+            log_queue: Optional multiprocessing.Queue for inter-process logging
         """
         self.shared = shared_dict
         self.config = config
+        self.log_queue = log_queue
         self.num_inputs = config.get('num_inputs', 8)
         self.sample_rate = config.get('input_sample_rate', 0.005)  # 200Hz default for fast safety-critical inputs
 
@@ -137,7 +142,30 @@ class InputManager:
         print(f"  Sample rate: {self.sample_rate}s ({1.0/self.sample_rate:.1f}Hz)")
         print(f"  ADC available: {self.adc_available}")
         print(f"  Channels available: {len([a for a in self.analog_inputs if a is not None])}")
-    
+
+    def _log(self, level, category, message, metadata=None):
+        """Log an event via the shared log queue
+
+        Args:
+            level: Log level (INFO, WARNING, ERROR)
+            category: Log category (INPUT, etc.)
+            message: Human-readable message
+            metadata: Optional dict with additional context
+        """
+        if self.log_queue:
+            try:
+                entry = {
+                    'timestamp': time.time(),
+                    'level': level,
+                    'level_name': {INFO: 'INFO', WARNING: 'WARNING', ERROR: 'ERROR'}.get(level, 'UNKNOWN'),
+                    'category': category,
+                    'message': message,
+                    'metadata': metadata or {}
+                }
+                self.log_queue.put_nowait(entry)
+            except:
+                pass  # Queue full or error - don't block input processing
+
     def _load_input_config(self):
         """Load input configuration from JSON file"""
         try:
@@ -366,6 +394,16 @@ class InputManager:
             if function:
                 print(f"[INPUT DEBOUNCED] {input_name:20s} func={function:20s} → {'ACTIVE' if is_active else 'inactive'}")
 
+                # Log input state change
+                self._log(INFO, INPUT, f"{input_name} {function} → {'ACTIVE' if is_active else 'inactive'}", {
+                    'input_name': input_name,
+                    'function': function,
+                    'state': 'ACTIVE' if is_active else 'inactive',
+                    'voltage': voltage,
+                    'resistance': resistance,
+                    'input_type': input_type
+                })
+
         # ALWAYS trigger command function with current state (every cycle)
         # This ensures sustained commands stay active even if something clears the flag
         function = input_cfg.get('function')
@@ -450,7 +488,16 @@ class InputManager:
                 
                 # INACTIVE if within tolerance range (normal/safe)
                 # ACTIVE if outside tolerance range (fault/triggered)
-                if min_resistance <= resistance <= max_resistance:
+                in_tolerance = min_resistance <= resistance <= max_resistance
+
+                # Log 8K2 resistance fault if active (out of tolerance)
+                # Only log when transitioning to fault state to avoid spam
+                if not in_tolerance and resistance not in [0.0, float('inf')]:
+                    # This is a resistance fault (not short/open circuit)
+                    # The state change logging above will catch this, but we add extra detail
+                    pass  # State change logging will handle this
+
+                if in_tolerance:
                     return False  # Within range = INACTIVE (safe/normal)
                 else:
                     return True  # Outside range = ACTIVE (fault/triggered)
@@ -528,7 +575,13 @@ class InputManager:
 
 
 
-def input_manager_process(shared_dict, config):
-    """Entry point for input manager process"""
-    manager = InputManager(shared_dict, config)
+def input_manager_process(shared_dict, config, log_queue=None):
+    """Entry point for input manager process
+
+    Args:
+        shared_dict: Multiprocessing shared dictionary
+        config: Input configuration dict
+        log_queue: Optional multiprocessing.Queue for inter-process logging
+    """
+    manager = InputManager(shared_dict, config, log_queue)
     manager.run()

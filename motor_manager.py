@@ -9,11 +9,21 @@ from time import time, sleep
 import multiprocessing
 import lgpio
 
+# Import log levels and categories for logging
+from log_manager import INFO, WARNING, ERROR, CRITICAL, MOTOR, FAULT, LIMIT
+
 class MotorManager:
-    def __init__(self, shared_dict, config):
-        """Initialize motor manager with shared memory and config"""
+    def __init__(self, shared_dict, config, log_queue=None):
+        """Initialize motor manager with shared memory and config
+
+        Args:
+            shared_dict: Multiprocessing shared dictionary
+            config: Motor configuration dict
+            log_queue: Optional multiprocessing.Queue for inter-process logging
+        """
         self.shared = shared_dict
-        
+        self.log_queue = log_queue
+
         # Config values
         self.motor1_run_time = config['motor1_run_time']
         self.motor2_run_time = config['motor2_run_time']
@@ -83,7 +93,30 @@ class MotorManager:
         self.last_movement_command = None
 
         print("Motor Manager initialized")
-    
+
+    def _log(self, level, category, message, metadata=None):
+        """Log an event via the shared log queue
+
+        Args:
+            level: Log level (INFO, WARNING, ERROR, CRITICAL)
+            category: Log category (MOTOR, FAULT, LIMIT, etc.)
+            message: Human-readable message
+            metadata: Optional dict with additional context
+        """
+        if self.log_queue:
+            try:
+                entry = {
+                    'timestamp': time(),
+                    'level': level,
+                    'level_name': {INFO: 'INFO', WARNING: 'WARNING', ERROR: 'ERROR', CRITICAL: 'CRITICAL'}.get(level, 'UNKNOWN'),
+                    'category': category,
+                    'message': message,
+                    'metadata': metadata or {}
+                }
+                self.log_queue.put_nowait(entry)
+            except:
+                pass  # Queue full or error - don't block motor control
+
     def _reload_config(self):
         """Reload config from shared memory"""
         print("Motor Manager: Reloading config from shared memory...")
@@ -134,6 +167,16 @@ class MotorManager:
 
         print(f"[FAULT] M{motor_num} {fault_type}: {details} (consecutive MOVEMENTS: {fault_count})")
 
+        # Log fault detection
+        self._log(ERROR, FAULT, f"M{motor_num} {fault_type}: {details}", {
+            'motor': motor_num,
+            'fault_type': fault_type,
+            'fault_count': fault_count,
+            'details': details,
+            'm1_faults': self.m1_consecutive_faults,
+            'm2_faults': self.m2_consecutive_faults
+        })
+
         # If in degraded mode, reset success counter (fault during recovery)
         if self.degraded_mode:
             if self.degraded_success_count > 0:
@@ -182,6 +225,17 @@ class MotorManager:
         print(f"{'='*60}")
         print(f"")
 
+        # Log degraded mode entry
+        self._log(CRITICAL, FAULT, f"Entering DEGRADED MODE - triggered by M{motor_num} {fault_type}", {
+            'trigger_motor': motor_num,
+            'trigger_fault': fault_type,
+            'm1_faults': self.m1_consecutive_faults,
+            'm2_faults': self.m2_consecutive_faults,
+            'degraded_speed': self.degraded_speed,
+            'recovery_threshold': self.degraded_recovery_threshold,
+            'action': 'Limit switches disabled, time-based mode at 30% speed'
+        })
+
         # Disable limit switches and switch to time-based operation
         self.motor1_use_limit_switches = False
         self.motor2_use_limit_switches = False
@@ -210,6 +264,15 @@ class MotorManager:
         print(f"  NOTE: If faults persist, will re-enter degraded mode")
         print(f"{'='*60}")
         print(f"")
+
+        # Log degraded mode exit
+        self._log(INFO, FAULT, f"Exiting DEGRADED MODE - {self.degraded_success_count} successful movements", {
+            'success_count': self.degraded_success_count,
+            'original_open_speed': self.original_open_speed,
+            'original_close_speed': self.original_close_speed,
+            'limit_switches_restored': True,
+            'action': 'Normal operation restored'
+        })
 
         # Restore original speeds
         self.open_speed = self.original_open_speed
@@ -1026,8 +1089,20 @@ class MotorManager:
                 position_percent = (self.shared['m1_position'] / self.motor1_run_time * 100.0) if self.motor1_run_time > 0 else 0.0
 
                 # Only print if position wasn't already at the limit (avoid spam)
-                if abs(self.shared['m1_position'] - self.motor1_run_time) > 0.01:
+                position_delta = abs(self.shared['m1_position'] - self.motor1_run_time)
+                if position_delta > 0.01:
                     print(f"[LIMIT SWITCH] M1 OPEN limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to {self.motor1_run_time:.2f}s (100%)")
+
+                    # Log limit switch activation
+                    self._log(INFO, LIMIT, f"M1 OPEN limit hit - position synced to {self.motor1_run_time:.2f}s", {
+                        'motor': 1,
+                        'limit': 'OPEN',
+                        'previous_position': self.shared['m1_position'],
+                        'synced_position': self.motor1_run_time,
+                        'position_delta': position_delta,
+                        'previous_percent': position_percent,
+                        'synced_percent': 100.0
+                    })
 
                 self.shared['m1_position'] = self.motor1_run_time
                 self.shared['m1_speed'] = 0.0
@@ -1054,8 +1129,20 @@ class MotorManager:
                 position_percent = (self.shared['m1_position'] / self.motor1_run_time * 100.0) if self.motor1_run_time > 0 else 0.0
 
                 # Only print if position wasn't already at the limit (avoid spam)
-                if abs(self.shared['m1_position'] - 0.0) > 0.01:
+                position_delta = abs(self.shared['m1_position'] - 0.0)
+                if position_delta > 0.01:
                     print(f"[LIMIT SWITCH] M1 CLOSE limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to 0.0s (0%)")
+
+                    # Log limit switch activation
+                    self._log(INFO, LIMIT, f"M1 CLOSE limit hit - position synced to 0.0s", {
+                        'motor': 1,
+                        'limit': 'CLOSE',
+                        'previous_position': self.shared['m1_position'],
+                        'synced_position': 0.0,
+                        'position_delta': position_delta,
+                        'previous_percent': position_percent,
+                        'synced_percent': 0.0
+                    })
 
                 self.shared['m1_position'] = 0.0
                 self.shared['m1_speed'] = 0.0
@@ -1081,7 +1168,19 @@ class MotorManager:
 
                     # Stop motor and set to full open position
                     position_percent = (self.shared['m2_position'] / self.motor2_run_time * 100.0) if self.motor2_run_time > 0 else 0.0
+                    position_delta = abs(self.shared['m2_position'] - self.motor2_run_time)
                     print(f"[LIMIT SWITCH] M2 OPEN limit reached - position was {self.shared['m2_position']:.2f}s ({position_percent:.1f}%), setting to {self.motor2_run_time:.2f}s (100%)")
+
+                    # Log limit switch activation
+                    self._log(INFO, LIMIT, f"M2 OPEN limit hit - position synced to {self.motor2_run_time:.2f}s", {
+                        'motor': 2,
+                        'limit': 'OPEN',
+                        'previous_position': self.shared['m2_position'],
+                        'synced_position': self.motor2_run_time,
+                        'position_delta': position_delta,
+                        'previous_percent': position_percent,
+                        'synced_percent': 100.0
+                    })
 
                     # Mark M2 position as known - synced to limit
                     if not self.shared.get('m2_position_known', True):
@@ -1115,7 +1214,19 @@ class MotorManager:
 
                     # Stop motor and set to fully closed position
                     position_percent = (self.shared['m2_position'] / self.motor2_run_time * 100.0) if self.motor2_run_time > 0 else 0.0
+                    position_delta = abs(self.shared['m2_position'] - 0.0)
                     print(f"[LIMIT SWITCH] M2 CLOSE limit reached - position was {self.shared['m2_position']:.2f}s ({position_percent:.1f}%), setting to 0.0s (0%)")
+
+                    # Log limit switch activation
+                    self._log(INFO, LIMIT, f"M2 CLOSE limit hit - position synced to 0.0s", {
+                        'motor': 2,
+                        'limit': 'CLOSE',
+                        'previous_position': self.shared['m2_position'],
+                        'synced_position': 0.0,
+                        'position_delta': position_delta,
+                        'previous_percent': position_percent,
+                        'synced_percent': 0.0
+                    })
 
                     # Mark M2 position as known - synced to limit
                     if not self.shared.get('m2_position_known', True):
@@ -1826,7 +1937,13 @@ class MotorManager:
         return min(speed, target_speed)
 
 
-def motor_manager_process(shared_dict, config):
-    """Entry point for motor manager process"""
-    manager = MotorManager(shared_dict, config)
+def motor_manager_process(shared_dict, config, log_queue=None):
+    """Entry point for motor manager process
+
+    Args:
+        shared_dict: Multiprocessing shared dictionary
+        config: Motor configuration dict
+        log_queue: Optional multiprocessing.Queue for inter-process logging
+    """
+    manager = MotorManager(shared_dict, config, log_queue)
     manager.run()

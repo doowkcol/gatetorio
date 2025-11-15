@@ -133,24 +133,24 @@ class GateController:
             'close_speed': self.close_speed
         }
         
-        # Start motor manager process
+        # Start motor manager process (pass log queue for inter-process logging)
         self.motor_process = multiprocessing.Process(
             target=motor_manager_process,
-            args=(self.shared, motor_config),
+            args=(self.shared, motor_config, self.log_manager.log_queue),
             daemon=True
         )
         self.motor_process.start()
-        
+
         # Prepare config for input manager
         input_config = {
             'num_inputs': 8,  # Dual ADS1115 = 8 channels
             'input_sample_rate': 0.1  # 10Hz sampling
         }
-        
-        # Start input manager process
+
+        # Start input manager process (pass log queue for inter-process logging)
         self.input_process = multiprocessing.Process(
             target=input_manager_process,
-            args=(self.shared, input_config),
+            args=(self.shared, input_config, self.log_manager.log_queue),
             daemon=True
         )
         self.input_process.start()
