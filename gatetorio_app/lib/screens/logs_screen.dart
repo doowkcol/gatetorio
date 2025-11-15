@@ -24,39 +24,48 @@ class _LogsScreenState extends State<LogsScreen> {
       appBar: AppBar(
         title: const Text('Device Logs'),
         actions: [
-          PopupMenuButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'export_txt') {
+                _exportLogs('txt');
+              } else if (value == 'export_csv') {
+                _exportLogs('csv');
+              } else if (value == 'clear') {
+                _confirmClearLogs();
+              }
+            },
             itemBuilder: (context) => [
-              PopupMenuItem(
-                child: const Row(
+              const PopupMenuItem(
+                value: 'export_txt',
+                child: Row(
                   children: [
                     Icon(Icons.download),
                     SizedBox(width: 8),
                     Text('Export as TXT'),
                   ],
                 ),
-                onTap: () => _exportLogs('txt'),
               ),
-              PopupMenuItem(
-                child: const Row(
+              const PopupMenuItem(
+                value: 'export_csv',
+                child: Row(
                   children: [
                     Icon(Icons.table_chart),
                     SizedBox(width: 8),
                     Text('Export as CSV'),
                   ],
                 ),
-                onTap: () => _exportLogs('csv'),
               ),
               const PopupMenuDivider(),
-              PopupMenuItem(
-                child: const Row(
+              const PopupMenuItem(
+                value: 'clear',
+                child: Row(
                   children: [
                     Icon(Icons.delete_forever, color: Colors.red),
                     SizedBox(width: 8),
                     Text('Clear Logs', style: TextStyle(color: Colors.red)),
                   ],
                 ),
-                onTap: () => _confirmClearLogs(),
               ),
             ],
           ),
