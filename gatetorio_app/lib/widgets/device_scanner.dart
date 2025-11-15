@@ -24,19 +24,19 @@ class DeviceScanner extends StatelessWidget {
                       // Gatetorio Logo
                       Image.asset(
                         'assets/images/GateTorio lightmode icon.png',
-                        height: 100,
+                        height: 70,
                         fit: BoxFit.contain,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       Text(
                         'Find Your Gate Controller',
-                        style: Theme.of(context).textTheme.headlineSmall,
+                        style: Theme.of(context).textTheme.titleLarge,
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
                       Text(
                         'Make sure Bluetooth is enabled and the gate controller is powered on.',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        style: Theme.of(context).textTheme.bodySmall,
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -59,10 +59,10 @@ class DeviceScanner extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1565C0), // Blue scan button
                   foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 56),
+                  minimumSize: const Size(double.infinity, 48),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // Demo Mode button
               OutlinedButton.icon(
@@ -72,10 +72,10 @@ class DeviceScanner extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.orange,
                   side: const BorderSide(color: Colors.orange, width: 2),
-                  minimumSize: const Size(double.infinity, 56),
+                  minimumSize: const Size(double.infinity, 48),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // Device list
               if (bleService.discoveredDevices.isNotEmpty) ...[
