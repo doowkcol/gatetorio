@@ -10,7 +10,7 @@ class DeviceScanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<BleService>(
       builder: (context, bleService, child) {
-        return Padding(
+        return SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -86,48 +86,49 @@ class DeviceScanner extends StatelessWidget {
                 const SizedBox(height: 8),
               ],
 
-              Expanded(
-                child: bleService.discoveredDevices.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.devices,
-                              size: 48,
-                              color: Colors.grey.shade400,
+              // Device list or empty state
+              bleService.discoveredDevices.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 48.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.devices,
+                            size: 48,
+                            color: Colors.grey.shade400,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No devices found',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 14,
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'No devices found',
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 14,
-                              ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Tap "Start Scanning" to search',
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 12,
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Tap "Start Scanning" to search',
-                              style: TextStyle(
-                                color: Colors.grey.shade500,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: bleService.discoveredDevices.length,
-                        itemBuilder: (context, index) {
-                          final device = bleService.discoveredDevices[index];
-                          return DeviceListItem(
-                            device: device,
-                            onTap: () => _connectToDevice(context, bleService, device),
-                          );
-                        },
+                          ),
+                        ],
                       ),
-              ),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: bleService.discoveredDevices.length,
+                      itemBuilder: (context, index) {
+                        final device = bleService.discoveredDevices[index];
+                        return DeviceListItem(
+                          device: device,
+                          onTap: () => _connectToDevice(context, bleService, device),
+                        );
+                      },
+                    ),
             ],
           ),
         );
@@ -204,7 +205,10 @@ class DeviceListItem extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('ID: ${device.deviceId}'),
+            Text(
+              'ID: ${device.deviceId}',
+              overflow: TextOverflow.ellipsis,
+            ),
             const SizedBox(height: 4),
             Row(
               children: [
@@ -214,11 +218,14 @@ class DeviceListItem extends StatelessWidget {
                   color: _getSignalColor(),
                 ),
                 const SizedBox(width: 4),
-                Text(
-                  '${device.signalStrength.displayName} (${device.rssi} dBm)',
-                  style: TextStyle(
-                    color: _getSignalColor(),
-                    fontSize: 12,
+                Flexible(
+                  child: Text(
+                    '${device.signalStrength.displayName} (${device.rssi} dBm)',
+                    style: TextStyle(
+                      color: _getSignalColor(),
+                      fontSize: 12,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

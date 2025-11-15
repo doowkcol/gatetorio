@@ -18,14 +18,20 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Image.asset(
               'assets/images/GateTorio lightmode icon.png',
               height: 28,
               fit: BoxFit.contain,
             ),
-            const SizedBox(width: 12),
-            const Text('Gatetorio'),
+            const SizedBox(width: 8),
+            const Flexible(
+              child: Text(
+                'Gatetorio',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         actions: [
