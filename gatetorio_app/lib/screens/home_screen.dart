@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/ble_service.dart';
+import '../services/fleet_service.dart';
 import '../widgets/device_scanner.dart';
 import '../widgets/gate_controller.dart';
 import '../widgets/connection_status.dart';
 import 'settings_screen.dart';
 import 'input_status_screen.dart';
+import 'fleet_management_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -26,6 +28,54 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         actions: [
+          // Fleet Management - always visible
+          Consumer<FleetService>(
+            builder: (context, fleetService, child) {
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.dashboard),
+                    tooltip: 'Fleet Management',
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const FleetManagementScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  // Offline device badge
+                  if (fleetService.offlineDevices > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFF6B6B),
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          fleetService.offlineDevices.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+          // Device-specific actions - only when connected
           Consumer<BleService>(
             builder: (context, bleService, child) {
               if (bleService.isConnected) {
