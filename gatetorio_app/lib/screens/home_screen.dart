@@ -18,14 +18,13 @@ class HomeScreen extends StatelessWidget {
           children: [
             Image.asset(
               'assets/images/GateTorio lightmode icon.png',
-              height: 32,
+              height: 28,
               fit: BoxFit.contain,
             ),
             const SizedBox(width: 12),
             const Text('Gatetorio'),
           ],
         ),
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         actions: [
           Consumer<BleService>(
             builder: (context, bleService, child) {

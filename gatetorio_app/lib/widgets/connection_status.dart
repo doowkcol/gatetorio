@@ -13,15 +13,15 @@ class ConnectionStatus extends StatelessWidget {
           return Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
-            color: Colors.red.shade100,
+            color: const Color(0xFF5C1010),
             child: Row(
               children: [
-                Icon(Icons.error, color: Colors.red.shade900),
+                const Icon(Icons.error, color: Color(0xFFFF6B6B)),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     bleService.lastError!,
-                    style: TextStyle(color: Colors.red.shade900),
+                    style: const TextStyle(color: Color(0xFFFF6B6B)),
                   ),
                 ),
               ],
@@ -32,8 +32,8 @@ class ConnectionStatus extends StatelessWidget {
         if (bleService.isConnected) {
           // Show different colors for demo mode vs real connection
           final isDemoMode = bleService.isDemoMode;
-          final bgColor = isDemoMode ? Colors.orange.shade100 : Colors.green.shade100;
-          final textColor = isDemoMode ? Colors.orange.shade900 : Colors.green.shade900;
+          final bgColor = isDemoMode ? const Color(0xFF5C3A10) : const Color(0xFF1B5E20);
+          final textColor = isDemoMode ? const Color(0xFFFFB74D) : const Color(0xFF81C784);
           final icon = isDemoMode ? Icons.preview : Icons.bluetooth_connected;
 
           return Container(
@@ -64,21 +64,21 @@ class ConnectionStatus extends StatelessWidget {
           return Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
-            color: Colors.blue.shade100,
-            child: Row(
+            color: const Color(0xFF0D47A1),
+            child: const Row(
               children: [
                 SizedBox(
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.blue.shade900,
+                    color: Color(0xFF64B5F6),
                   ),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Text(
                   'Scanning for devices...',
-                  style: TextStyle(color: Colors.blue.shade900),
+                  style: TextStyle(color: Color(0xFF64B5F6)),
                 ),
               ],
             ),

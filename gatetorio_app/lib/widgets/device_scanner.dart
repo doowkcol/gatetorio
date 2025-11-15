@@ -24,7 +24,7 @@ class DeviceScanner extends StatelessWidget {
                       // Gatetorio Logo
                       Image.asset(
                         'assets/images/GateTorio lightmode icon.png',
-                        height: 120,
+                        height: 100,
                         fit: BoxFit.contain,
                       ),
                       const SizedBox(height: 16),
@@ -57,8 +57,9 @@ class DeviceScanner extends StatelessWidget {
                     ? 'Scanning...'
                     : 'Start Scanning'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  backgroundColor: const Color(0xFF1565C0), // Blue scan button
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 56),
                 ),
               ),
               const SizedBox(height: 12),
@@ -70,7 +71,8 @@ class DeviceScanner extends StatelessWidget {
                 label: const Text('Demo Mode (Preview UI)'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.orange,
-                  side: const BorderSide(color: Colors.orange),
+                  side: const BorderSide(color: Colors.orange, width: 2),
+                  minimumSize: const Size(double.infinity, 56),
                 ),
               ),
               const SizedBox(height: 24),
