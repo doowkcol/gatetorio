@@ -20,7 +20,7 @@ cat << 'EOF' | sudo tee /etc/systemd/system/bluetooth.service.d/override.conf
 # Disable pairing prompts for testing
 # Remove this file for production use!
 ExecStart=
-ExecStart=/usr/lib/bluetooth/bluetoothd --noplugin=* --experimental
+ExecStart=/usr/lib/bluetooth/bluetoothd --noplugin=pairing --experimental
 EOF
 
 # Reload systemd and restart bluetooth
