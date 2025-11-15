@@ -336,7 +336,7 @@ class _PositionIndicators extends StatelessWidget {
             _MotorIndicator(
               motorName: 'Motor 1',
               percent: status.m1Percent,
-              speed: status.m1Speed,
+              speed: status.m1SpeedPercent,
             ),
             const SizedBox(height: 12),
 
@@ -344,7 +344,7 @@ class _PositionIndicators extends StatelessWidget {
             _MotorIndicator(
               motorName: 'Motor 2',
               percent: status.m2Percent,
-              speed: status.m2Speed,
+              speed: status.m2SpeedPercent,
             ),
           ],
         ),
@@ -377,7 +377,7 @@ class _MotorIndicator extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             Text(
-              '$percent% (Speed: $speed)',
+              '$percent% (Speed: $speed%)',
               style: TextStyle(color: Colors.grey.shade700),
             ),
           ],

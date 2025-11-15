@@ -6,8 +6,8 @@ class GateStatus {
   final GateState state;
   final int m1Percent;
   final int m2Percent;
-  final int m1Speed;
-  final int m2Speed;
+  final double m1Speed;  // 0.0 to 1.0 (motor speed as fraction of max)
+  final double m2Speed;  // 0.0 to 1.0 (motor speed as fraction of max)
   final int autoCloseCountdown;
   final DateTime timestamp;
 
@@ -27,8 +27,8 @@ class GateStatus {
       state: GateState.fromString(json['state'] ?? 'UNKNOWN'),
       m1Percent: (json['m1_percent'] as num?)?.toInt() ?? 0,
       m2Percent: (json['m2_percent'] as num?)?.toInt() ?? 0,
-      m1Speed: (json['m1_speed'] as num?)?.toInt() ?? 0,
-      m2Speed: (json['m2_speed'] as num?)?.toInt() ?? 0,
+      m1Speed: (json['m1_speed'] as num?)?.toDouble() ?? 0.0,
+      m2Speed: (json['m2_speed'] as num?)?.toDouble() ?? 0.0,
       autoCloseCountdown: (json['auto_close_countdown'] as num?)?.toInt() ?? 0,
       timestamp: DateTime.fromMillisecondsSinceEpoch(
         ((json['timestamp'] as num?) ?? 0).toInt() * 1000,
@@ -46,10 +46,16 @@ class GateStatus {
   /// Check if commands can be sent in the current state
   bool get canSendCommand => state.canSendCommand;
 
+  /// Get M1 speed as percentage (0-100)
+  int get m1SpeedPercent => (m1Speed * 100).round();
+
+  /// Get M2 speed as percentage (0-100)
+  int get m2SpeedPercent => (m2Speed * 100).round();
+
   @override
   String toString() {
     return 'GateStatus(state: $state, m1: $m1Percent%, m2: $m2Percent%, '
-        'm1Speed: $m1Speed, m2Speed: $m2Speed, autoClose: $autoCloseCountdown)';
+        'm1Speed: $m1SpeedPercent%, m2Speed: $m2SpeedPercent%, autoClose: $autoCloseCountdown)';
   }
 }
 

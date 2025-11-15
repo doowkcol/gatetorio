@@ -580,8 +580,8 @@ class BleService extends ChangeNotifier {
         state: GateState.closed,
         m1Percent: 45,
         m2Percent: 48,
-        m1Speed: 0,
-        m2Speed: 0,
+        m1Speed: 0.0,
+        m2Speed: 0.0,
         autoCloseCountdown: 0,
         timestamp: DateTime.now(),
       );
