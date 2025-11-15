@@ -667,12 +667,62 @@ class GatetorioBLEServer:
             write_callback=write_config
         )
 
+        # Input Config (read-only)
+        def read_input_config():
+            """Return input configuration from input_config.json"""
+            try:
+                import json
+                with open('/home/doowkcol/Gatetorio_Code/input_config.json', 'r') as f:
+                    config = json.load(f)
+                config_json = json.dumps(config).encode('utf-8')
+                return list(config_json)
+            except Exception as e:
+                print(f"[BLE] Error reading input config: {e}")
+                return list(b'{"error":"input config not available"}')
+
+        ble_peripheral.add_characteristic(
+            srv_id=3, chr_id=2, uuid=CHAR_INPUT_CONFIG,
+            value=[], notifying=False, flags=['read'],
+            read_callback=read_input_config
+        )
+
     def _add_diagnostics_service(self, ble_peripheral):
         """Add Diagnostics service (secondary - not advertised)"""
         print("[BLE] Adding Diagnostics service...")
 
         # Secondary service (not included in advertisement to save space)
         ble_peripheral.add_service(srv_id=4, uuid=SERVICE_DIAGNOSTICS, primary=False)
+
+        # Input States (read + notify)
+        def read_input_states():
+            """Return current state of all inputs"""
+            try:
+                states = {}
+                # Read input config to get all input names
+                with open('/home/doowkcol/Gatetorio_Code/input_config.json', 'r') as f:
+                    input_config = json.load(f)['inputs']
+
+                # Get current state of each input from shared dict
+                for input_name, config in input_config.items():
+                    is_active = self.controller.shared.get(f'{input_name}_state', False)
+                    states[input_name] = {
+                        "active": is_active,
+                        "function": config.get('function'),
+                        "type": config.get('type'),
+                        "channel": config.get('channel')
+                    }
+
+                states_json = json.dumps(states).encode('utf-8')
+                return list(states_json)
+            except Exception as e:
+                print(f"[BLE] Error reading input states: {e}")
+                return list(b'{"error":"input states not available"}')
+
+        ble_peripheral.add_characteristic(
+            srv_id=4, chr_id=1, uuid=CHAR_INPUT_STATES,
+            value=[], notifying=False, flags=['read'],
+            read_callback=read_input_states
+        )
 
         # System Status (read-only)
         def read_system_status():
@@ -683,7 +733,7 @@ class GatetorioBLEServer:
                 return list(b'{}')
 
         ble_peripheral.add_characteristic(
-            srv_id=4, chr_id=1, uuid=CHAR_SYSTEM_STATUS,
+            srv_id=4, chr_id=2, uuid=CHAR_SYSTEM_STATUS,
             value=[], notifying=False, flags=['read'],
             read_callback=read_system_status
         )
