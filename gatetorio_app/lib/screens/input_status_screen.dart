@@ -371,7 +371,7 @@ class _InfoChip extends StatelessWidget {
             '$label: ',
             style: TextStyle(
               fontSize: 13,
-              color: color.shade800,
+              color: color,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -380,7 +380,7 @@ class _InfoChip extends StatelessWidget {
               value,
               style: TextStyle(
                 fontSize: 13,
-                color: color.shade900,
+                color: color,
                 fontWeight: FontWeight.bold,
               ),
               overflow: TextOverflow.ellipsis,
