@@ -21,10 +21,11 @@ class DeviceScanner extends StatelessWidget {
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     children: [
-                      Icon(
-                        Icons.bluetooth_searching,
-                        size: 64,
-                        color: Theme.of(context).colorScheme.primary,
+                      // Gatetorio Logo
+                      Image.asset(
+                        'assets/images/GateTorio lightmode icon.png',
+                        height: 120,
+                        fit: BoxFit.contain,
                       ),
                       const SizedBox(height: 16),
                       Text(

@@ -14,7 +14,17 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Gatetorio Gate Controller'),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/images/GateTorio lightmode icon.png',
+              height: 32,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(width: 12),
+            const Text('Gatetorio'),
+          ],
+        ),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         actions: [
           Consumer<BleService>(
