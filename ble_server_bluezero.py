@@ -569,11 +569,24 @@ class GatetorioBLEServer:
         # Command TX (write-only)
         def write_command(value):
             try:
-                response = self.handle_command(bytes(value))
+                # Debug: Show raw bytes received
+                raw_bytes = bytes(value)
+                print(f"[BLE] ========================================")
+                print(f"[BLE] Received write to Command TX")
+                print(f"[BLE] Raw bytes ({len(raw_bytes)}): {raw_bytes}")
+                print(f"[BLE] Decoded: {raw_bytes.decode('utf-8')}")
+
+                response = self.handle_command(raw_bytes)
                 self.last_command_response = json.dumps(response).encode('utf-8')
-                print(f"[BLE] Command executed: {response.get('message', 'OK')}")
+
+                print(f"[BLE] Response: {response}")
+                print(f"[BLE] ========================================")
             except Exception as e:
-                print(f"[BLE] Error executing command: {e}")
+                print(f"[BLE] ========================================")
+                print(f"[BLE] ERROR executing command: {e}")
+                import traceback
+                traceback.print_exc()
+                print(f"[BLE] ========================================")
                 self.last_command_response = json.dumps({
                     "success": False, "message": str(e)
                 }).encode('utf-8')
