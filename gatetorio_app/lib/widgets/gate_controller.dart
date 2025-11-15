@@ -154,22 +154,40 @@ class _StatusCard extends StatelessWidget {
     if (status == null) return Icons.help_outline;
 
     switch (status!.state) {
-      case GateState.idle:
-        return Icons.check_circle;
-      case GateState.opening:
-        return Icons.arrow_upward;
-      case GateState.closing:
-        return Icons.arrow_downward;
+      // Primary states
+      case GateState.closed:
+        return Icons.lock;
+      case GateState.open:
+        return Icons.lock_open;
+      case GateState.partial1:
+      case GateState.partial2:
+        return Icons.horizontal_rule;
       case GateState.stopped:
         return Icons.stop_circle;
-      case GateState.partialOpen:
-        return Icons.horizontal_rule;
+      case GateState.unknown:
+        return Icons.help_outline;
+
+      // Movement states
+      case GateState.opening:
+      case GateState.openingToPartial1:
+      case GateState.openingToPartial2:
+        return Icons.arrow_upward;
+      case GateState.closing:
+      case GateState.closingToPartial1:
+      case GateState.closingToPartial2:
+        return Icons.arrow_downward;
+
+      // Safety reversal states
+      case GateState.reversingFromOpen:
+        return Icons.warning;
+      case GateState.reversingFromClose:
+        return Icons.warning;
+
+      // Legacy states
       case GateState.error:
         return Icons.error;
       case GateState.calibrating:
         return Icons.settings;
-      default:
-        return Icons.help_outline;
     }
   }
 
@@ -177,21 +195,38 @@ class _StatusCard extends StatelessWidget {
     if (status == null) return Colors.grey;
 
     switch (status!.state) {
-      case GateState.idle:
+      // Primary states
+      case GateState.closed:
         return Colors.green;
-      case GateState.opening:
-      case GateState.closing:
-        return Colors.blue;
+      case GateState.open:
+        return Colors.lightGreen;
+      case GateState.partial1:
+      case GateState.partial2:
+        return Colors.teal;
       case GateState.stopped:
         return Colors.orange;
-      case GateState.partialOpen:
-        return Colors.teal;
+      case GateState.unknown:
+        return Colors.grey;
+
+      // Movement states
+      case GateState.opening:
+      case GateState.openingToPartial1:
+      case GateState.openingToPartial2:
+      case GateState.closing:
+      case GateState.closingToPartial1:
+      case GateState.closingToPartial2:
+        return Colors.blue;
+
+      // Safety reversal states
+      case GateState.reversingFromOpen:
+      case GateState.reversingFromClose:
+        return Colors.amber;
+
+      // Legacy states
       case GateState.error:
         return Colors.red;
       case GateState.calibrating:
         return Colors.purple;
-      default:
-        return Colors.grey;
     }
   }
 

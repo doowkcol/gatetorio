@@ -55,32 +55,83 @@ class GateStatus {
 
 /// Gate state enum matching the Python backend states
 enum GateState {
-  unknown,
-  idle,
-  opening,
-  closing,
-  partialOpen,
-  error,
-  calibrating,
-  stopped;
+  // Primary states (gate at rest)
+  closed,            // Gate fully closed
+  open,              // Gate fully open
+  partial1,          // Gate at partial position 1
+  partial2,          // Gate at partial position 2
+  stopped,           // Gate stopped mid-movement
+  unknown,           // Position unknown (power-on state)
+
+  // Movement states
+  opening,           // Opening to full open
+  closing,           // Closing to full closed
+  openingToPartial1, // Moving to partial position 1
+  openingToPartial2, // Moving to partial position 2
+  closingToPartial1, // Closing to partial position 1
+  closingToPartial2, // Closing to partial position 2
+
+  // Safety reversal states
+  reversingFromOpen,  // Reversing after obstacle while opening
+  reversingFromClose, // Reversing after obstacle while closing
+
+  // Legacy/future states
+  error,              // Error state
+  calibrating;        // Calibration in progress
 
   static GateState fromString(String state) {
     switch (state.toUpperCase()) {
-      case 'IDLE':
-        return GateState.idle;
+      // Primary states
+      case 'CLOSED':
+        return GateState.closed;
+      case 'OPEN':
+        return GateState.open;
+      case 'PARTIAL_1':
+      case 'PARTIAL1':
+        return GateState.partial1;
+      case 'PARTIAL_2':
+      case 'PARTIAL2':
+        return GateState.partial2;
+      case 'STOPPED':
+        return GateState.stopped;
+      case 'UNKNOWN':
+        return GateState.unknown;
+
+      // Movement states
       case 'OPENING':
         return GateState.opening;
       case 'CLOSING':
         return GateState.closing;
+      case 'OPENING_TO_PARTIAL_1':
+      case 'OPENING_TO_PARTIAL1':
+        return GateState.openingToPartial1;
+      case 'OPENING_TO_PARTIAL_2':
+      case 'OPENING_TO_PARTIAL2':
+        return GateState.openingToPartial2;
+      case 'CLOSING_TO_PARTIAL_1':
+      case 'CLOSING_TO_PARTIAL1':
+        return GateState.closingToPartial1;
+      case 'CLOSING_TO_PARTIAL_2':
+      case 'CLOSING_TO_PARTIAL2':
+        return GateState.closingToPartial2;
+
+      // Safety reversal states
+      case 'REVERSING_FROM_OPEN':
+        return GateState.reversingFromOpen;
+      case 'REVERSING_FROM_CLOSE':
+        return GateState.reversingFromClose;
+
+      // Legacy states (for backward compatibility)
+      case 'IDLE':
+        return GateState.closed; // Map old IDLE to CLOSED
       case 'PARTIAL_OPEN':
       case 'PARTIALOPEN':
-        return GateState.partialOpen;
+        return GateState.partial1; // Map old PARTIAL_OPEN to PARTIAL_1
       case 'ERROR':
         return GateState.error;
       case 'CALIBRATING':
         return GateState.calibrating;
-      case 'STOPPED':
-        return GateState.stopped;
+
       default:
         return GateState.unknown;
     }
@@ -88,27 +139,50 @@ enum GateState {
 
   String get displayName {
     switch (this) {
-      case GateState.idle:
-        return 'Idle';
-      case GateState.opening:
-        return 'Opening';
-      case GateState.closing:
-        return 'Closing';
-      case GateState.partialOpen:
-        return 'Partial Open';
-      case GateState.error:
-        return 'Error';
-      case GateState.calibrating:
-        return 'Calibrating';
+      case GateState.closed:
+        return 'Closed';
+      case GateState.open:
+        return 'Open';
+      case GateState.partial1:
+        return 'Partial 1';
+      case GateState.partial2:
+        return 'Partial 2';
       case GateState.stopped:
         return 'Stopped';
       case GateState.unknown:
         return 'Unknown';
+      case GateState.opening:
+        return 'Opening';
+      case GateState.closing:
+        return 'Closing';
+      case GateState.openingToPartial1:
+        return 'Opening to P1';
+      case GateState.openingToPartial2:
+        return 'Opening to P2';
+      case GateState.closingToPartial1:
+        return 'Closing to P1';
+      case GateState.closingToPartial2:
+        return 'Closing to P2';
+      case GateState.reversingFromOpen:
+        return 'Safety Reverse';
+      case GateState.reversingFromClose:
+        return 'Safety Reverse';
+      case GateState.error:
+        return 'Error';
+      case GateState.calibrating:
+        return 'Calibrating';
     }
   }
 
   bool get isMoving =>
-      this == GateState.opening || this == GateState.closing;
+      this == GateState.opening ||
+      this == GateState.closing ||
+      this == GateState.openingToPartial1 ||
+      this == GateState.openingToPartial2 ||
+      this == GateState.closingToPartial1 ||
+      this == GateState.closingToPartial2 ||
+      this == GateState.reversingFromOpen ||
+      this == GateState.reversingFromClose;
 
   bool get canSendCommand =>
       this != GateState.error && this != GateState.unknown;
