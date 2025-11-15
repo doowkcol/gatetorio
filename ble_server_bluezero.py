@@ -544,7 +544,7 @@ class GatetorioBLEServer:
         def read_user_id():
             return list(self.config.user_id.encode('utf-8'))
 
-        def write_user_id(value):
+        def write_user_id(value, options):
             try:
                 self.config.user_id = bytes(value).decode('utf-8')
                 self._save_config()
@@ -567,7 +567,7 @@ class GatetorioBLEServer:
         ble_peripheral.add_service(srv_id=2, uuid=SERVICE_GATE_CONTROL, primary=True)
 
         # Command TX (write-only)
-        def write_command(value):
+        def write_command(value, options):
             try:
                 # Debug: Show raw bytes received
                 raw_bytes = bytes(value)
@@ -632,7 +632,7 @@ class GatetorioBLEServer:
             except:
                 return list(b'{}')
 
-        def write_config(value):
+        def write_config(value, options):
             try:
                 config_data = json.loads(bytes(value).decode('utf-8'))
                 self._handle_set_config(config_data)
@@ -675,7 +675,7 @@ class GatetorioBLEServer:
         ble_peripheral.add_service(srv_id=5, uuid=SERVICE_SECURITY, primary=False)
 
         # Pairing Control (write-only)
-        def write_pairing_control(value):
+        def write_pairing_control(value, options):
             try:
                 cmd = json.loads(bytes(value).decode('utf-8'))
                 action = cmd.get('action')
@@ -700,7 +700,7 @@ class GatetorioBLEServer:
             enabled = b'1' if self.config.engineer_mode_enabled else b'0'
             return list(enabled)
 
-        def write_engineer_mode(value):
+        def write_engineer_mode(value, options):
             try:
                 enabled = bytes(value).decode('utf-8') == '1'
                 self._handle_enable_engineer_mode(enabled)
