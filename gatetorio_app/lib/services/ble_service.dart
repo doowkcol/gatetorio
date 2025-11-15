@@ -38,19 +38,24 @@ class BleService extends ChangeNotifier {
   bool _isConnecting = false;
   String? _lastError;
 
+  // Demo mode
+  bool _isDemoMode = false;
+
   // Stream subscriptions
   StreamSubscription<List<ScanResult>>? _scanSubscription;
   StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
   StreamSubscription<List<int>>? _statusSubscription;
 
   // Getters
-  bool get isConnected => _connectedDevice != null;
+  bool get isConnected => _connectedDevice != null || _isDemoMode;
   bool get isScanning => _isScanning;
   bool get isConnecting => _isConnecting;
+  bool get isDemoMode => _isDemoMode;
   GateStatus? get currentStatus => _currentStatus;
   List<BleDeviceInfo> get discoveredDevices => _discoveredDevices;
   String? get lastError => _lastError;
-  String? get connectedDeviceName => _connectedDevice?.platformName;
+  String? get connectedDeviceName =>
+      _isDemoMode ? 'Demo Gate (Static UI)' : _connectedDevice?.platformName;
 
   BleService() {
     _initialize();
@@ -312,6 +317,14 @@ class BleService extends ChangeNotifier {
 
   /// Send a command to the gate controller
   Future<bool> sendCommand(GateCommand command) async {
+    // Handle demo mode
+    if (_isDemoMode) {
+      debugPrint("Demo mode: Simulating command: $command");
+      _lastError = null;
+      notifyListeners();
+      return true;
+    }
+
     if (_commandTxChar == null) {
       _lastError = "Not connected to device";
       notifyListeners();
@@ -341,6 +354,22 @@ class BleService extends ChangeNotifier {
     }
   }
 
+  /// Enable demo mode with static sample data
+  void enableDemoMode() {
+    _isDemoMode = true;
+    _currentStatus = GateStatus(
+      state: GateState.idle,
+      m1Percent: 45,
+      m2Percent: 48,
+      m1Speed: 0,
+      m2Speed: 0,
+      autoCloseCountdown: 0,
+      timestamp: DateTime.now(),
+    );
+    _lastError = null;
+    notifyListeners();
+  }
+
   /// Disconnect from current device
   Future<void> disconnect() async {
     try {
@@ -353,6 +382,7 @@ class BleService extends ChangeNotifier {
       _commandResponseChar = null;
       _statusChar = null;
       _currentStatus = null;
+      _isDemoMode = false;
 
       notifyListeners();
     } catch (e) {

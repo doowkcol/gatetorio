@@ -60,6 +60,18 @@ class DeviceScanner extends StatelessWidget {
                   foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 ),
               ),
+              const SizedBox(height: 12),
+
+              // Demo Mode button
+              OutlinedButton.icon(
+                onPressed: () => bleService.enableDemoMode(),
+                icon: const Icon(Icons.preview),
+                label: const Text('Demo Mode (Preview UI)'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.orange,
+                  side: const BorderSide(color: Colors.orange),
+                ),
+              ),
               const SizedBox(height: 24),
 
               // Device list

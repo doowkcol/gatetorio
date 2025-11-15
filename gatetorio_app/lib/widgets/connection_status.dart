@@ -30,19 +30,27 @@ class ConnectionStatus extends StatelessWidget {
         }
 
         if (bleService.isConnected) {
+          // Show different colors for demo mode vs real connection
+          final isDemoMode = bleService.isDemoMode;
+          final bgColor = isDemoMode ? Colors.orange.shade100 : Colors.green.shade100;
+          final textColor = isDemoMode ? Colors.orange.shade900 : Colors.green.shade900;
+          final icon = isDemoMode ? Icons.preview : Icons.bluetooth_connected;
+
           return Container(
             width: double.infinity,
             padding: const EdgeInsets.all(12),
-            color: Colors.green.shade100,
+            color: bgColor,
             child: Row(
               children: [
-                Icon(Icons.bluetooth_connected, color: Colors.green.shade900),
+                Icon(icon, color: textColor),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Connected to ${bleService.connectedDeviceName}',
+                    isDemoMode
+                        ? 'Demo Mode - Static UI Preview (Not Connected)'
+                        : 'Connected to ${bleService.connectedDeviceName}',
                     style: TextStyle(
-                      color: Colors.green.shade900,
+                      color: textColor,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
