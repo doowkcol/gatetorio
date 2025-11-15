@@ -185,7 +185,7 @@ class BleService extends ChangeNotifier {
       }
 
       // Find the device
-      final results = await FlutterBluePlus.lastScanResults;
+      final results = FlutterBluePlus.lastScanResults;
       final result = results.firstWhere(
         (r) => r.device.remoteId.toString() == deviceId,
         orElse: () => throw Exception("Device not found"),

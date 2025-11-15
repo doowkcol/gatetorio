@@ -43,6 +43,9 @@ class GateStatus {
     return GateStatus.fromJson(json);
   }
 
+  /// Check if commands can be sent in the current state
+  bool get canSendCommand => state.canSendCommand;
+
   @override
   String toString() {
     return 'GateStatus(state: $state, m1: $m1Percent%, m2: $m2Percent%, '
