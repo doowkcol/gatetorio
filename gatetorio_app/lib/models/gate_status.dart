@@ -25,13 +25,13 @@ class GateStatus {
   factory GateStatus.fromJson(Map<String, dynamic> json) {
     return GateStatus(
       state: GateState.fromString(json['state'] ?? 'UNKNOWN'),
-      m1Percent: json['m1_percent'] ?? 0,
-      m2Percent: json['m2_percent'] ?? 0,
-      m1Speed: json['m1_speed'] ?? 0,
-      m2Speed: json['m2_speed'] ?? 0,
-      autoCloseCountdown: json['auto_close_countdown'] ?? 0,
+      m1Percent: (json['m1_percent'] as num?)?.toInt() ?? 0,
+      m2Percent: (json['m2_percent'] as num?)?.toInt() ?? 0,
+      m1Speed: (json['m1_speed'] as num?)?.toInt() ?? 0,
+      m2Speed: (json['m2_speed'] as num?)?.toInt() ?? 0,
+      autoCloseCountdown: (json['auto_close_countdown'] as num?)?.toInt() ?? 0,
       timestamp: DateTime.fromMillisecondsSinceEpoch(
-        (json['timestamp'] ?? 0) * 1000,
+        ((json['timestamp'] as num?) ?? 0).toInt() * 1000,
       ),
     );
   }

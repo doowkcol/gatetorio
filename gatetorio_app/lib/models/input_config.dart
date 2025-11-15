@@ -26,13 +26,13 @@ class InputConfig {
   factory InputConfig.fromJson(String name, Map<String, dynamic> json) {
     return InputConfig(
       name: name,
-      channel: json['channel'] ?? 0,
+      channel: (json['channel'] as num?)?.toInt() ?? 0,
       enabled: json['enabled'] ?? true,
       type: json['type'] ?? 'NO',
       function: json['function'],
       description: json['description'] ?? '',
-      tolerancePercent: json['tolerance_percent']?.toDouble(),
-      learnedResistance: json['learned_resistance']?.toDouble(),
+      tolerancePercent: (json['tolerance_percent'] as num?)?.toDouble(),
+      learnedResistance: (json['learned_resistance'] as num?)?.toDouble(),
     );
   }
 
@@ -167,7 +167,7 @@ class InputStates {
       states: statesMap,
       rawValues: rawValuesMap,
       timestamp: DateTime.fromMillisecondsSinceEpoch(
-        (json['timestamp'] ?? DateTime.now().millisecondsSinceEpoch ~/ 1000) * 1000,
+        ((json['timestamp'] as num?) ?? (DateTime.now().millisecondsSinceEpoch ~/ 1000)).toInt() * 1000,
       ),
     );
   }
