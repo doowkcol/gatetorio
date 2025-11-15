@@ -577,7 +577,7 @@ class BleService extends ChangeNotifier {
       debugPrint('BleService: Set _isDemoMode = true');
 
       _currentStatus = GateStatus(
-        state: GateState.idle,
+        state: GateState.closed,
         m1Percent: 45,
         m2Percent: 48,
         m1Speed: 0,
