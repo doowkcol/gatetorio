@@ -15,10 +15,14 @@ class BleService extends ChangeNotifier {
   // GATT Service and Characteristic UUIDs (matching ble_server_bluezero.py)
   static const String _baseUuidTemplate = "0000{}-4751-5445-5254-494F00000000";
 
-  // Services
-  static final Guid _gateControlServiceUuid = Guid(_formatUuid(0x1000));
-  static final Guid _configurationServiceUuid = Guid(_formatUuid(0x2000));
-  static final Guid _diagnosticsServiceUuid = Guid(_formatUuid(0x3000));
+  // Standard Bluetooth Services
+  static final Guid _deviceInfoServiceUuid = Guid("0000180A-0000-1000-8000-00805F9B34FB");
+
+  // Custom Gatetorio Services
+  static final Guid _gateControlServiceUuid = Guid(_formatUuid(0x1000));  // PRIMARY
+  static final Guid _configurationServiceUuid = Guid(_formatUuid(0x2000)); // Secondary
+  static final Guid _diagnosticsServiceUuid = Guid(_formatUuid(0x3000));  // Secondary
+  static final Guid _securityServiceUuid = Guid(_formatUuid(0x4000));     // Secondary
 
   // Gate Control Characteristics
   static final Guid _commandTxUuid = Guid(_formatUuid(0x1001));
@@ -230,6 +234,18 @@ class BleService extends ChangeNotifier {
       await device.connect(timeout: const Duration(seconds: 15));
       _connectedDevice = device;
 
+      // Request MTU (185 bytes - safe value that works with most BLE implementations)
+      try {
+        final mtu = await device.requestMtu(185);
+        debugPrint("MTU negotiated: $mtu bytes");
+      } catch (e) {
+        debugPrint("MTU request failed (non-critical): $e");
+        // Continue even if MTU request fails - it's not critical
+      }
+
+      // Wait a moment for connection to stabilize
+      await Future.delayed(const Duration(milliseconds: 500));
+
       // Discover services and characteristics
       final success = await _discoverServices();
       if (!success) {
@@ -259,9 +275,19 @@ class BleService extends ChangeNotifier {
     if (_connectedDevice == null) return false;
 
     try {
+      debugPrint("Starting service discovery...");
       final services = await _connectedDevice!.discoverServices();
 
-      // Find Gate Control Service
+      // Log all discovered services for debugging
+      debugPrint("Discovered ${services.length} services:");
+      for (var service in services) {
+        debugPrint("  - Service: ${service.uuid} (${service.isPrimary ? 'PRIMARY' : 'SECONDARY'})");
+        for (var char in service.characteristics) {
+          debugPrint("    - Char: ${char.uuid}");
+        }
+      }
+
+      // Find Gate Control Service (PRIMARY service)
       final gateControlService = services.firstWhere(
         (s) => s.uuid == _gateControlServiceUuid,
         orElse: () => throw Exception("Gate Control Service not found"),
