@@ -4,6 +4,7 @@ import '../services/ble_service.dart';
 import '../widgets/device_scanner.dart';
 import '../widgets/gate_controller.dart';
 import '../widgets/connection_status.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -18,17 +19,33 @@ class HomeScreen extends StatelessWidget {
           Consumer<BleService>(
             builder: (context, bleService, child) {
               if (bleService.isConnected) {
-                return IconButton(
-                  icon: const Icon(Icons.bluetooth_disabled),
-                  tooltip: 'Disconnect',
-                  onPressed: () async {
-                    await bleService.disconnect();
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Disconnected')),
-                      );
-                    }
-                  },
+                return Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.settings),
+                      tooltip: 'Settings',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SettingsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.bluetooth_disabled),
+                      tooltip: 'Disconnect',
+                      onPressed: () async {
+                        await bleService.disconnect();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Disconnected')),
+                          );
+                        }
+                      },
+                    ),
+                  ],
                 );
               }
               return const SizedBox.shrink();

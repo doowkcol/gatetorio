@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../models/gate_status.dart';
 import '../models/gate_command.dart';
 import '../models/ble_device_info.dart';
+import '../models/gate_config.dart';
 
 /// BLE Service for communicating with Gatetorio gate controller
 /// Handles device scanning, connection, and GATT operations
@@ -15,11 +16,15 @@ class BleService extends ChangeNotifier {
 
   // Services
   static final Guid _gateControlServiceUuid = Guid(_formatUuid(0x1000));
+  static final Guid _configurationServiceUuid = Guid(_formatUuid(0x2000));
 
-  // Characteristics
+  // Gate Control Characteristics
   static final Guid _commandTxUuid = Guid(_formatUuid(0x1001));
   static final Guid _commandResponseUuid = Guid(_formatUuid(0x1002));
   static final Guid _statusUuid = Guid(_formatUuid(0x1003));
+
+  // Configuration Characteristics
+  static final Guid _configDataUuid = Guid(_formatUuid(0x2001));
 
   // Helper to format UUIDs
   static String _formatUuid(int code) {
@@ -31,8 +36,10 @@ class BleService extends ChangeNotifier {
   BluetoothCharacteristic? _commandTxChar;
   BluetoothCharacteristic? _commandResponseChar;
   BluetoothCharacteristic? _statusChar;
+  BluetoothCharacteristic? _configDataChar;
 
   GateStatus? _currentStatus;
+  GateConfig? _currentConfig;
   List<BleDeviceInfo> _discoveredDevices = [];
   bool _isScanning = false;
   bool _isConnecting = false;
@@ -52,6 +59,7 @@ class BleService extends ChangeNotifier {
   bool get isConnecting => _isConnecting;
   bool get isDemoMode => _isDemoMode;
   GateStatus? get currentStatus => _currentStatus;
+  GateConfig? get currentConfig => _currentConfig;
   List<BleDeviceInfo> get discoveredDevices => _discoveredDevices;
   String? get lastError => _lastError;
   String? get connectedDeviceName =>
@@ -247,7 +255,7 @@ class BleService extends ChangeNotifier {
         orElse: () => throw Exception("Gate Control Service not found"),
       );
 
-      // Find characteristics
+      // Find gate control characteristics
       _commandTxChar = gateControlService.characteristics.firstWhere(
         (c) => c.uuid == _commandTxUuid,
         orElse: () => throw Exception("Command TX characteristic not found"),
@@ -262,6 +270,20 @@ class BleService extends ChangeNotifier {
         (c) => c.uuid == _statusUuid,
         orElse: () => throw Exception("Status characteristic not found"),
       );
+
+      // Find Configuration Service (optional - may not exist on all devices)
+      try {
+        final configService = services.firstWhere(
+          (s) => s.uuid == _configurationServiceUuid,
+        );
+
+        _configDataChar = configService.characteristics.firstWhere(
+          (c) => c.uuid == _configDataUuid,
+        );
+      } catch (e) {
+        debugPrint("Configuration service not available: $e");
+        _configDataChar = null;
+      }
 
       return true;
     } catch (e) {
@@ -354,6 +376,67 @@ class BleService extends ChangeNotifier {
     }
   }
 
+  /// Read configuration from BLE device
+  Future<GateConfig?> readConfig() async {
+    // Handle demo mode
+    if (_isDemoMode) {
+      debugPrint("Demo mode: Returning sample config");
+      return _currentConfig;
+    }
+
+    if (_configDataChar == null) {
+      _lastError = "Configuration characteristic not available";
+      notifyListeners();
+      return null;
+    }
+
+    try {
+      debugPrint("Reading configuration...");
+      final value = await _configDataChar!.read();
+      if (value.isNotEmpty) {
+        _currentConfig = GateConfig.fromBytes(value);
+        debugPrint("Config loaded: $_currentConfig");
+        notifyListeners();
+        return _currentConfig;
+      }
+    } catch (e) {
+      _lastError = "Failed to read config: $e";
+      notifyListeners();
+    }
+    return null;
+  }
+
+  /// Write configuration to BLE device
+  Future<bool> writeConfig(GateConfig config) async {
+    // Handle demo mode
+    if (_isDemoMode) {
+      debugPrint("Demo mode: Simulating config write");
+      _currentConfig = config;
+      _lastError = null;
+      notifyListeners();
+      return true;
+    }
+
+    if (_configDataChar == null) {
+      _lastError = "Configuration characteristic not available";
+      notifyListeners();
+      return false;
+    }
+
+    try {
+      debugPrint("Writing configuration: $config");
+      await _configDataChar!.write(config.toBytes(), withoutResponse: false);
+      _currentConfig = config;
+      _lastError = null;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _lastError = "Failed to write config: $e";
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Enable demo mode with static sample data
   void enableDemoMode() {
     _isDemoMode = true;
@@ -366,6 +449,7 @@ class BleService extends ChangeNotifier {
       autoCloseCountdown: 0,
       timestamp: DateTime.now(),
     );
+    _currentConfig = GateConfig.defaults();
     _lastError = null;
     notifyListeners();
   }
@@ -381,7 +465,9 @@ class BleService extends ChangeNotifier {
       _commandTxChar = null;
       _commandResponseChar = null;
       _statusChar = null;
+      _configDataChar = null;
       _currentStatus = null;
+      _currentConfig = null;
       _isDemoMode = false;
 
       notifyListeners();
