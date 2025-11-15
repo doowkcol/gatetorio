@@ -16,7 +16,10 @@ class _InputStatusScreenState extends State<InputStatusScreen> {
   @override
   void initState() {
     super.initState();
-    _loadInputData();
+    // Defer data loading until after first build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadInputData();
+    });
   }
 
   Future<void> _loadInputData() async {

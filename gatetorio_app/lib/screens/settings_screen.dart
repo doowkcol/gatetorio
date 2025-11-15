@@ -35,7 +35,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _initializeControllers();
-    _loadConfiguration();
+    // Defer config loading until after first build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadConfiguration();
+    });
   }
 
   void _initializeControllers() {
