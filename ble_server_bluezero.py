@@ -520,10 +520,11 @@ class GatetorioBLEServer:
         return ble_peripheral
 
     def _add_device_info_service(self, ble_peripheral):
-        """Add Device Information service"""
+        """Add Device Information service (secondary - not advertised)"""
         print("[BLE] Adding Device Info service...")
 
-        ble_peripheral.add_service(srv_id=1, uuid=SERVICE_DEVICE_INFO, primary=True)
+        # Secondary service (not included in advertisement to save space)
+        ble_peripheral.add_service(srv_id=1, uuid=SERVICE_DEVICE_INFO, primary=False)
 
         # Hardware ID (read-only)
         ble_peripheral.add_characteristic(
@@ -559,9 +560,10 @@ class GatetorioBLEServer:
         )
 
     def _add_gate_control_service(self, ble_peripheral):
-        """Add Gate Control service"""
+        """Add Gate Control service (PRIMARY - advertised)"""
         print("[BLE] Adding Gate Control service...")
 
+        # Primary service (included in advertisement - main service UUID)
         ble_peripheral.add_service(srv_id=2, uuid=SERVICE_GATE_CONTROL, primary=True)
 
         # Command TX (write-only)
@@ -603,10 +605,11 @@ class GatetorioBLEServer:
         )
 
     def _add_configuration_service(self, ble_peripheral):
-        """Add Configuration service"""
+        """Add Configuration service (secondary - not advertised)"""
         print("[BLE] Adding Configuration service...")
 
-        ble_peripheral.add_service(srv_id=3, uuid=SERVICE_CONFIGURATION, primary=True)
+        # Secondary service (not included in advertisement to save space)
+        ble_peripheral.add_service(srv_id=3, uuid=SERVICE_CONFIGURATION, primary=False)
 
         # Config Data (read/write)
         def read_config():
@@ -631,10 +634,11 @@ class GatetorioBLEServer:
         )
 
     def _add_diagnostics_service(self, ble_peripheral):
-        """Add Diagnostics service"""
+        """Add Diagnostics service (secondary - not advertised)"""
         print("[BLE] Adding Diagnostics service...")
 
-        ble_peripheral.add_service(srv_id=4, uuid=SERVICE_DIAGNOSTICS, primary=True)
+        # Secondary service (not included in advertisement to save space)
+        ble_peripheral.add_service(srv_id=4, uuid=SERVICE_DIAGNOSTICS, primary=False)
 
         # System Status (read-only)
         def read_system_status():
@@ -651,10 +655,11 @@ class GatetorioBLEServer:
         )
 
     def _add_security_service(self, ble_peripheral):
-        """Add Security service"""
+        """Add Security service (secondary - not advertised)"""
         print("[BLE] Adding Security service...")
 
-        ble_peripheral.add_service(srv_id=5, uuid=SERVICE_SECURITY, primary=True)
+        # Secondary service (not included in advertisement to save space)
+        ble_peripheral.add_service(srv_id=5, uuid=SERVICE_SECURITY, primary=False)
 
         # Pairing Control (write-only)
         def write_pairing_control(value):
