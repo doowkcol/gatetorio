@@ -1024,7 +1024,11 @@ class MotorManager:
                 # Stop motor and set to full open position
                 self.motor1.stop()
                 position_percent = (self.shared['m1_position'] / self.motor1_run_time * 100.0) if self.motor1_run_time > 0 else 0.0
-                print(f"[LIMIT SWITCH] M1 OPEN limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to {self.motor1_run_time:.2f}s (100%)")
+
+                # Only print if position wasn't already at the limit (avoid spam)
+                if abs(self.shared['m1_position'] - self.motor1_run_time) > 0.01:
+                    print(f"[LIMIT SWITCH] M1 OPEN limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to {self.motor1_run_time:.2f}s (100%)")
+
                 self.shared['m1_position'] = self.motor1_run_time
                 self.shared['m1_speed'] = 0.0
 
@@ -1048,7 +1052,11 @@ class MotorManager:
                 # Stop motor and set to fully closed position
                 self.motor1.stop()
                 position_percent = (self.shared['m1_position'] / self.motor1_run_time * 100.0) if self.motor1_run_time > 0 else 0.0
-                print(f"[LIMIT SWITCH] M1 CLOSE limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to 0.0s (0%)")
+
+                # Only print if position wasn't already at the limit (avoid spam)
+                if abs(self.shared['m1_position'] - 0.0) > 0.01:
+                    print(f"[LIMIT SWITCH] M1 CLOSE limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to 0.0s (0%)")
+
                 self.shared['m1_position'] = 0.0
                 self.shared['m1_speed'] = 0.0
 

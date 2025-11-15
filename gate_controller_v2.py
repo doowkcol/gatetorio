@@ -639,22 +639,23 @@ class GateController:
         """
         
         # DEBUG: Print ALL command flags every cycle when any safety edge active
-        if self.shared['safety_stop_opening_active'] or self.shared['safety_stop_closing_active']:
-            print(f"\n[CYCLE DEBUG] state={self.shared['state']}, "
-                  f"reversing={self.shared['safety_reversing']}, "
-                  f"movement_cmd={self.shared['movement_command']}")
-            print(f"  Commands: open={self.shared['cmd_open_active']}, "
-                  f"close={self.shared['cmd_close_active']}, "
-                  f"stop={self.shared['cmd_stop_active']}")
-            print(f"  Photocells: closing={self.shared['photocell_closing_active']}, "
-                  f"opening={self.shared['photocell_opening_active']}")
-            print(f"  Safety: stop_opening_active={self.shared['safety_stop_opening_active']}, "
-                  f"stop_opening_reversed={self.shared.get('safety_stop_opening_reversed', False)}, "
-                  f"stop_opening_triggered={self.shared.get('safety_stop_opening_triggered', False)}")
-            print(f"  Safety: stop_closing_active={self.shared['safety_stop_closing_active']}, "
-                  f"stop_closing_reversed={self.shared.get('safety_stop_closing_reversed', False)}, "
-                  f"stop_closing_triggered={self.shared.get('safety_stop_closing_triggered', False)}")
-        
+        # (Commented out to reduce log spam - uncomment for debugging)
+        # if self.shared['safety_stop_opening_active'] or self.shared['safety_stop_closing_active']:
+        #     print(f"\n[CYCLE DEBUG] state={self.shared['state']}, "
+        #           f"reversing={self.shared['safety_reversing']}, "
+        #           f"movement_cmd={self.shared['movement_command']}")
+        #     print(f"  Commands: open={self.shared['cmd_open_active']}, "
+        #           f"close={self.shared['cmd_close_active']}, "
+        #           f"stop={self.shared['cmd_stop_active']}")
+        #     print(f"  Photocells: closing={self.shared['photocell_closing_active']}, "
+        #           f"opening={self.shared['photocell_opening_active']}")
+        #     print(f"  Safety: stop_opening_active={self.shared['safety_stop_opening_active']}, "
+        #           f"stop_opening_reversed={self.shared.get('safety_stop_opening_reversed', False)}, "
+        #           f"stop_opening_triggered={self.shared.get('safety_stop_opening_triggered', False)}")
+        #     print(f"  Safety: stop_closing_active={self.shared['safety_stop_closing_active']}, "
+        #           f"stop_closing_reversed={self.shared.get('safety_stop_closing_reversed', False)}, "
+        #           f"stop_closing_triggered={self.shared.get('safety_stop_closing_triggered', False)}")
+        pass
         # Debug: Print flag states when any command is active (DISABLED - too spammy)
         # if self.shared['cmd_open_active'] or self.shared['cmd_close_active'] or self.shared['cmd_stop_active']:
         #     print(f"[EVAL] State:{self.shared['state']} Open:{self.shared['cmd_open_active']} Close:{self.shared['cmd_close_active']} Stop:{self.shared['cmd_stop_active']}")
@@ -680,25 +681,33 @@ class GateController:
         )
         
         # DEBUG: Print flag states when safety edges active
-        if self.shared['safety_stop_opening_active'] or self.shared['safety_stop_closing_active']:
-            print(f"[SAFETY DEBUG] stop_opening_active={self.shared['safety_stop_opening_active']}, "
-                  f"stop_opening_reversed={self.shared.get('safety_stop_opening_reversed', False)}, "
-                  f"stop_closing_active={self.shared['safety_stop_closing_active']}, "
-                  f"stop_closing_reversed={self.shared.get('safety_stop_closing_reversed', False)}, "
-                  f"safety_reversing={self.shared['safety_reversing']}, "
-                  f"acting_as_stop={safety_edge_acting_as_stop}, "
-                  f"state={self.shared['state']}, "
-                  f"cmd_open={self.shared['cmd_open_active']}, "
-                  f"cmd_close={self.shared['cmd_close_active']}")
-        
+        # (Commented out to reduce log spam - uncomment for debugging)
+        # if self.shared['safety_stop_opening_active'] or self.shared['safety_stop_closing_active']:
+        #     print(f"[SAFETY DEBUG] stop_opening_active={self.shared['safety_stop_opening_active']}, "
+        #           f"stop_opening_reversed={self.shared.get('safety_stop_opening_reversed', False)}, "
+        #           f"stop_closing_active={self.shared['safety_stop_closing_active']}, "
+        #           f"stop_closing_reversed={self.shared.get('safety_stop_closing_reversed', False)}, "
+        #           f"safety_reversing={self.shared['safety_reversing']}, "
+        #           f"acting_as_stop={safety_edge_acting_as_stop}, "
+        #           f"state={self.shared['state']}, "
+        #           f"cmd_open={self.shared['cmd_open_active']}, "
+        #           f"cmd_close={self.shared['cmd_close_active']}")
+        pass
         if safety_edge_acting_as_stop:
             # Act exactly like sustained STOP - block everything
-            print(f"[SAFETY BLOCK] Safety edge acting as STOP - blocking all commands")
+            # Only print once when safety first engages (avoid spam)
+            if not hasattr(self, '_safety_block_logged') or not self._safety_block_logged:
+                print(f"[SAFETY BLOCK] Safety edge acting as STOP - blocking all commands")
+                self._safety_block_logged = True
+
             # Stop any active movement
             if self.shared['state'] not in ['STOPPED', 'CLOSED', 'OPEN', 'PARTIAL_1', 'PARTIAL_2', 'REVERSING_FROM_OPEN', 'REVERSING_FROM_CLOSE']:
                 self._execute_stop()
             # Block ALL command processing - don't let anything through
             return
+        else:
+            # Reset the flag when safety is no longer blocking
+            self._safety_block_logged = False
         
         # Safety edges before reversal - block their respective directions
         # CRITICAL: Check BOTH 'active' (edge currently pressed) AND 'reversed' (edge was pressed and reversed, blocking until released + cleared)
