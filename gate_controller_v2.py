@@ -418,10 +418,13 @@ class GateController:
             if self.shared['movement_command'] == 'OPEN':
                 # Debug: Print position check for opening
                 if self.shared['state'] == 'OPENING':
-                    if self.shared['m1_position'] >= self.motor1_run_time - 0.1 or self.shared['m2_position'] >= self.motor2_run_time - 0.1:
-                        print(f"[COMPLETION CHECK] OPENING: M1={self.shared['m1_position']:.2f}/{self.motor1_run_time}, M2={self.shared['m2_position']:.2f}/{self.motor2_run_time}, state={self.shared['state']}")
-                        print(f"  EXACT VALUES: M1={self.shared['m1_position']!r}, M2={self.shared['m2_position']!r}")
-                        print(f"  Check (FULL): M1>={self.motor1_run_time-POSITION_TOLERANCE}={self.shared['m1_position'] >= (self.motor1_run_time - POSITION_TOLERANCE)}, M2>={self.motor2_run_time-POSITION_TOLERANCE}={self.shared['m2_position'] >= (self.motor2_run_time - POSITION_TOLERANCE)}")
+                    # Debug: Show completion check details
+                    # (Commented out to reduce log spam - uncomment for debugging)
+                    # if self.shared['m1_position'] >= self.motor1_run_time - 0.1 or self.shared['m2_position'] >= self.motor2_run_time - 0.1:
+                    #     print(f"[COMPLETION CHECK] OPENING: M1={self.shared['m1_position']:.2f}/{self.motor1_run_time}, M2={self.shared['m2_position']:.2f}/{self.motor2_run_time}, state={self.shared['state']}")
+                    #     print(f"  EXACT VALUES: M1={self.shared['m1_position']!r}, M2={self.shared['m2_position']!r}")
+                    #     print(f"  Check (FULL): M1>={self.motor1_run_time-POSITION_TOLERANCE}={self.shared['m1_position'] >= (self.motor1_run_time - POSITION_TOLERANCE)}, M2>={self.motor2_run_time-POSITION_TOLERANCE}={self.shared['m2_position'] >= (self.motor2_run_time - POSITION_TOLERANCE)}")
+                    pass
                 
                 if self.shared['state'] == 'OPENING_TO_PARTIAL_1' and self.shared['m1_position'] >= (self.partial_1_position - POSITION_TOLERANCE):
                     self._complete_partial_1()
@@ -466,11 +469,13 @@ class GateController:
                         open_complete = m1_done and m2_done
 
                         # Debug: show why we're waiting (only print when close to completion)
-                        if not open_complete and (self.shared['m1_position'] >= 11.5 or self.shared['m2_position'] >= 11.5):
-                            if not m1_done:
-                                print(f"[WAITING] M1 not done: {m1_reason}")
-                            if not m2_done:
-                                print(f"[WAITING] M2 not done: {m2_reason}")
+                        # (Commented out to reduce log spam - uncomment for debugging)
+                        # if not open_complete and (self.shared['m1_position'] >= 11.5 or self.shared['m2_position'] >= 11.5):
+                        #     if not m1_done:
+                        #         print(f"[WAITING] M1 not done: {m1_reason}")
+                        #     if not m2_done:
+                        #         print(f"[WAITING] M2 not done: {m2_reason}")
+                        pass
 
                         if open_complete:
                             print(f"[COMPLETION] OPEN complete! M1: {m1_reason}, M2: {m2_reason}")
@@ -487,10 +492,12 @@ class GateController:
                 # Debug: Print position check for closing (THROTTLED to reduce spam)
                 if self.shared['state'] == 'CLOSING':
                     if self.shared['m1_position'] <= 0.1 or self.shared['m2_position'] <= 0.1:
-                        # Only print every 2 seconds to reduce spam
-                        if not hasattr(self, '_last_close_debug') or (time() - self._last_close_debug) > 2.0:
-                            print(f"[COMPLETION CHECK] CLOSING: M1={self.shared['m1_position']:.2f}/0, M2={self.shared['m2_position']:.2f}/0")
-                            self._last_close_debug = time()
+                        # Debug: Show completion check details
+                        # (Commented out to reduce log spam - uncomment for debugging)
+                        # if not hasattr(self, '_last_close_debug') or (time() - self._last_close_debug) > 2.0:
+                        #     print(f"[COMPLETION CHECK] CLOSING: M1={self.shared['m1_position']:.2f}/0, M2={self.shared['m2_position']:.2f}/0")
+                        #     self._last_close_debug = time()
+                        pass
                 
                 if self.shared['state'] == 'CLOSING_TO_PARTIAL_1':
                     # Only complete when BOTH M1 at partial AND M2 fully closed
@@ -547,14 +554,16 @@ class GateController:
                         close_complete = m1_done and m2_done
 
                         # Debug: show why we're waiting (only print when close to completion, throttled to reduce spam)
-                        if not close_complete and (self.shared['m1_position'] <= 0.5 or self.shared['m2_position'] <= 0.5):
-                            # Only print every 2 seconds to reduce spam
-                            if not hasattr(self, '_last_waiting_debug') or (time() - self._last_waiting_debug) > 2.0:
-                                if not m1_done:
-                                    print(f"[WAITING] M1 not done: {m1_reason}")
-                                if not m2_done:
-                                    print(f"[WAITING] M2 not done: {m2_reason}")
-                                self._last_waiting_debug = time()
+                        # (Commented out to reduce log spam - uncomment for debugging)
+                        # if not close_complete and (self.shared['m1_position'] <= 0.5 or self.shared['m2_position'] <= 0.5):
+                        #     # Only print every 2 seconds to reduce spam
+                        #     if not hasattr(self, '_last_waiting_debug') or (time() - self._last_waiting_debug) > 2.0:
+                        #         if not m1_done:
+                        #             print(f"[WAITING] M1 not done: {m1_reason}")
+                        #         if not m2_done:
+                        #             print(f"[WAITING] M2 not done: {m2_reason}")
+                        #         self._last_waiting_debug = time()
+                        pass
 
                         if close_complete:
                             print(f"[COMPLETION] CLOSE complete! M1: {m1_reason}, M2: {m2_reason}")
