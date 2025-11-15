@@ -8,6 +8,7 @@ import '../widgets/connection_status.dart';
 import 'settings_screen.dart';
 import 'input_status_screen.dart';
 import 'fleet_management_screen.dart';
+import 'logs_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -81,6 +82,18 @@ class HomeScreen extends StatelessWidget {
               if (bleService.isConnected) {
                 return Row(
                   children: [
+                    IconButton(
+                      icon: const Icon(Icons.article),
+                      tooltip: 'Logs',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LogsScreen(),
+                          ),
+                        );
+                      },
+                    ),
                     IconButton(
                       icon: const Icon(Icons.electrical_services),
                       tooltip: 'Input Status',

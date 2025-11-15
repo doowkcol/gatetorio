@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/ble_service.dart';
 import 'services/fleet_service.dart';
+import 'services/log_service.dart';
 import 'screens/home_screen.dart';
 
 void main() {
@@ -17,6 +18,7 @@ class GateterioApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => BleService()),
         ChangeNotifierProvider(create: (_) => FleetService()),
+        ChangeNotifierProvider(create: (_) => LogService()),
       ],
       child: MaterialApp(
         title: 'Gatetorio Controller',
