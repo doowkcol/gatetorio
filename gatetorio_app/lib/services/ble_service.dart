@@ -157,9 +157,9 @@ class BleService extends ChangeNotifier {
       _scanSubscription?.cancel();
       _scanSubscription = FlutterBluePlus.scanResults.listen((results) {
         _discoveredDevices = results
-            .where((r) =>
-                r.device.platformName.isNotEmpty &&
-                r.device.platformName.toLowerCase().contains('gatetorio'))
+            .where((r) => r.device.platformName.isNotEmpty)
+            // Temporarily show ALL devices - remove filter for debugging
+            // .where((r) => r.device.platformName.toLowerCase().contains('gatetorio'))
             .map((r) => BleDeviceInfo(
                   deviceId: r.device.remoteId.toString(),
                   deviceName: r.device.platformName,
