@@ -95,8 +95,9 @@ echo ""
 # Change to code directory
 cd /home/doowkcol/Gatetorio_Code
 
-# Run BLE server
-python3 ble_server_bluezero.py
+# Run BLE server with unbuffered output (-u flag)
+# This ensures all print statements appear immediately in the terminal
+python3 -u ble_server_bluezero.py
 
 # If we get here, server stopped (Ctrl+C or error)
 echo ""
