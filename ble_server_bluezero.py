@@ -429,13 +429,16 @@ class GatetorioBLEServer:
     def _get_status_json(self) -> bytes:
         """Generate current status JSON"""
         try:
+            # Get status from controller (calculates m1_percent, m2_percent)
+            controller_status = self.controller.get_status()
+
             status = {
-                "state": self.controller.shared.get('state', 'UNKNOWN'),
-                "m1_percent": self.controller.shared.get('m1_percent', 0),
-                "m2_percent": self.controller.shared.get('m2_percent', 0),
+                "state": controller_status['state'],
+                "m1_percent": int(controller_status['m1_percent']),
+                "m2_percent": int(controller_status['m2_percent']),
                 "m1_speed": self.controller.shared.get('m1_speed', 0),
                 "m2_speed": self.controller.shared.get('m2_speed', 0),
-                "auto_close_countdown": self.controller.shared.get('auto_close_countdown', 0),
+                "auto_close_countdown": controller_status['auto_close_countdown'],
                 "timestamp": int(time.time())
             }
             return json.dumps(status).encode('utf-8')
