@@ -530,47 +530,67 @@ class BleService extends ChangeNotifier {
 
   /// Enable demo mode with static sample data
   void enableDemoMode() {
-    _isDemoMode = true;
-    _currentStatus = GateStatus(
-      state: GateState.idle,
-      m1Percent: 45,
-      m2Percent: 48,
-      m1Speed: 0,
-      m2Speed: 0,
-      autoCloseCountdown: 0,
-      timestamp: DateTime.now(),
-    );
-    _currentConfig = GateConfig.defaults();
+    debugPrint('BleService: Entering enableDemoMode()');
 
-    // Create sample input config
-    _inputConfig = InputConfigData(inputs: {
-      'IN1': InputConfig(name: 'IN1', channel: 0, enabled: true, type: 'NC', function: 'cmd_open', description: 'Open command button'),
-      'IN2': InputConfig(name: 'IN2', channel: 1, enabled: true, type: 'NO', function: 'cmd_close', description: 'Close command button'),
-      'IN3': InputConfig(name: 'IN3', channel: 2, enabled: true, type: 'NO', function: 'cmd_stop', description: 'Stop command button'),
-      'IN4': InputConfig(name: 'IN4', channel: 3, enabled: true, type: 'NC', function: 'photocell_closing', description: 'Closing photocell'),
-      'IN5': InputConfig(name: 'IN5', channel: 4, enabled: true, type: 'NO', function: 'open_limit_m1', description: 'M1 Open Limit'),
-      'IN6': InputConfig(name: 'IN6', channel: 5, enabled: true, type: '8K2', function: 'safety_stop_opening', description: 'Safety edge', tolerancePercent: 5.0, learnedResistance: 8200.0),
-      'IN7': InputConfig(name: 'IN7', channel: 6, enabled: false, type: 'NO', function: null, description: 'Unassigned'),
-      'IN8': InputConfig(name: 'IN8', channel: 7, enabled: false, type: 'NO', function: null, description: 'Unassigned'),
-    });
+    try {
+      _isDemoMode = true;
+      debugPrint('BleService: Set _isDemoMode = true');
 
-    // Create sample input states (some active, some inactive)
-    _inputStates = InputStates(
-      states: {
-        'IN1': false,
-        'IN2': false,
-        'IN3': false,
-        'IN4': true,  // Photocell active
-        'IN5': true,  // Limit switch active
-        'IN6': false,
-        'IN7': false,
-        'IN8': false,
-      },
-      timestamp: DateTime.now(),
-    );
+      _currentStatus = GateStatus(
+        state: GateState.idle,
+        m1Percent: 45,
+        m2Percent: 48,
+        m1Speed: 0,
+        m2Speed: 0,
+        autoCloseCountdown: 0,
+        timestamp: DateTime.now(),
+      );
+      debugPrint('BleService: Created _currentStatus');
 
-    _lastError = null;
-    notifyListeners();
+      _currentConfig = GateConfig.defaults();
+      debugPrint('BleService: Created _currentConfig');
+
+      // Create sample input config
+      debugPrint('BleService: Creating sample input config...');
+      _inputConfig = InputConfigData(inputs: {
+        'IN1': InputConfig(name: 'IN1', channel: 0, enabled: true, type: 'NC', function: 'cmd_open', description: 'Open command button'),
+        'IN2': InputConfig(name: 'IN2', channel: 1, enabled: true, type: 'NO', function: 'cmd_close', description: 'Close command button'),
+        'IN3': InputConfig(name: 'IN3', channel: 2, enabled: true, type: 'NO', function: 'cmd_stop', description: 'Stop command button'),
+        'IN4': InputConfig(name: 'IN4', channel: 3, enabled: true, type: 'NC', function: 'photocell_closing', description: 'Closing photocell'),
+        'IN5': InputConfig(name: 'IN5', channel: 4, enabled: true, type: 'NO', function: 'open_limit_m1', description: 'M1 Open Limit'),
+        'IN6': InputConfig(name: 'IN6', channel: 5, enabled: true, type: '8K2', function: 'safety_stop_opening', description: 'Safety edge', tolerancePercent: 5.0, learnedResistance: 8200.0),
+        'IN7': InputConfig(name: 'IN7', channel: 6, enabled: false, type: 'NO', function: null, description: 'Unassigned'),
+        'IN8': InputConfig(name: 'IN8', channel: 7, enabled: false, type: 'NO', function: null, description: 'Unassigned'),
+      });
+      debugPrint('BleService: Created _inputConfig = $_inputConfig');
+
+      // Create sample input states (some active, some inactive)
+      debugPrint('BleService: Creating sample input states...');
+      _inputStates = InputStates(
+        states: {
+          'IN1': false,
+          'IN2': false,
+          'IN3': false,
+          'IN4': true,  // Photocell active
+          'IN5': true,  // Limit switch active
+          'IN6': false,
+          'IN7': false,
+          'IN8': false,
+        },
+        timestamp: DateTime.now(),
+      );
+      debugPrint('BleService: Created _inputStates = $_inputStates');
+
+      _lastError = null;
+      debugPrint('BleService: Calling notifyListeners()');
+      notifyListeners();
+      debugPrint('BleService: enableDemoMode() completed successfully');
+    } catch (e, stackTrace) {
+      debugPrint('BleService: ERROR in enableDemoMode(): $e');
+      debugPrint('BleService: Stack trace: $stackTrace');
+      _lastError = 'Demo mode error: $e';
+      notifyListeners();
+    }
   }
 
   /// Disconnect from current device
