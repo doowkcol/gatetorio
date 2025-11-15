@@ -5,6 +5,7 @@ import '../widgets/device_scanner.dart';
 import '../widgets/gate_controller.dart';
 import '../widgets/connection_status.dart';
 import 'settings_screen.dart';
+import 'input_status_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -21,6 +22,18 @@ class HomeScreen extends StatelessWidget {
               if (bleService.isConnected) {
                 return Row(
                   children: [
+                    IconButton(
+                      icon: const Icon(Icons.electrical_services),
+                      tooltip: 'Input Status',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const InputStatusScreen(),
+                          ),
+                        );
+                      },
+                    ),
                     IconButton(
                       icon: const Icon(Icons.settings),
                       tooltip: 'Settings',

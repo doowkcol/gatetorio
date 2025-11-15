@@ -7,6 +7,7 @@ import '../models/gate_status.dart';
 import '../models/gate_command.dart';
 import '../models/ble_device_info.dart';
 import '../models/gate_config.dart';
+import '../models/input_config.dart';
 
 /// BLE Service for communicating with Gatetorio gate controller
 /// Handles device scanning, connection, and GATT operations
@@ -17,6 +18,7 @@ class BleService extends ChangeNotifier {
   // Services
   static final Guid _gateControlServiceUuid = Guid(_formatUuid(0x1000));
   static final Guid _configurationServiceUuid = Guid(_formatUuid(0x2000));
+  static final Guid _diagnosticsServiceUuid = Guid(_formatUuid(0x3000));
 
   // Gate Control Characteristics
   static final Guid _commandTxUuid = Guid(_formatUuid(0x1001));
@@ -25,6 +27,10 @@ class BleService extends ChangeNotifier {
 
   // Configuration Characteristics
   static final Guid _configDataUuid = Guid(_formatUuid(0x2001));
+  static final Guid _inputConfigUuid = Guid(_formatUuid(0x2003));
+
+  // Diagnostics Characteristics
+  static final Guid _inputStatesUuid = Guid(_formatUuid(0x3001));
 
   // Helper to format UUIDs
   static String _formatUuid(int code) {
@@ -37,9 +43,13 @@ class BleService extends ChangeNotifier {
   BluetoothCharacteristic? _commandResponseChar;
   BluetoothCharacteristic? _statusChar;
   BluetoothCharacteristic? _configDataChar;
+  BluetoothCharacteristic? _inputConfigChar;
+  BluetoothCharacteristic? _inputStatesChar;
 
   GateStatus? _currentStatus;
   GateConfig? _currentConfig;
+  InputConfigData? _inputConfig;
+  InputStates? _inputStates;
   List<BleDeviceInfo> _discoveredDevices = [];
   bool _isScanning = false;
   bool _isConnecting = false;
@@ -60,6 +70,8 @@ class BleService extends ChangeNotifier {
   bool get isDemoMode => _isDemoMode;
   GateStatus? get currentStatus => _currentStatus;
   GateConfig? get currentConfig => _currentConfig;
+  InputConfigData? get inputConfig => _inputConfig;
+  InputStates? get inputStates => _inputStates;
   List<BleDeviceInfo> get discoveredDevices => _discoveredDevices;
   String? get lastError => _lastError;
   String? get connectedDeviceName =>
@@ -280,9 +292,28 @@ class BleService extends ChangeNotifier {
         _configDataChar = configService.characteristics.firstWhere(
           (c) => c.uuid == _configDataUuid,
         );
+
+        _inputConfigChar = configService.characteristics.firstWhere(
+          (c) => c.uuid == _inputConfigUuid,
+        );
       } catch (e) {
         debugPrint("Configuration service not available: $e");
         _configDataChar = null;
+        _inputConfigChar = null;
+      }
+
+      // Find Diagnostics Service (optional - may not exist on all devices)
+      try {
+        final diagnosticsService = services.firstWhere(
+          (s) => s.uuid == _diagnosticsServiceUuid,
+        );
+
+        _inputStatesChar = diagnosticsService.characteristics.firstWhere(
+          (c) => c.uuid == _inputStatesUuid,
+        );
+      } catch (e) {
+        debugPrint("Diagnostics service not available: $e");
+        _inputStatesChar = null;
       }
 
       return true;
@@ -437,6 +468,66 @@ class BleService extends ChangeNotifier {
     }
   }
 
+  /// Read input configuration from BLE device
+  Future<InputConfigData?> readInputConfig() async {
+    // Handle demo mode
+    if (_isDemoMode) {
+      debugPrint("Demo mode: Returning sample input config");
+      return _inputConfig;
+    }
+
+    if (_inputConfigChar == null) {
+      _lastError = "Input config characteristic not available";
+      notifyListeners();
+      return null;
+    }
+
+    try {
+      debugPrint("Reading input configuration...");
+      final value = await _inputConfigChar!.read();
+      if (value.isNotEmpty) {
+        _inputConfig = InputConfigData.fromBytes(value);
+        debugPrint("Input config loaded: $_inputConfig");
+        notifyListeners();
+        return _inputConfig;
+      }
+    } catch (e) {
+      _lastError = "Failed to read input config: $e";
+      notifyListeners();
+    }
+    return null;
+  }
+
+  /// Read input states from BLE device
+  Future<InputStates?> readInputStates() async {
+    // Handle demo mode
+    if (_isDemoMode) {
+      debugPrint("Demo mode: Returning sample input states");
+      return _inputStates;
+    }
+
+    if (_inputStatesChar == null) {
+      _lastError = "Input states characteristic not available";
+      notifyListeners();
+      return null;
+    }
+
+    try {
+      debugPrint("Reading input states...");
+      final value = await _inputStatesChar!.read();
+      if (value.isNotEmpty) {
+        _inputStates = InputStates.fromBytes(value);
+        debugPrint("Input states loaded: $_inputStates");
+        notifyListeners();
+        return _inputStates;
+      }
+    } catch (e) {
+      _lastError = "Failed to read input states: $e";
+      notifyListeners();
+    }
+    return null;
+  }
+
   /// Enable demo mode with static sample data
   void enableDemoMode() {
     _isDemoMode = true;
@@ -450,6 +541,34 @@ class BleService extends ChangeNotifier {
       timestamp: DateTime.now(),
     );
     _currentConfig = GateConfig.defaults();
+
+    // Create sample input config
+    _inputConfig = InputConfigData(inputs: {
+      'IN1': InputConfig(name: 'IN1', channel: 0, enabled: true, type: 'NC', function: 'cmd_open', description: 'Open command button'),
+      'IN2': InputConfig(name: 'IN2', channel: 1, enabled: true, type: 'NO', function: 'cmd_close', description: 'Close command button'),
+      'IN3': InputConfig(name: 'IN3', channel: 2, enabled: true, type: 'NO', function: 'cmd_stop', description: 'Stop command button'),
+      'IN4': InputConfig(name: 'IN4', channel: 3, enabled: true, type: 'NC', function: 'photocell_closing', description: 'Closing photocell'),
+      'IN5': InputConfig(name: 'IN5', channel: 4, enabled: true, type: 'NO', function: 'open_limit_m1', description: 'M1 Open Limit'),
+      'IN6': InputConfig(name: 'IN6', channel: 5, enabled: true, type: '8K2', function: 'safety_stop_opening', description: 'Safety edge', tolerancePercent: 5.0, learnedResistance: 8200.0),
+      'IN7': InputConfig(name: 'IN7', channel: 6, enabled: false, type: 'NO', function: null, description: 'Unassigned'),
+      'IN8': InputConfig(name: 'IN8', channel: 7, enabled: false, type: 'NO', function: null, description: 'Unassigned'),
+    });
+
+    // Create sample input states (some active, some inactive)
+    _inputStates = InputStates(
+      states: {
+        'IN1': false,
+        'IN2': false,
+        'IN3': false,
+        'IN4': true,  // Photocell active
+        'IN5': true,  // Limit switch active
+        'IN6': false,
+        'IN7': false,
+        'IN8': false,
+      },
+      timestamp: DateTime.now(),
+    );
+
     _lastError = null;
     notifyListeners();
   }
@@ -466,8 +585,12 @@ class BleService extends ChangeNotifier {
       _commandResponseChar = null;
       _statusChar = null;
       _configDataChar = null;
+      _inputConfigChar = null;
+      _inputStatesChar = null;
       _currentStatus = null;
       _currentConfig = null;
+      _inputConfig = null;
+      _inputStates = null;
       _isDemoMode = false;
 
       notifyListeners();
