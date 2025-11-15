@@ -91,26 +91,27 @@ class DeviceScanner extends StatelessWidget {
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
                               Icons.devices,
-                              size: 64,
+                              size: 48,
                               color: Colors.grey.shade400,
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 12),
                             Text(
                               'No devices found',
                               style: TextStyle(
                                 color: Colors.grey.shade600,
-                                fontSize: 16,
+                                fontSize: 14,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 4),
                             Text(
                               'Tap "Start Scanning" to search',
                               style: TextStyle(
                                 color: Colors.grey.shade500,
-                                fontSize: 14,
+                                fontSize: 12,
                               ),
                             ),
                           ],
