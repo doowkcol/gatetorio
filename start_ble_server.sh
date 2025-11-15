@@ -54,16 +54,11 @@ if pgrep -f "ble_server_bluezero.py" > /dev/null; then
     sleep 1
 fi
 
-# Restart Bluetooth service to clear advertisements
-echo "  Restarting Bluetooth service to clear old advertisements..."
+# Gentle cleanup - just restart service (no power cycle needed anymore)
+# NOTE: Aggressive power cycling removed after fixing advertisement issue
+#       (only advertising one primary service now, fits in 31 bytes)
+echo "  Restarting Bluetooth service..."
 systemctl restart bluetooth
-sleep 2
-
-# Power cycle the Bluetooth adapter (more aggressive cleanup)
-echo "  Power cycling Bluetooth adapter..."
-hciconfig hci0 down 2>/dev/null || true
-sleep 1
-hciconfig hci0 up 2>/dev/null || true
 sleep 2
 
 # Verify Bluetooth is running
