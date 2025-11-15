@@ -20,6 +20,8 @@ Security (secondary):      00004000-4751-5445-5254-494F00000000
 Command TX:       00001001-4751-5445-5254-494F00000000  [WRITE]
 Command Response: 00001002-4751-5445-5254-494F00000000  [READ]
 Status:           00001003-4751-5445-5254-494F00000000  [READ, NOTIFY]
+Input Config:     00002003-4751-5445-5254-494F00000000  [READ]
+Input States:     00003001-4751-5445-5254-494F00000000  [READ]
 ```
 
 ## Sending Commands
@@ -194,6 +196,50 @@ Then: State changes to CLOSING automatically
 - Use `"UNKNOWN"` as fallback in state parser
 - Log unrecognized states for debugging
 
+## Input Monitoring (NEW)
+
+**Input Config Characteristic (0x2003):**
+
+Returns configuration for all 8 inputs:
+```json
+{
+  "inputs": {
+    "IN1": {
+      "channel": 0,
+      "enabled": true,
+      "type": "NC",
+      "function": "close_limit_m1",
+      "description": "Motor 1 close limit"
+    },
+    "IN2": {"channel": 1, "type": "NO", "function": "open_limit_m1", ...},
+    "IN5": {"channel": 4, "type": "NO", "function": "cmd_open", ...},
+    "IN6": {"channel": 5, "type": "8K2", "function": "safety_stop_opening", ...}
+  }
+}
+```
+
+**Input States Characteristic (0x3001):**
+
+Returns current state of all inputs:
+```json
+{
+  "IN1": {"active": true, "function": "close_limit_m1", "type": "NC", "channel": 0},
+  "IN2": {"active": false, "function": "open_limit_m1", "type": "NO", "channel": 1},
+  "IN5": {"active": false, "function": "cmd_open", "type": "NO", "channel": 4},
+  "IN6": {"active": false, "function": "safety_stop_opening", "type": "8K2", "channel": 5}
+}
+```
+
+**Input Types:**
+- `"NO"` - Normally Open (active when voltage present)
+- `"NC"` - Normally Closed (active when voltage absent)
+- `"8K2"` - 8.2kΩ resistor (safety edge, requires learned resistance)
+
+**Usage:**
+1. Read Input Config once on connect to get input definitions
+2. Read Input States to get current state (can poll or add notify later)
+3. Display inputs with their functions and current active/inactive state
+
 ## Quick Reference Card
 
 ```
@@ -205,6 +251,9 @@ Status arrives every 1 second via notifications
 Motor position: m1_percent (0-100)
 Motor moving: m1_speed > 0
 Auto-close active: auto_close_countdown > 0
+
+Input config: Read 0x2003 once
+Input states: Read 0x3001 (poll as needed)
 ```
 
 That's it! See GATE_STATES.md for complete state details.
