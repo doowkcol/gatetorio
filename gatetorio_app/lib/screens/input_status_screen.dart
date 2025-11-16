@@ -390,7 +390,7 @@ class _InputCard extends StatelessWidget {
                     Icon(Icons.settings_input_component, size: 14, color: Colors.grey.shade600),
                     const SizedBox(width: 4),
                     Text(
-                      'Target: ${input.learnedResistance!.toStringAsFixed(0)}Ω ±${input.tolerancePercent?.toStringAsFixed(1)}%',
+                      'Target: ${input.learnedResistance!.toStringAsFixed(0)}Ω ±${input.tolerancePercent?.toStringAsFixed(0)}%',
                       style: TextStyle(
                         fontSize: 10,
                         color: Colors.grey.shade700,
@@ -455,6 +455,9 @@ class _InputEditorState extends State<_InputEditor> {
   // Constants for resistance calculation
   static const double _VCC = 3.3; // Raspberry Pi supply voltage
   static const double _PULLUP_RESISTANCE = 10000.0; // 10K pull-up resistor
+
+  // Tolerance options (2% to 10%)
+  static const List<double> _toleranceOptions = [2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
 
   /// Calculate resistance from voltage using voltage divider formula
   /// V_measured = Vcc * (R_sensor / (R_pullup + R_sensor))
@@ -795,14 +798,13 @@ class _InputEditorState extends State<_InputEditor> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Tolerance field
+                  // Tolerance selector
                   Row(
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: TextEditingController(
-                            text: _tolerancePercent?.toStringAsFixed(1) ?? '10.0',
-                          ),
+                        child: DropdownButtonFormField<double>(
+                          value: _tolerancePercent,
+                          isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'Tolerance (%)',
                             border: OutlineInputBorder(),
@@ -810,11 +812,15 @@ class _InputEditorState extends State<_InputEditor> {
                             filled: true,
                             fillColor: Colors.white,
                           ),
-                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          items: _toleranceOptions.map((tolerance) {
+                            return DropdownMenuItem(
+                              value: tolerance,
+                              child: Text('${tolerance.toStringAsFixed(0)}%'),
+                            );
+                          }).toList(),
                           onChanged: (value) {
-                            final parsed = double.tryParse(value);
-                            if (parsed != null) {
-                              _tolerancePercent = parsed;
+                            if (value != null) {
+                              setState(() => _tolerancePercent = value);
                             }
                           },
                         ),
@@ -848,7 +854,7 @@ class _InputEditorState extends State<_InputEditor> {
                   if (_learnedResistance != null) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Learned: ${_learnedResistance!.toStringAsFixed(0)}Ω ±${_tolerancePercent?.toStringAsFixed(1)}%',
+                      'Learned: ${_learnedResistance!.toStringAsFixed(0)}Ω ±${_tolerancePercent?.toStringAsFixed(0)}%',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.green.shade700,
