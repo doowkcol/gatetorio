@@ -1,7 +1,7 @@
 ==========================================
 Gatetorio BLE Server
 ==========================================
-Starting at: Sun 16 Nov 08:31:43 GMT 2025
+Starting at: Sun 16 Nov 09:23:12 GMT 2025
 
 ==========================================
 Gatetorio BLE Server Startup
@@ -29,8 +29,8 @@ Step 4: Starting BLE server...
 Gate Controller V2 (Step 3 - Three Processes) initialized
   M1 travel time: 7.835115489037847s, M2 travel time: 8.557032567378949s
   M2 enabled: True
-  Motor Manager PID: 14552
-  Input Manager PID: 14553
+  Motor Manager PID: 23772
+  Input Manager PID: 23773
   Auto-close: ENABLED (5.0s)
 Motor Manager initialized
 Motor Manager process started
@@ -104,29 +104,6 @@ Traceback (most recent call last):
                                      ^^^^^^^^^^^^^^^^^^^^^^^
 ValueError: Unknown format code 'd' for object of type 'str'
 Exception in thread Thread-2 (_control_loop):
-Process Process-2:
-Traceback (most recent call last):
-Traceback (most recent call last):
-  File "/usr/lib/python3.13/threading.py", line 1043, in _bootstrap_inner
-    self.run()
-    ~~~~~~~~^^
-  File "/usr/lib/python3.13/threading.py", line 994, in run
-    self._target(*self._args, **self._kwargs)
-    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/doowkcol/Gatetorio_Code/gate_controller_v2.py", line 491, in _control_loop
-    elif self.shared['movement_command'] == 'CLOSE':
-         ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
-  File "<string>", line 2, in __getitem__
-  File "/usr/lib/python3.13/multiprocessing/managers.py", line 831, in _callmethod
-    kind, result = conn.recv()
-                   ~~~~~~~~~^^
-  File "/usr/lib/python3.13/multiprocessing/connection.py", line 250, in recv
-    buf = self._recv_bytes()
-  File "/usr/lib/python3.13/multiprocessing/connection.py", line 430, in _recv_bytes
-    buf = self._recv(4)
-  File "/usr/lib/python3.13/multiprocessing/connection.py", line 395, in _recv
-    chunk = read(handle, remaining)
-ConnectionResetError: [Errno 104] Connection reset by peer
 
 ==========================================
 BLE server stopped
