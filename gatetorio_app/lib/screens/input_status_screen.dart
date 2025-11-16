@@ -111,9 +111,19 @@ class _InputStatusScreenState extends State<InputStatusScreen> {
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Consumer<BleService>(
+      body: Stack(
+        children: [
+          // Background image
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/background.png',
+              fit: BoxFit.cover,
+            ),
+          ),
+          // Main content
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Consumer<BleService>(
               builder: (context, bleService, child) {
                 final inputConfig = bleService.inputConfig;
                 final inputStates = bleService.inputStates;
@@ -165,6 +175,8 @@ class _InputStatusScreenState extends State<InputStatusScreen> {
                 );
               },
             ),
+        ],
+      ),
     );
   }
 

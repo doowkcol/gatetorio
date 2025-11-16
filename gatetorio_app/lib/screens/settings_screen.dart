@@ -204,9 +204,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
+      body: Stack(
+        children: [
+          // Background image
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/background.png',
+              fit: BoxFit.cover,
+            ),
+          ),
+          // Main content
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Form(
               key: _formKey,
               child: ListView(
                 padding: const EdgeInsets.all(16.0),
@@ -515,6 +525,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
+        ],
+      ),
     );
   }
 
