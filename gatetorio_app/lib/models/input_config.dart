@@ -210,7 +210,58 @@ class InputConfigData {
     }
   }
 
-  /// Convert to JSON for BLE transmission
+  /// Encode function name to numeric code (inverse of _decodeFunctionCode)
+  static int _encodeFunctionCode(String? function) {
+    if (function == null || function.isEmpty) return 0;
+
+    switch (function) {
+      case 'close_limit_m1': return 1;
+      case 'open_limit_m1': return 2;
+      case 'close_limit_m2': return 3;
+      case 'open_limit_m2': return 4;
+      case 'cmd_open': return 5;
+      case 'cmd_close': return 6;
+      case 'cmd_stop': return 7;
+      case 'safety_stop_opening': return 8;
+      case 'safety_stop_closing': return 9;
+      case 'partial_1': return 10;
+      case 'partial_2': return 11;
+      default: return 0; // Unknown function
+    }
+  }
+
+  /// Encode type string to numeric code (inverse of _decodeTypeCode)
+  static int _encodeTypeCode(String type) {
+    switch (type) {
+      case 'NC': return 1;
+      case 'NO': return 2;
+      case '8K2': return 3;
+      default: return 2; // Default to NO
+    }
+  }
+
+  /// Convert to ultra-compact array format for BLE transmission
+  /// Format: [["IN1", func_code, type_code, channel], ...]
+  List<dynamic> toArray() {
+    final array = <List<dynamic>>[];
+
+    // Sort input names for consistent ordering
+    final sortedNames = sortedInputNames;
+
+    for (final name in sortedNames) {
+      final input = inputs[name]!;
+      array.add([
+        name,
+        _encodeFunctionCode(input.function),
+        _encodeTypeCode(input.type),
+        input.channel,
+      ]);
+    }
+
+    return array;
+  }
+
+  /// Convert to JSON for BLE transmission (old format)
   Map<String, dynamic> toJson() {
     final inputsJson = <String, dynamic>{};
     inputs.forEach((key, value) {
@@ -219,9 +270,9 @@ class InputConfigData {
     return {'inputs': inputsJson};
   }
 
-  /// Convert to bytes for BLE write operation
+  /// Convert to bytes for BLE write operation (uses compact array format)
   List<int> toBytes() {
-    return utf8.encode(jsonEncode(toJson()));
+    return utf8.encode(jsonEncode(toArray()));
   }
 
   /// Get sorted list of input names

@@ -219,12 +219,22 @@ class _InputCard extends StatelessWidget {
     required this.isActive,
   });
 
+  void _showInputEditor(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => _InputEditor(input: input),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final stateColor = isActive ? Colors.green : Colors.grey;
     final stateText = isActive ? 'ACTIVE' : 'INACTIVE';
 
-    return Card(
+    return GestureDetector(
+      onTap: () => _showInputEditor(context),
+      child: Card(
       margin: const EdgeInsets.only(bottom: 8),
       elevation: isActive ? 4 : 2,
       color: isActive ? Colors.green.shade50 : null,
@@ -339,47 +349,295 @@ class _InputCard extends StatelessWidget {
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
+class _InputEditor extends StatefulWidget {
+  final InputConfig input;
 
-  const _InfoChip({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
+  const _InputEditor({required this.input});
+
+  @override
+  State<_InputEditor> createState() => _InputEditorState();
+}
+
+class _InputEditorState extends State<_InputEditor> {
+  late String _type;
+  late String? _function;
+  late bool _enabled;
+  late String _description;
+  bool _isSaving = false;
+
+  // Available input types
+  static const List<String> _types = ['NO', 'NC', '8K2'];
+
+  // Available functions with display names
+  static const Map<String?, String> _functionOptions = {
+    null: 'Not Used',
+    'close_limit_m1': 'Close Limit M1',
+    'open_limit_m1': 'Open Limit M1',
+    'close_limit_m2': 'Close Limit M2',
+    'open_limit_m2': 'Open Limit M2',
+    'cmd_open': 'Cmd Open',
+    'cmd_close': 'Cmd Close',
+    'cmd_stop': 'Cmd Stop',
+    'safety_stop_opening': 'Safety Stop Opening',
+    'safety_stop_closing': 'Safety Stop Closing',
+    'partial_1': 'Partial 1',
+    'partial_2': 'Partial 2',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _type = widget.input.type;
+    _function = widget.input.function;
+    _enabled = widget.input.enabled;
+    _description = widget.input.description;
+  }
+
+  Future<void> _save() async {
+    setState(() => _isSaving = true);
+
+    try {
+      final bleService = Provider.of<BleService>(context, listen: false);
+
+      // Create updated input config
+      final updatedInput = InputConfig(
+        name: widget.input.name,
+        channel: widget.input.channel,
+        enabled: _enabled,
+        type: _type,
+        function: _function,
+        description: _description,
+        tolerancePercent: widget.input.tolerancePercent,
+        learnedResistance: widget.input.learnedResistance,
+      );
+
+      // Update in the service's inputConfig
+      if (bleService.inputConfig != null) {
+        final updatedInputs = Map<String, InputConfig>.from(bleService.inputConfig!.inputs);
+        updatedInputs[widget.input.name] = updatedInput;
+
+        // Write to BLE - this will write the entire config back
+        await bleService.writeInputConfig(InputConfigData(inputs: updatedInputs));
+
+        if (mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${widget.input.name} configuration saved'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error saving input config: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving configuration: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  Future<void> _reload() async {
+    try {
+      final bleService = Provider.of<BleService>(context, listen: false);
+      await bleService.readInputConfig();
+
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Configuration reloaded from device'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error reloading input config: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error reloading configuration: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
       ),
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            '$label: ',
-            style: TextStyle(
-              fontSize: 13,
-              color: color,
-              fontWeight: FontWeight.w500,
+          // Header
+          Row(
+            children: [
+              Icon(
+                Icons.edit,
+                color: Theme.of(context).colorScheme.primary,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Configure ${widget.input.name}',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Channel info (read-only)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, size: 20, color: Colors.grey),
+                const SizedBox(width: 8),
+                Text(
+                  'Channel ${widget.input.channel} • ${widget.input.adcLabel}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
-          Flexible(
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 13,
-                color: color,
-                fontWeight: FontWeight.bold,
-              ),
-              overflow: TextOverflow.ellipsis,
+          const SizedBox(height: 16),
+
+          // Type dropdown
+          DropdownButtonFormField<String>(
+            value: _type,
+            decoration: const InputDecoration(
+              labelText: 'Input Type',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.electrical_services),
             ),
+            items: _types.map((type) {
+              return DropdownMenuItem(
+                value: type,
+                child: Text(type),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() => _type = value);
+              }
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // Function dropdown
+          DropdownButtonFormField<String?>(
+            value: _function,
+            decoration: const InputDecoration(
+              labelText: 'Function',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.settings_input_component),
+            ),
+            items: _functionOptions.entries.map((entry) {
+              return DropdownMenuItem(
+                value: entry.key,
+                child: Text(entry.value),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() => _function = value);
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // Enabled toggle
+          SwitchListTile(
+            title: const Text('Enabled'),
+            subtitle: Text(_enabled ? 'Input is active' : 'Input is disabled'),
+            value: _enabled,
+            onChanged: (value) {
+              setState(() => _enabled = value);
+            },
+            secondary: const Icon(Icons.power_settings_new),
+          ),
+          const SizedBox(height: 16),
+
+          // Description field
+          TextField(
+            controller: TextEditingController(text: _description),
+            decoration: const InputDecoration(
+              labelText: 'Description',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.description),
+            ),
+            maxLines: 2,
+            onChanged: (value) {
+              _description = value;
+            },
+          ),
+          const SizedBox(height: 24),
+
+          // Action buttons
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _isSaving ? null : _reload,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Reload'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: ElevatedButton.icon(
+                  onPressed: _isSaving ? null : _save,
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.save),
+                  label: Text(_isSaving ? 'Saving...' : 'Save'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

@@ -575,6 +575,43 @@ class BleService extends ChangeNotifier {
     return null;
   }
 
+  /// Write input configuration to BLE device
+  Future<bool> writeInputConfig(InputConfigData config) async {
+    debugPrint("=== writeInputConfig() called ===");
+
+    // Handle demo mode
+    if (_isDemoMode) {
+      debugPrint("Demo mode: Updating local input config");
+      _inputConfig = config;
+      notifyListeners();
+      return true;
+    }
+
+    debugPrint("Checking if input config characteristic is available...");
+    if (_inputConfigChar == null) {
+      debugPrint("ERROR: Input config characteristic not available");
+      _lastError = "Input config characteristic not available";
+      notifyListeners();
+      return false;
+    }
+
+    try {
+      debugPrint("Writing input configuration: $config");
+      await _inputConfigChar!.write(config.toBytes(), withoutResponse: false);
+      _inputConfig = config;
+      _lastError = null;
+      notifyListeners();
+      debugPrint("Input config written successfully");
+      return true;
+    } catch (e, stackTrace) {
+      debugPrint("ERROR: Failed to write input config: $e");
+      debugPrint("Stack trace: $stackTrace");
+      _lastError = "Failed to write input config: $e";
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Read input states from BLE device
   Future<InputStates?> readInputStates() async {
     debugPrint("=== readInputStates() called ===");
