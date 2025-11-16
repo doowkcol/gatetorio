@@ -1,7 +1,7 @@
 ==========================================
 Gatetorio BLE Server
 ==========================================
-Starting at: Sun 16 Nov 10:11:25 GMT 2025
+Starting at: Sun 16 Nov 10:25:40 GMT 2025
 
 ==========================================
 Gatetorio BLE Server Startup
@@ -29,8 +29,8 @@ Step 4: Starting BLE server...
 Gate Controller V2 (Step 3 - Three Processes) initialized
   M1 travel time: 7.835115489037847s, M2 travel time: 8.557032567378949s
   M2 enabled: True
-  Motor Manager PID: 30389
-  Input Manager PID: 30390
+  Motor Manager PID: 3080
+  Input Manager PID: 3081
   Auto-close: ENABLED (5.0s)
 Motor Manager initialized
 Motor Manager process started
@@ -103,32 +103,8 @@ Traceback (most recent call last):
     self.path = f'{service_path}/char{characteristic_id:04d}'
                                      ^^^^^^^^^^^^^^^^^^^^^^^
 ValueError: Unknown format code 'd' for object of type 'str'
-Process Process-2:
 Exception in thread Thread-2 (_control_loop):
-Traceback (most recent call last):
-Traceback (most recent call last):
-  File "/usr/lib/python3.13/threading.py", line 1043, in _bootstrap_inner
-    self.run()
-    ~~~~~~~~^^
-  File "/usr/lib/python3.13/threading.py", line 994, in run
-    self._target(*self._args, **self._kwargs)
-    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/doowkcol/Gatetorio_Code/gate_controller_v2.py", line 396, in _control_loop
-    self.shared['controller_heartbeat'] = now
-    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
-  File "<string>", line 2, in __setitem__
-  File "/usr/lib/python3.13/multiprocessing/managers.py", line 830, in _callmethod
-    conn.send((self._id, methodname, args, kwds))
-    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.13/multiprocessing/connection.py", line 206, in send
-    self._send_bytes(_ForkingPickler.dumps(obj))
-    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.13/multiprocessing/connection.py", line 427, in _send_bytes
-    self._send(header + buf)
-    ~~~~~~~~~~^^^^^^^^^^^^^^
-  File "/usr/lib/python3.13/multiprocessing/connection.py", line 384, in _send
-    n = write(self._handle, buf)
-BrokenPipeError: [Errno 32] Broken pipe
+Process Process-2:
 
 ==========================================
 BLE server stopped
