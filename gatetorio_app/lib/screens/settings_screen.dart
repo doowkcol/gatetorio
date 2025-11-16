@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -27,6 +28,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _motor1UseLimitSwitches = false;
   bool _motor2UseLimitSwitches = false;
   bool _autoCloseEnabled = false;
+
+  // Engineer/Learning mode state
+  bool _engineerModeEnabled = false;
+  bool _autoLearnActive = false;
+  String _autoLearnStatus = 'Ready';
 
   bool _isLoading = false;
   bool _hasChanges = false;
@@ -185,6 +191,157 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _toggleEngineerMode(bool value) async {
+    final bleService = Provider.of<BleService>(context, listen: false);
+
+    // Send engineer mode command
+    final success = await bleService.sendCommand(
+      GateCommand.enableEngineerMode(value),
+    );
+
+    if (success) {
+      setState(() {
+        _engineerModeEnabled = value;
+        if (!value) {
+          // If disabling engineer mode, also stop auto-learn if active
+          _autoLearnActive = false;
+          _autoLearnStatus = 'Ready';
+        }
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(value
+                ? 'Engineer mode ENABLED - Normal commands blocked'
+                : 'Engineer mode disabled - Normal operation restored'),
+            backgroundColor: value ? Colors.orange : Colors.green,
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to toggle engineer mode: ${bleService.lastError ?? "Unknown error"}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _startAutoLearn() async {
+    if (!_engineerModeEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Engineer mode must be enabled first'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    if (!_motor1UseLimitSwitches || !_motor2UseLimitSwitches) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Both motors must have limit switches enabled'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final bleService = Provider.of<BleService>(context, listen: false);
+    final success = await bleService.sendCommand(GateCommand.startAutoLearn);
+
+    if (success) {
+      setState(() {
+        _autoLearnActive = true;
+        _autoLearnStatus = 'Auto-learn sequence started...';
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Auto-learn started - sequence will run automatically'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to start auto-learn: ${bleService.lastError ?? "Unknown error"}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _stopAutoLearn() async {
+    final bleService = Provider.of<BleService>(context, listen: false);
+    final success = await bleService.sendCommand(GateCommand.stopAutoLearn);
+
+    if (success) {
+      setState(() {
+        _autoLearnActive = false;
+        _autoLearnStatus = 'Stopped by user';
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Auto-learn stopped'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to stop auto-learn: ${bleService.lastError ?? "Unknown error"}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveLearnedTimes() async {
+    final bleService = Provider.of<BleService>(context, listen: false);
+    final success = await bleService.sendCommand(GateCommand.saveLearned);
+
+    if (success) {
+      // Auto-disable engineer mode after saving
+      await _toggleEngineerMode(false);
+
+      // Reload configuration to get updated learned times
+      await _loadConfiguration();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Learned times saved successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save learned times: ${bleService.lastError ?? "Unknown error"}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     for (final controller in _controllers.values) {
@@ -200,6 +357,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('Settings & Configuration'),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         actions: [
+          // Refresh icon
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Reload from device',
+            onPressed: _isLoading ? null : _loadConfiguration,
+          ),
           if (_hasChanges)
             Padding(
               padding: const EdgeInsets.only(right: 8.0),
@@ -231,9 +394,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Main content
           _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : Form(
-              key: _formKey,
-              child: ListView(
+              : RefreshIndicator(
+                  onRefresh: _loadConfiguration,
+                  child: Form(
+                    key: _formKey,
+                    child: ListView(
                 padding: const EdgeInsets.all(16.0),
                 children: [
                   // Basic Timing Settings Section
@@ -420,6 +585,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
 
+                  // Engineer Mode Toggle (Red Warning Frame)
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF440000),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade700, width: 3),
+                    ),
+                    child: Column(
+                      children: [
+                        SwitchListTile(
+                          title: const Text(
+                            '🔧 ENGINEER MODE',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.yellow,
+                              fontSize: 14,
+                            ),
+                          ),
+                          subtitle: const Text(
+                            'Enable before auto-learn',
+                            style: TextStyle(color: Colors.orange, fontSize: 12),
+                          ),
+                          value: _engineerModeEnabled,
+                          onChanged: (value) => _toggleEngineerMode(value),
+                          activeColor: Colors.yellow,
+                          tileColor: const Color(0xFF440000),
+                        ),
+                        if (_engineerModeEnabled)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              'WARNING: Engineer mode blocks normal OPEN/CLOSE commands',
+                              style: TextStyle(
+                                color: Colors.orange,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
                   // Learned Times Display
                   Consumer<BleService>(
                     builder: (context, bleService, child) {
@@ -428,9 +639,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
+                          color: Colors.blue.shade900.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.blue.shade300),
+                          border: Border.all(color: Colors.blue.shade300, width: 2),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -460,55 +671,104 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                   ),
 
-                  // Engineer Mode Warning
+                  // Auto-learn Status
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.orange.shade100,
+                      color: Colors.black87,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.shade300, width: 2),
                     ),
+                    child: Text(
+                      'Status: $_autoLearnStatus',
+                      style: const TextStyle(
+                        color: Colors.yellow,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+
+                  // Limit Switch Warning
+                  if (!_motor1UseLimitSwitches || !_motor2UseLimitSwitches)
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.shade300, width: 2),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.warning_amber, color: Colors.orange.shade900, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Note: Engineer mode and limit switches must be enabled',
+                              style: TextStyle(
+                                color: Colors.orange.shade900,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // Auto-learn Control Buttons
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Row(
                       children: [
-                        Icon(Icons.warning_amber, color: Colors.orange.shade900, size: 24),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _engineerModeEnabled && !_autoLearnActive
+                                ? _startAutoLearn
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              disabledBackgroundColor: Colors.grey.shade400,
+                            ),
+                            child: const Text(
+                              'START AUTO-LEARN',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Engineer Mode Required',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.orange.shade900,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Auto-learn requires engineer mode and configured limit switches. Enable via BLE security service.',
-                                style: TextStyle(
-                                  color: Colors.orange.shade800,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
+                          child: ElevatedButton(
+                            onPressed: _autoLearnActive ? _stopAutoLearn : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              disabledBackgroundColor: Colors.grey.shade400,
+                            ),
+                            child: const Text(
+                              'STOP AUTO-LEARN',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  // Auto-learn note
+                  // Save Learned Times Button
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Text(
-                      'Note: Auto-learn control is available through the main Python UI or BLE commands when engineer mode is enabled.',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 12,
-                        fontStyle: FontStyle.italic,
+                    child: OutlinedButton.icon(
+                      onPressed: _saveLearnedTimes,
+                      icon: const Icon(Icons.save_alt),
+                      label: const Text('SAVE LEARNED TIMES'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
                       ),
                     ),
                   ),
@@ -540,6 +800,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
+          ),
         ],
       ),
     );
@@ -584,48 +845,80 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             label,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+              color: Colors.white,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.3),
+                    width: 1.5,
+                  ),
+                ),
+                child: TextFormField(
+                  controller: _controllers[key],
+                  keyboardType: TextInputType.numberWithOptions(decimal: !isInt),
+                  inputFormatters: isInt
+                      ? [FilteringTextInputFormatter.digitsOnly]
+                      : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: hint,
+                    hintStyle: TextStyle(
+                      fontSize: 13,
+                      color: Colors.white.withOpacity(0.5),
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a value';
+                    }
+                    if (isInt) {
+                      if (int.tryParse(value) == null) {
+                        return 'Please enter a valid integer';
+                      }
+                    } else {
+                      if (double.tryParse(value) == null) {
+                        return 'Please enter a valid number';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: 4),
-          TextFormField(
-            controller: _controllers[key],
-            keyboardType: TextInputType.numberWithOptions(decimal: !isInt),
-            inputFormatters: isInt
-                ? [FilteringTextInputFormatter.digitsOnly]
-                : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: const TextStyle(fontSize: 12, color: Colors.grey),
-              border: const OutlineInputBorder(),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          Text(
+            hint,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.white.withOpacity(0.7),
+              fontStyle: FontStyle.italic,
             ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Please enter a value';
-              }
-              if (isInt) {
-                if (int.tryParse(value) == null) {
-                  return 'Please enter a valid integer';
-                }
-              } else {
-                if (double.tryParse(value) == null) {
-                  return 'Please enter a valid number';
-                }
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.only(left: 12.0),
-            child: Text(
-              hint,
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
-            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),

@@ -60,6 +60,12 @@ class GateCommand {
   static GateCommand get getDiagnostics =>
       GateCommand(cmd: 'get_diagnostics');
 
+  /// Auto-learn commands
+  static GateCommand get startAutoLearn => GateCommand(cmd: 'start_auto_learn');
+  static GateCommand get stopAutoLearn => GateCommand(cmd: 'stop_auto_learn');
+  static GateCommand get getAutoLearnStatus =>
+      GateCommand(cmd: 'get_auto_learn_status');
+
   static GateCommand enableEngineerMode(bool enable) {
     return GateCommand(
       cmd: 'enable_engineer_mode',
