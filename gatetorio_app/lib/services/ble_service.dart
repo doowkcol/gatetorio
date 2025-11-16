@@ -317,17 +317,29 @@ class BleService extends ChangeNotifier {
         );
         debugPrint("Configuration service FOUND! Looking for characteristics...");
 
-        debugPrint("  Looking for Config Data characteristic ${_configDataUuid}...");
-        _configDataChar = configService.characteristics.firstWhere(
-          (c) => c.uuid == _configDataUuid,
-        );
-        debugPrint("  Config Data characteristic FOUND!");
+        // Try to find Config Data characteristic (optional)
+        try {
+          debugPrint("  Looking for Config Data characteristic ${_configDataUuid}...");
+          _configDataChar = configService.characteristics.firstWhere(
+            (c) => c.uuid == _configDataUuid,
+          );
+          debugPrint("  Config Data characteristic FOUND!");
+        } catch (e) {
+          debugPrint("  Config Data characteristic not available: $e");
+          _configDataChar = null;
+        }
 
-        debugPrint("  Looking for Input Config characteristic ${_inputConfigUuid}...");
-        _inputConfigChar = configService.characteristics.firstWhere(
-          (c) => c.uuid == _inputConfigUuid,
-        );
-        debugPrint("  Input Config characteristic FOUND!");
+        // Try to find Input Config characteristic (optional)
+        try {
+          debugPrint("  Looking for Input Config characteristic ${_inputConfigUuid}...");
+          _inputConfigChar = configService.characteristics.firstWhere(
+            (c) => c.uuid == _inputConfigUuid,
+          );
+          debugPrint("  Input Config characteristic FOUND!");
+        } catch (e) {
+          debugPrint("  Input Config characteristic not available: $e");
+          _inputConfigChar = null;
+        }
       } catch (e) {
         debugPrint("Configuration service NOT available: $e");
         _configDataChar = null;
