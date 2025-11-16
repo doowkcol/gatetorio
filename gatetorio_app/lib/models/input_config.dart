@@ -22,20 +22,54 @@ class InputConfig {
     this.learnedResistance,
   });
 
+  /// Map numeric function code to function name string
+  /// Server sends compact numeric codes to save BLE bandwidth
+  static String? _decodeFunctionCode(dynamic functionValue) {
+    if (functionValue == null) return null;
+
+    // If already a string, return it (backwards compatibility)
+    if (functionValue is String) {
+      return functionValue.isEmpty ? null : functionValue;
+    }
+
+    // Decode numeric function code
+    if (functionValue is int) {
+      switch (functionValue) {
+        case 0: return null; // No function
+        case 1: return 'close_limit_m1';
+        case 2: return 'open_limit_m1';
+        case 3: return 'close_limit_m2';
+        case 4: return 'open_limit_m2';
+        case 5: return 'cmd_open';
+        case 6: return 'cmd_close';
+        case 7: return 'cmd_stop';
+        case 8: return 'safety_stop_opening';
+        case 9: return 'safety_stop_closing';
+        case 10: return 'partial_1';
+        case 11: return 'partial_2';
+        default: return null; // Unknown code
+      }
+    }
+
+    return null;
+  }
+
   /// Parse from JSON received from BLE
   /// Supports both old format and new compact format with keys:
   /// - "c" = channel
   /// - "e" = enabled
   /// - "t" = type
-  /// - "f" = function
+  /// - "f" = function (string or numeric code)
   /// - "d" = description
   factory InputConfig.fromJson(String name, Map<String, dynamic> json) {
+    final functionValue = json['f'] ?? json['function'];
+
     return InputConfig(
       name: name,
       channel: (json['c'] ?? json['channel'] as num?)?.toInt() ?? 0,
       enabled: json['e'] ?? json['enabled'] ?? true,
       type: json['t'] ?? json['type'] ?? 'NO',
-      function: json['f'] ?? json['function'],
+      function: _decodeFunctionCode(functionValue),
       description: json['d'] ?? json['description'] ?? '',
       tolerancePercent: (json['tol'] ?? json['tolerance_percent'] as num?)?.toDouble(),
       learnedResistance: (json['lr'] ?? json['learned_resistance'] as num?)?.toDouble(),
