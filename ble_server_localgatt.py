@@ -16,7 +16,7 @@ from ble_server_bluezero import (
     GatetorioBLEServer,
     SERVICE_GATE_CONTROL, SERVICE_CONFIGURATION, SERVICE_DIAGNOSTICS,
     CHAR_COMMAND_TX, CHAR_COMMAND_RESPONSE, CHAR_STATUS,
-    CHAR_INPUT_CONFIG, CHAR_INPUT_STATES,
+    CHAR_CONFIG_DATA, CHAR_INPUT_CONFIG, CHAR_INPUT_STATES,
     STATUS_UPDATE_INTERVAL,
     INPUT_FUNCTION_CODES
 )
@@ -124,12 +124,49 @@ class StatusChar(localGATT.Characteristic):
 
 
 class ConfigurationService(localGATT.Service):
-    """Configuration service with input config"""
+    """Configuration service with gate config and input config"""
 
     def __init__(self, service_id, ble_server):
         self.ble_server = ble_server
         self.service_id = service_id  # Store for characteristics
         super().__init__(service_id, SERVICE_CONFIGURATION, True)  # PRIMARY
+
+
+class ConfigDataChar(localGATT.Characteristic):
+    """Gate Configuration characteristic (read/write)"""
+
+    def __init__(self, index, service, ble_server):
+        self.ble_server = ble_server
+        super().__init__(
+            service.service_id,
+            index,
+            CHAR_CONFIG_DATA,  # 0x2001 - Gate configuration
+            [],
+            False,
+            ['read', 'write']
+        )
+
+    def ReadValue(self, options):
+        """Return gate configuration"""
+        try:
+            print("[BLE] Config Data READ")
+            config_json = json.dumps(self.ble_server.controller.config, separators=(',', ':')).encode('utf-8')
+            print(f"[BLE] Sending {len(config_json)} bytes (gate config)")
+            return list(config_json)
+        except Exception as e:
+            print(f"[BLE] Error reading config: {e}")
+            return list(b'{}')
+
+    def WriteValue(self, value, options):
+        """Write gate configuration"""
+        try:
+            raw_bytes = bytes(value)
+            print(f"[BLE] Config Data WRITE: {len(raw_bytes)} bytes")
+            config_data = json.loads(raw_bytes.decode('utf-8'))
+            response = self.ble_server._handle_set_config(config_data)
+            print(f"[BLE] Config updated successfully")
+        except Exception as e:
+            print(f"[BLE] Error writing config: {e}")
 
 
 class InputConfigChar(localGATT.Characteristic):
@@ -276,9 +313,11 @@ def start_localgatt_server(ble_server: GatetorioBLEServer):
         # Add Configuration service and characteristics
         print("[BLE] Adding Configuration service (PRIMARY)...")
         config_service = ConfigurationService(2, ble_server)
-        input_config_char = InputConfigChar(1, config_service, ble_server)
+        config_data_char = ConfigDataChar(1, config_service, ble_server)
+        input_config_char = InputConfigChar(2, config_service, ble_server)
 
         app.add_managed_object(config_service)
+        app.add_managed_object(config_data_char)
         app.add_managed_object(input_config_char)
 
         # Add Diagnostics service and characteristics
