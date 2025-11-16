@@ -284,12 +284,26 @@ class _InputCard extends StatelessWidget {
                   color: Colors.purple,
                 ),
                 const SizedBox(width: 12),
-                // Function badge
+                // Function display (no label, just value)
                 Expanded(
-                  child: _InfoChip(
-                    label: 'Function',
-                    value: input.functionDisplayName,
-                    color: input.function != null ? Colors.teal : Colors.orange,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: (input.function != null ? Colors.teal : Colors.orange).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: (input.function != null ? Colors.teal : Colors.orange).withOpacity(0.3),
+                      ),
+                    ),
+                    child: Text(
+                      input.functionDisplayName,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: input.function != null ? Colors.teal : Colors.orange,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
               ],

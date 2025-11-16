@@ -103,7 +103,7 @@ class InputConfig {
 
   /// Get function display name
   String get functionDisplayName {
-    if (function == null || function!.isEmpty) return '[Unassigned]';
+    if (function == null || function!.isEmpty) return 'Not Used';
     return _formatFunctionName(function!);
   }
 
