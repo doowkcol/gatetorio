@@ -66,12 +66,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadConfiguration() async {
+    debugPrint('SettingsScreen: _loadConfiguration() called');
     setState(() => _isLoading = true);
 
     final bleService = Provider.of<BleService>(context, listen: false);
+    debugPrint('SettingsScreen: isConnected=${bleService.isConnected}, isDemoMode=${bleService.isDemoMode}');
+
     final config = await bleService.readConfig();
+    debugPrint('SettingsScreen: readConfig() returned: $config');
 
     if (config != null && mounted) {
+      debugPrint('SettingsScreen: Populating form fields with config data');
       setState(() {
         // Text fields
         _controllers['motor1_run_time']!.text = config.motor1RunTime.toString();
@@ -104,8 +109,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _hasChanges = false;
         _isLoading = false;
       });
+      debugPrint('SettingsScreen: Form fields populated successfully');
     } else {
-      setState(() => _isLoading = false);
+      debugPrint('SettingsScreen: Config was null or widget not mounted');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load configuration: ${bleService.lastError ?? "Unknown error"}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
