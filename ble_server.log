@@ -1,7 +1,7 @@
 ==========================================
 Gatetorio BLE Server
 ==========================================
-Starting at: Sun 16 Nov 01:17:43 GMT 2025
+Starting at: Sun 16 Nov 01:31:22 GMT 2025
 
 ==========================================
 Gatetorio BLE Server Startup
@@ -29,8 +29,8 @@ Step 4: Starting BLE server...
 Gate Controller V2 (Step 3 - Three Processes) initialized
   M1 travel time: 7.835115489037847s, M2 travel time: 8.557032567378949s
   M2 enabled: True
-  Motor Manager PID: 11043
-  Input Manager PID: 11044
+  Motor Manager PID: 14857
+  Input Manager PID: 14858
   Auto-close: ENABLED (5.0s)
 Motor Manager initialized
 Motor Manager process started
@@ -73,7 +73,7 @@ CONFIGURED INPUTS (8 total):
 [BLE] User ID: gatetorio-default
 [Main] Starting BLE GATT server...
 ============================================================
-Gatetorio BLE Server v1.0.0 (bluezero)
+Gatetorio BLE Server v1.0.0 (localGATT)
 ============================================================
 Hardware ID: 98697DF6
 User ID: gatetorio-default
@@ -81,6 +81,8 @@ Stealth mode: True
 Whitelist enabled: True
 [BLE] TESTING MODE: Pairing window ALWAYS OPEN (device always visible)
 [BLE] Device will be discoverable as: Gatetorio-7DF6
+[BLE] Using Bluetooth adapter: 2C:CF:67:A4:C4:D0
+[BLE] Building GATT server using Peripheral...
 [BLE] Building GATT server...
 [BLE] Using Bluetooth adapter: 2C:CF:67:A4:C4:D0
 [BLE] Adding Device Info service...
@@ -89,11 +91,5 @@ Whitelist enabled: True
 [BLE] Adding Diagnostics service...
 [BLE] Adding Security service...
 [BLE] GATT server built successfully
-[BLE] Starting GATT server...
-[BLE] Attempting to manually control advertisement payload...
-[BLE] Found peripheral.advert - modifying service_UUIDs
-[BLE] Set advertisement UUID to: 00001000-4751-5445-5254-494F00000000
-[BLE] Note: Configuration and Diagnostics remain PRIMARY
-[BLE]       (discoverable via GATT after connection)
-[BLE] Calling peripheral.publish()...
+[BLE] Attempting peripheral.publish() (will fail on advertisement)...
 Failed to register advertisement: org.bluez.Error.Failed: Failed to register advertisement
