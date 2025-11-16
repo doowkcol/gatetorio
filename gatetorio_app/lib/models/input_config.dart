@@ -95,12 +95,27 @@ class InputConfigData {
   InputConfigData({required this.inputs});
 
   /// Parse from JSON received from BLE
+  /// Supports both old format with wrapper and new compact format:
+  /// - Old: {"inputs": {"IN1": {...}, "IN2": {...}}}
+  /// - New: {"IN1": {...}, "IN2": {...}}
   factory InputConfigData.fromJson(Map<String, dynamic> json) {
-    final inputsMap = json['inputs'] as Map<String, dynamic>? ?? {};
+    Map<String, dynamic> inputsMap;
+
+    // Check if using old format (has 'inputs' wrapper) or new compact format
+    if (json.containsKey('inputs')) {
+      // Old format with wrapper
+      inputsMap = json['inputs'] as Map<String, dynamic>? ?? {};
+    } else {
+      // New compact format - input names are at top level
+      inputsMap = json;
+    }
+
     final inputs = <String, InputConfig>{};
 
     inputsMap.forEach((key, value) {
-      inputs[key] = InputConfig.fromJson(key, value as Map<String, dynamic>);
+      if (value is Map<String, dynamic>) {
+        inputs[key] = InputConfig.fromJson(key, value);
+      }
     });
 
     return InputConfigData(inputs: inputs);
