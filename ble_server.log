@@ -1,7 +1,7 @@
 ==========================================
 Gatetorio BLE Server
 ==========================================
-Starting at: Sun 16 Nov 01:43:58 GMT 2025
+Starting at: Sun 16 Nov 07:57:06 GMT 2025
 
 ==========================================
 Gatetorio BLE Server Startup
@@ -29,8 +29,8 @@ Step 4: Starting BLE server...
 Gate Controller V2 (Step 3 - Three Processes) initialized
   M1 travel time: 7.835115489037847s, M2 travel time: 8.557032567378949s
   M2 enabled: True
-  Motor Manager PID: 18607
-  Input Manager PID: 18608
+  Motor Manager PID: 2494
+  Input Manager PID: 2495
   Auto-close: ENABLED (5.0s)
 Motor Manager initialized
 Motor Manager process started
@@ -85,19 +85,16 @@ Gatetorio BLE Server - localGATT Implementation
 [BLE] Using adapter: 2C:CF:67:A4:C4:D0
 [BLE] Creating GATT application...
 [BLE] Adding Gate Control service (PRIMARY)...
-[BLE] ERROR: Characteristic.__init__() missing 2 required positional arguments: 'notifying' and 'flags'
+[BLE] ERROR: Characteristic.__init__() missing 1 required positional argument: 'flags'
 Traceback (most recent call last):
   File "/home/doowkcol/Gatetorio_Code/ble_server_localgatt.py", line 200, in start_localgatt_server
     cmd_tx_char = CommandTxChar(1, ble_server)
   File "/home/doowkcol/Gatetorio_Code/ble_server_localgatt.py", line 36, in __init__
-    super().__init__(char_id, CHAR_COMMAND_TX, ['write'], localGATT.Service)
-    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TypeError: Characteristic.__init__() missing 2 required positional arguments: 'notifying' and 'flags'
+    super().__init__(char_id, CHAR_COMMAND_TX, localGATT.Service, False, ['write'])
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Characteristic.__init__() missing 1 required positional argument: 'flags'
 Exception in thread Thread-2 (_control_loop):
-Traceback (most recent call last):
-  File "/usr/lib/python3.13/threading.py", line 1043, in _bootstrap_inner
-    self.run()
-    ~~~~~~~~^^
+Process Process-3:
 
 ==========================================
 BLE server stopped
