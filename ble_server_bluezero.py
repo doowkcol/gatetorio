@@ -27,6 +27,9 @@ from datetime import datetime
 try:
     from bluezero import adapter
     from bluezero import peripheral
+    from bluezero import localGATT
+    from bluezero import GATT
+    from bluezero import advertisement
     from bluezero import dbus_tools
     from bluezero import async_tools
 except ImportError:
@@ -837,60 +840,52 @@ class GatetorioBLEServer:
             ble_peripheral = self.build_gatt_server()
             print("[BLE] Starting GATT server...")
 
-            # Try to publish (register advertisement)
+            # Try to advertise with manual control (only advertise Gate Control UUID)
+            # This avoids the 31-byte payload limit by not advertising all 3 primary services
             try:
-                print("[BLE] Registering BLE advertisement...")
-                ble_peripheral.publish()
+                print("[BLE] Attempting to register advertisement with single UUID...")
+                # Try Option B from ChatGPT: use peripheral.advertise() if available
+                device_name = f"Gatetorio-{self.hardware_id[-4:]}"
+                ble_peripheral.advertise(
+                    name=device_name,
+                    services=[SERVICE_GATE_CONTROL],  # ONLY Gate Control UUID in advertisement
+                    appearance=0x0000
+                )
                 print("[BLE] ✓ Advertisement registered successfully!")
+                print(f"[BLE] Advertising as: {device_name}")
+                print(f"[BLE] Advertising UUID: {SERVICE_GATE_CONTROL}")
+                print("[BLE] Note: Configuration and Diagnostics services are PRIMARY")
+                print("[BLE]       but NOT advertised (discoverable after connection)")
                 print("[BLE] Ready for connections!")
+
+            except AttributeError as attr_error:
+                print(f"[BLE] ⚠ peripheral.advertise() method not available: {attr_error}")
+                print("[BLE] This bluezero version doesn't support peripheral.advertise()")
+                print("[BLE] Need to refactor to use localGATT + Advertisement API (Option A)")
+                print()
+                print("[BLE] IMPLEMENTATION REQUIRED:")
+                print("[BLE] The code needs to be refactored to use:")
+                print("[BLE]   - localGATT.Application() for GATT server")
+                print("[BLE]   - advertisement.Advertisement() for manual advertisement")
+                print("[BLE]   - Only advertise Gate Control UUID")
+                print("[BLE]   - Keep all 3 services as PRIMARY (discoverable after connection)")
+                print()
+                raise RuntimeError("peripheral.advertise() not available - need localGATT refactor")
 
             except Exception as adv_error:
                 print(f"[BLE] ⚠ Advertisement registration failed: {adv_error}")
-                print("[BLE] This is often caused by:")
-                print("[BLE]   1. Another BLE advertisement already registered")
-                print("[BLE]   2. BlueZ caching old advertisements")
-                print("[BLE]   3. Bluetooth adapter in wrong state")
+                print("[BLE] Error type:", type(adv_error).__name__)
+                print("[BLE] This could be caused by:")
+                print("[BLE]   1. Payload size limit (31 bytes for legacy advertising)")
+                print("[BLE]   2. Another BLE advertisement already registered")
+                print("[BLE]   3. BlueZ caching old advertisements")
+                print("[BLE]   4. Bluetooth adapter in wrong state")
                 print()
-                print("[BLE] ATTEMPTING WORKAROUND...")
-                print("[BLE] Restarting Bluetooth service to clear old advertisements...")
-
-                # Try to restart Bluetooth to clear advertisements
-                import subprocess
-                try:
-                    subprocess.run(['systemctl', 'restart', 'bluetooth'],
-                                 check=True, timeout=10,
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    print("[BLE] ✓ Bluetooth service restarted")
-                    print("[BLE] Waiting 3 seconds for Bluetooth to stabilize...")
-                    time.sleep(3)
-
-                    # Rebuild peripheral after Bluetooth restart
-                    print("[BLE] Rebuilding GATT server...")
-                    ble_peripheral = self.build_gatt_server()
-
-                    # Try publish again
-                    print("[BLE] Attempting advertisement registration again...")
-                    ble_peripheral.publish()
-                    print("[BLE] ✓ Advertisement registered successfully (after restart)!")
-                    print("[BLE] Ready for connections!")
-
-                except subprocess.TimeoutExpired:
-                    print("[BLE] ERROR: Bluetooth restart timed out")
-                    raise RuntimeError("Could not restart Bluetooth service")
-                except subprocess.CalledProcessError as e:
-                    print(f"[BLE] ERROR: Bluetooth restart failed: {e}")
-                    print("[BLE] Try manually: sudo systemctl restart bluetooth")
-                    raise
-                except Exception as retry_error:
-                    print(f"[BLE] ERROR: Advertisement still failing after restart: {retry_error}")
-                    print()
-                    print("[BLE] MANUAL TROUBLESHOOTING REQUIRED:")
-                    print("[BLE]   1. Stop this script (Ctrl+C)")
-                    print("[BLE]   2. Restart Bluetooth: sudo systemctl restart bluetooth")
-                    print("[BLE]   3. Check status: sudo systemctl status bluetooth")
-                    print("[BLE]   4. Check for other BLE apps: ps aux | grep ble")
-                    print("[BLE]   5. Reboot if necessary: sudo reboot")
-                    raise
+                print("[BLE] If error is 'org.bluez.Error.Failed', this likely means:")
+                print("[BLE]   The advertisement payload is too large (3 UUIDs exceed 31 bytes)")
+                print("[BLE]   Need to use localGATT refactor approach")
+                print()
+                raise
 
             # Keep running
             print("[BLE] Press Ctrl+C to stop")
