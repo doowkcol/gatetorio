@@ -1,7 +1,7 @@
 ==========================================
 Gatetorio BLE Server
 ==========================================
-Starting at: Sun 16 Nov 01:11:25 GMT 2025
+Starting at: Sun 16 Nov 01:17:43 GMT 2025
 
 ==========================================
 Gatetorio BLE Server Startup
@@ -29,8 +29,8 @@ Step 4: Starting BLE server...
 Gate Controller V2 (Step 3 - Three Processes) initialized
   M1 travel time: 7.835115489037847s, M2 travel time: 8.557032567378949s
   M2 enabled: True
-  Motor Manager PID: 9115
-  Input Manager PID: 9116
+  Motor Manager PID: 11043
+  Input Manager PID: 11044
   Auto-close: ENABLED (5.0s)
 Motor Manager initialized
 Motor Manager process started
@@ -90,34 +90,10 @@ Whitelist enabled: True
 [BLE] Adding Security service...
 [BLE] GATT server built successfully
 [BLE] Starting GATT server...
-[BLE] Attempting to register advertisement with single UUID...
-[BLE] ⚠ peripheral.advertise() method not available: 'Peripheral' object has no attribute 'advertise'
-[BLE] This bluezero version doesn't support peripheral.advertise()
-[BLE] Need to refactor to use localGATT + Advertisement API (Option A)
-
-[BLE] IMPLEMENTATION REQUIRED:
-[BLE] The code needs to be refactored to use:
-[BLE]   - localGATT.Application() for GATT server
-[BLE]   - advertisement.Advertisement() for manual advertisement
-[BLE]   - Only advertise Gate Control UUID
-[BLE]   - Keep all 3 services as PRIMARY (discoverable after connection)
-
-[BLE] Error: peripheral.advertise() not available - need localGATT refactor
-Traceback (most recent call last):
-  File "/home/doowkcol/Gatetorio_Code/ble_server_bluezero.py", line 849, in start
-    ble_peripheral.advertise(
-    ^^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'Peripheral' object has no attribute 'advertise'. Did you mean: 'advert'?
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/doowkcol/Gatetorio_Code/ble_server_bluezero.py", line 873, in start
-    raise RuntimeError("peripheral.advertise() not available - need localGATT refactor")
-RuntimeError: peripheral.advertise() not available - need localGATT refactor
-Exception in thread Thread-2 (_control_loop):
-Process Process-2:
-
-==========================================
-BLE server stopped
-==========================================
+[BLE] Attempting to manually control advertisement payload...
+[BLE] Found peripheral.advert - modifying service_UUIDs
+[BLE] Set advertisement UUID to: 00001000-4751-5445-5254-494F00000000
+[BLE] Note: Configuration and Diagnostics remain PRIMARY
+[BLE]       (discoverable via GATT after connection)
+[BLE] Calling peripheral.publish()...
+Failed to register advertisement: org.bluez.Error.Failed: Failed to register advertisement
