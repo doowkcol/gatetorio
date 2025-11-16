@@ -1,7 +1,7 @@
 ==========================================
 Gatetorio BLE Server
 ==========================================
-Starting at: Sun 16 Nov 00:26:39 GMT 2025
+Starting at: Sun 16 Nov 01:11:25 GMT 2025
 
 ==========================================
 Gatetorio BLE Server Startup
@@ -29,8 +29,8 @@ Step 4: Starting BLE server...
 Gate Controller V2 (Step 3 - Three Processes) initialized
   M1 travel time: 7.835115489037847s, M2 travel time: 8.557032567378949s
   M2 enabled: True
-  Motor Manager PID: 3157
-  Input Manager PID: 3158
+  Motor Manager PID: 9115
+  Input Manager PID: 9116
   Auto-close: ENABLED (5.0s)
 Motor Manager initialized
 Motor Manager process started
@@ -90,108 +90,34 @@ Whitelist enabled: True
 [BLE] Adding Security service...
 [BLE] GATT server built successfully
 [BLE] Starting GATT server...
-[BLE] Registering BLE advertisement...
-Advertisement registered
-[BLE] Status notifications enabled - starting 1Hz update timer
-[INPUT RAW] IN5                  func=cmd_open             raw=ACTIVE was=inactive V=3.31
-[INPUT DEBOUNCED] IN5                  func=cmd_open             → ACTIVE
-[INPUT] cmd_open             → ACTIVE
+[BLE] Attempting to register advertisement with single UUID...
+[BLE] ⚠ peripheral.advertise() method not available: 'Peripheral' object has no attribute 'advertise'
+[BLE] This bluezero version doesn't support peripheral.advertise()
+[BLE] Need to refactor to use localGATT + Advertisement API (Option A)
 
->>> [_execute_open CALLED] M1:0.0s M2:0.0s
-    Current state: CLOSED, safety_reversing: False
-    Flags: cmd_open=True, stop_opening_active=False
-[INPUT RAW] IN5                  func=cmd_open             raw=inactive was=ACTIVE V=0.00
-[INPUT RAW] IN5                  func=cmd_open             raw=inactive was=ACTIVE V=0.00
-[INPUT DEBOUNCED] IN5                  func=cmd_open             → inactive
-[INPUT] cmd_open             → inactive
-[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
-[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
-[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → inactive
-[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
-[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
-[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → inactive
-[FAULT] M1 LIMIT_MISSING: OPENING - open limit not activated at 7.84s (consecutive MOVEMENTS: 1)
-[INPUT RAW] IN2                  func=open_limit_m1        raw=ACTIVE was=inactive V=3.31
-[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → ACTIVE
-[LIMIT SWITCH] M1 OPEN limit reached - position was 7.94s (101.3%), setting to 7.84s (100%)
-[FAULT] M1 fault counter cleared (was 1)
-[FAULT] M2 LIMIT_MISSING: OPENING - open limit not activated at 8.56s (consecutive MOVEMENTS: 1)
-[INPUT RAW] IN3                  func=open_limit_m2        raw=ACTIVE was=inactive V=3.31
-[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → ACTIVE
-[COMPLETION] OPEN complete! M1: limit=True, M2: limit=True
-[_complete_open] BEFORE: state=OPENING, M1=7.84, M2=8.72
-[_complete_open] AFTER: state=OPEN, movement_command=None
-Gates OPEN
-Auto-close triggered (from full OPEN) - sending momentary CLOSE pulse
-Auto-close pulse - no PO sustained, closing fully
+[BLE] IMPLEMENTATION REQUIRED:
+[BLE] The code needs to be refactored to use:
+[BLE]   - localGATT.Application() for GATT server
+[BLE]   - advertisement.Advertisement() for manual advertisement
+[BLE]   - Only advertise Gate Control UUID
+[BLE]   - Keep all 3 services as PRIMARY (discoverable after connection)
 
->>> CLOSE command - M1:7.8s M2:8.6s
-[INPUT RAW] IN3                  func=open_limit_m2        raw=inactive was=ACTIVE V=0.00
-[INPUT RAW] IN3                  func=open_limit_m2        raw=inactive was=ACTIVE V=0.00
-[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → inactive
-[INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
-[INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
-[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → inactive
-[FAULT] M2 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 2)
-[INPUT RAW] IN4                  func=close_limit_m2       raw=ACTIVE was=inactive V=0.00
-[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → ACTIVE
-[LIMIT SWITCH] M2 CLOSE limit reached - position was 0.07s (0.8%), setting to 0.0s (0%)
-[FAULT] M2 fault counter cleared (was 2)
-[INPUT RAW] IN1                  func=close_limit_m1       raw=ACTIVE was=inactive V=0.00
-[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
-[COMPLETION] CLOSE complete! M1: limit=True, M2: limit=True
-[_complete_close] BEFORE: state=CLOSING, M1=0.11, M2=-0.00
-[_complete_close] AFTER: state=CLOSED, movement_command=None
-Gates CLOSED
-[BLE] ========================================
-[BLE] Received write to Command TX
-[BLE] Raw bytes (55): b'{"cmd":"pulse","key":"cmd_open","timestamp":1763253106}'
-[BLE] Decoded: {"cmd":"pulse","key":"cmd_open","timestamp":1763253106}
-[BLE] Command: pulse cmd_open
+[BLE] Error: peripheral.advertise() not available - need localGATT refactor
+Traceback (most recent call last):
+  File "/home/doowkcol/Gatetorio_Code/ble_server_bluezero.py", line 849, in start
+    ble_peripheral.advertise(
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Peripheral' object has no attribute 'advertise'. Did you mean: 'advert'?
 
->>> [_execute_open CALLED] M1:0.0s M2:0.0s
-    Current state: CLOSED, safety_reversing: False
-    Flags: cmd_open=True, stop_opening_active=False
-[BLE] Response: {'success': True, 'message': 'Pulse sent: cmd_open'}
-[BLE] ========================================
-[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
-[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
-[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → inactive
-[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
-[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
-[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → inactive
-[FAULT] M1 LIMIT_MISSING: OPENING - open limit not activated at 7.84s (consecutive MOVEMENTS: 1)
-[INPUT RAW] IN2                  func=open_limit_m1        raw=ACTIVE was=inactive V=3.31
-[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → ACTIVE
-[FAULT] M1 fault counter cleared (was 1)
-[LIMIT SWITCH] M1 OPEN limit reached - position was 7.93s (101.3%), setting to 7.84s (100%)
-[FAULT] M2 LIMIT_MISSING: OPENING - open limit not activated at 8.56s (consecutive MOVEMENTS: 1)
-[INPUT RAW] IN3                  func=open_limit_m2        raw=ACTIVE was=inactive V=3.31
-[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → ACTIVE
-[LIMIT SWITCH] M2 OPEN limit reached - position was 8.65s (101.1%), setting to 8.56s (100%)[COMPLETION] OPEN complete! M1: limit=True, M2: limit=True
+During handling of the above exception, another exception occurred:
 
-[_complete_open] BEFORE: state=OPENING, M1=7.84, M2=8.65
-[_complete_open] AFTER: state=OPEN, movement_command=None
-Gates OPEN
-Auto-close triggered (from full OPEN) - sending momentary CLOSE pulse
-Auto-close pulse - no PO sustained, closing fully
+Traceback (most recent call last):
+  File "/home/doowkcol/Gatetorio_Code/ble_server_bluezero.py", line 873, in start
+    raise RuntimeError("peripheral.advertise() not available - need localGATT refactor")
+RuntimeError: peripheral.advertise() not available - need localGATT refactor
+Exception in thread Thread-2 (_control_loop):
+Process Process-2:
 
->>> CLOSE command - M1:7.8s M2:8.6s
-[INPUT RAW] IN3                  func=open_limit_m2        raw=inactive was=ACTIVE V=0.00
-[INPUT RAW] IN3                  func=open_limit_m2        raw=inactive was=ACTIVE V=0.00
-[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → inactive
-[INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
-[INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
-[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → inactive
-[INPUT RAW] IN4                  func=close_limit_m2       raw=ACTIVE was=inactive V=0.00
-[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → ACTIVE
-[LIMIT SWITCH] M2 CLOSE limit reached - position was 0.11s (1.3%), setting to 0.0s (0%)
-[FAULT] M2 fault counter cleared (was 1)
-[FAULT] M1 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 1)
-[INPUT RAW] IN1                  func=close_limit_m1       raw=ACTIVE was=inactive V=0.00
-[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
-[LIMIT SWITCH] M1 CLOSE limit reached - position was 0.09s (1.2%), setting to 0.0s (0%)
-[COMPLETION] CLOSE complete! M1: limit=True, M2: limit=True
-[_complete_close] BEFORE: state=CLOSING, M1=0.00, M2=-0.00
-[_complete_close] AFTER: state=CLOSED, movement_command=None
-Gates CLOSED
+==========================================
+BLE server stopped
+==========================================
