@@ -471,9 +471,10 @@ class GatetorioBLEServer:
     # GATT SERVER CREATION
     # ========================================================================
 
-    def build_gatt_server(self) -> peripheral.Peripheral:
+    def build_gatt_server(self):
         """
         Build the complete GATT server with all services and characteristics
+        NOTE: This method is deprecated - we now use localGATT implementation
         """
         print("[BLE] Building GATT server...")
 
