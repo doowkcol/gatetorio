@@ -452,6 +452,20 @@ class _InputEditorState extends State<_InputEditor> {
     'close_limit_m2': 'Limit Switch - M2 CLOSE',
   };
 
+  // Constants for resistance calculation
+  static const double _VCC = 3.3; // Raspberry Pi supply voltage
+  static const double _PULLUP_RESISTANCE = 10000.0; // 10K pull-up resistor
+
+  /// Calculate resistance from voltage using voltage divider formula
+  /// V_measured = Vcc * (R_sensor / (R_pullup + R_sensor))
+  /// Solving for R_sensor: R_sensor = (V_measured * R_pullup) / (Vcc - V_measured)
+  double? _calculateResistance(double voltage) {
+    if (voltage <= 0 || voltage >= _VCC) return null;
+
+    final resistance = (voltage * _PULLUP_RESISTANCE) / (_VCC - voltage);
+    return resistance;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -556,18 +570,33 @@ class _InputEditorState extends State<_InputEditor> {
         final voltage = inputStates.getRawValue(widget.input.name);
 
         if (voltage != null && voltage > 0 && voltage.isFinite) {
-          // Successfully learned the resistance
-          setState(() {
-            _learnedResistance = voltage; // Store voltage as resistance value
-          });
+          // Calculate resistance from voltage
+          final resistance = _calculateResistance(voltage);
 
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Learned: ${voltage.toStringAsFixed(3)}V'),
-                backgroundColor: Colors.green,
-              ),
-            );
+          if (resistance != null) {
+            // Successfully learned the resistance
+            setState(() {
+              _learnedResistance = resistance;
+            });
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Learned: ${resistance.toStringAsFixed(0)}Ω (${voltage.toStringAsFixed(3)}V)'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          } else {
+            // Voltage out of valid range
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Voltage out of range: ${voltage.toStringAsFixed(3)}V'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            }
           }
         } else {
           // Invalid reading
@@ -819,7 +848,7 @@ class _InputEditorState extends State<_InputEditor> {
                   if (_learnedResistance != null) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Learned: ${_learnedResistance!.toStringAsFixed(3)}V ±${_tolerancePercent?.toStringAsFixed(1)}%',
+                      'Learned: ${_learnedResistance!.toStringAsFixed(0)}Ω ±${_tolerancePercent?.toStringAsFixed(1)}%',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.green.shade700,
