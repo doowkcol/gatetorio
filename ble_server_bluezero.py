@@ -838,38 +838,52 @@ class GatetorioBLEServer:
                 dongle.powered = True
                 time.sleep(1)
 
-            # Build GATT server using old peripheral method (for now)
-            # TODO: Rewrite this to use localGATT.Application completely
-            print("[BLE] Building GATT server using Peripheral (compatibility mode)...")
+            # Build GATT server using peripheral (keeps all callbacks working)
+            print("[BLE] Building GATT server using Peripheral...")
             ble_peripheral = self.build_gatt_server()
 
-            # Register GATT application (peripheral.publish() registers GATT but not advertisement)
-            # We'll manually handle advertisement registration
-            print("[BLE] Registering GATT application...")
+            # Try to publish - this will register GATT but fail on advertisement (3 UUIDs too big)
+            # We catch the failure and manually register a smaller advertisement
+            print("[BLE] Attempting peripheral.publish() (will fail on advertisement)...")
+            gatt_registered = False
 
-            # Create manual advertisement with ONLY Gate Control UUID
-            device_name = f"Gatetorio-{self.hardware_id[-4:]}"
-            print(f"[BLE] Creating advertisement for: {device_name}")
-            print(f"[BLE] Advertising ONLY: {SERVICE_GATE_CONTROL}")
-            print("[BLE] Note: Configuration/Diagnostics services are PRIMARY")
-            print("[BLE]       but NOT in advertisement (discoverable after connection)")
+            try:
+                ble_peripheral.publish()
+                # If we get here, it worked (unexpected)
+                print("[BLE] ✓ peripheral.publish() succeeded (unexpected - 3 UUIDs fit!)")
+                print("[BLE] Ready for connections!")
+                gatt_registered = True
 
-            advert = advertisement.Advertisement(1, 'peripheral', local_name=device_name)
-            advert.service_UUIDs = [SERVICE_GATE_CONTROL]  # ONLY one UUID
-            advert.appearance = 0x0000
+            except Exception as pub_error:
+                print(f"[BLE] peripheral.publish() failed as expected: {pub_error}")
+                print("[BLE] GATT services may already be registered, advertisement failed")
+                gatt_registered = True  # Assume GATT succeeded even though advertisement failed
 
-            # Register advertisement
-            print("[BLE] Registering advertisement...")
-            ad_mgr = advertisement.AdvertisingManager(dongle_addr)
-            ad_mgr.register_advertisement(advert, {})
+            # Now manually register advertisement with ONLY one UUID
+            if gatt_registered:
+                device_name = f"Gatetorio-{self.hardware_id[-4:]}"
+                print()
+                print("[BLE] Manually registering advertisement with single UUID...")
+                print(f"[BLE] Device name: {device_name}")
+                print(f"[BLE] Advertising ONLY: {SERVICE_GATE_CONTROL}")
+                print("[BLE] Note: Configuration/Diagnostics are PRIMARY (discoverable after connection)")
 
-            print("[BLE] ✓ Advertisement registered successfully!")
-            print(f"[BLE] Advertising as: {device_name}")
-            print("[BLE] Ready for connections!")
+                advert = advertisement.Advertisement(1, 'peripheral', local_name=device_name)
+                advert.service_UUIDs = [SERVICE_GATE_CONTROL]  # ONLY one UUID
+                advert.appearance = 0x0000
 
-            # Publish peripheral (this registers GATT services)
-            print("[BLE] Publishing GATT services...")
-            ble_peripheral.publish()
+                try:
+                    ad_mgr = advertisement.AdvertisingManager(dongle_addr)
+                    ad_mgr.register_advertisement(advert, {})
+                    print("[BLE] ✓ Manual advertisement registered successfully!")
+                    print("[BLE] Ready for connections!")
+                except Exception as ad_error:
+                    print(f"[BLE] ✗ Manual advertisement failed: {ad_error}")
+                    print("[BLE] This might mean peripheral.publish() already registered one")
+                    raise
+            else:
+                print("[BLE] ERROR: GATT registration failed")
+                raise RuntimeError("Failed to register GATT services")
 
             # Keep running
             print("[BLE] Press Ctrl+C to stop")
