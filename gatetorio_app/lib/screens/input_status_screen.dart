@@ -345,6 +345,7 @@ class _InputCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
