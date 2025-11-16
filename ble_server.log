@@ -1,7 +1,7 @@
 ==========================================
 Gatetorio BLE Server
 ==========================================
-Starting at: Sun 16 Nov 01:40:26 GMT 2025
+Starting at: Sun 16 Nov 01:43:58 GMT 2025
 
 ==========================================
 Gatetorio BLE Server Startup
@@ -29,8 +29,8 @@ Step 4: Starting BLE server...
 Gate Controller V2 (Step 3 - Three Processes) initialized
   M1 travel time: 7.835115489037847s, M2 travel time: 8.557032567378949s
   M2 enabled: True
-  Motor Manager PID: 16764
-  Input Manager PID: 16765
+  Motor Manager PID: 18607
+  Input Manager PID: 18608
   Auto-close: ENABLED (5.0s)
 Motor Manager initialized
 Motor Manager process started
@@ -85,18 +85,19 @@ Gatetorio BLE Server - localGATT Implementation
 [BLE] Using adapter: 2C:CF:67:A4:C4:D0
 [BLE] Creating GATT application...
 [BLE] Adding Gate Control service (PRIMARY)...
-[BLE] ERROR: 'GateControlService' object has no attribute 'add_characteristic'
+[BLE] ERROR: Characteristic.__init__() missing 2 required positional arguments: 'notifying' and 'flags'
 Traceback (most recent call last):
-  File "/home/doowkcol/Gatetorio_Code/ble_server_localgatt.py", line 208, in start_localgatt_server
-    gate_service = GateControlService(1, ble_server)
-  File "/home/doowkcol/Gatetorio_Code/ble_server_localgatt.py", line 31, in __init__
-    self.add_characteristic(CommandTxChar(1, self.ble_server))
-    ^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: 'GateControlService' object has no attribute 'add_characteristic'
-Process Process-3:
-Traceback (most recent call last):
+  File "/home/doowkcol/Gatetorio_Code/ble_server_localgatt.py", line 200, in start_localgatt_server
+    cmd_tx_char = CommandTxChar(1, ble_server)
+  File "/home/doowkcol/Gatetorio_Code/ble_server_localgatt.py", line 36, in __init__
+    super().__init__(char_id, CHAR_COMMAND_TX, ['write'], localGATT.Service)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Characteristic.__init__() missing 2 required positional arguments: 'notifying' and 'flags'
 Exception in thread Thread-2 (_control_loop):
-Process Process-2:
+Traceback (most recent call last):
+  File "/usr/lib/python3.13/threading.py", line 1043, in _bootstrap_inner
+    self.run()
+    ~~~~~~~~^^
 
 ==========================================
 BLE server stopped
