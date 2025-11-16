@@ -128,7 +128,44 @@ class InputConfigData {
 
   InputConfigData({required this.inputs});
 
-  /// Parse from JSON received from BLE
+  /// Map numeric type code to type string
+  static String _decodeTypeCode(int typeCode) {
+    switch (typeCode) {
+      case 1: return 'NC';
+      case 2: return 'NO';
+      case 3: return '8K2';
+      default: return 'NO';
+    }
+  }
+
+  /// Parse from ultra-compact array format
+  /// Format: [["IN1", func_code, type_code, channel], ...]
+  /// Type codes: 1=NC, 2=NO, 3=8K2
+  factory InputConfigData.fromArray(List<dynamic> array) {
+    final inputs = <String, InputConfig>{};
+
+    for (final item in array) {
+      if (item is List && item.length >= 4) {
+        final name = item[0] as String;
+        final functionCode = item[1] as int;
+        final typeCode = item[2] as int;
+        final channel = item[3] as int;
+
+        inputs[name] = InputConfig(
+          name: name,
+          channel: channel,
+          enabled: true,
+          type: _decodeTypeCode(typeCode),
+          function: InputConfig._decodeFunctionCode(functionCode),
+          description: '',
+        );
+      }
+    }
+
+    return InputConfigData(inputs: inputs);
+  }
+
+  /// Parse from JSON object format
   /// Supports both old format with wrapper and new compact format:
   /// - Old: {"inputs": {"IN1": {...}, "IN2": {...}}}
   /// - New: {"IN1": {...}, "IN2": {...}}
@@ -156,10 +193,21 @@ class InputConfigData {
   }
 
   /// Parse from raw bytes received from BLE characteristic
+  /// Supports both array format and object format
   factory InputConfigData.fromBytes(List<int> bytes) {
     final jsonString = utf8.decode(bytes);
-    final json = jsonDecode(jsonString) as Map<String, dynamic>;
-    return InputConfigData.fromJson(json);
+    final decoded = jsonDecode(jsonString);
+
+    // Check if array format or object format
+    if (decoded is List) {
+      // New ultra-compact array format
+      return InputConfigData.fromArray(decoded);
+    } else if (decoded is Map<String, dynamic>) {
+      // Old object format
+      return InputConfigData.fromJson(decoded);
+    } else {
+      throw FormatException('Unexpected InputConfig format');
+    }
   }
 
   /// Convert to JSON for BLE transmission
