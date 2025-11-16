@@ -36,7 +36,7 @@ class CommandTxChar(localGATT.Characteristic):
         super().__init__(
             index,
             CHAR_COMMAND_TX,
-            service,
+            service.path,
             [],          # initial value
             False,       # notifying
             ['write']
@@ -65,7 +65,7 @@ class CommandResponseChar(localGATT.Characteristic):
         super().__init__(
             index,
             CHAR_COMMAND_RESPONSE,
-            service,
+            service.path,
             [],
             False,
             ['read']
@@ -84,7 +84,7 @@ class StatusChar(localGATT.Characteristic):
         super().__init__(
             index,
             CHAR_STATUS,
-            service,
+            service.path,
             [],
             False,
             ['read', 'notify']
@@ -137,7 +137,7 @@ class InputConfigChar(localGATT.Characteristic):
         super().__init__(
             index,
             CHAR_INPUT_CONFIG,
-            service,
+            service.path,
             [],
             False,
             ['read']
@@ -173,7 +173,7 @@ class InputStatesChar(localGATT.Characteristic):
         super().__init__(
             index,
             CHAR_INPUT_STATES,
-            service,
+            service.path,
             [],
             False,
             ['read']
@@ -234,11 +234,6 @@ def start_localgatt_server(ble_server: GatetorioBLEServer):
         cmd_resp_char = CommandResponseChar(2, gate_service, ble_server)
         status_char = StatusChar(3, gate_service, ble_server)
 
-        # Attach characteristics to service (D-Bus path)
-        cmd_tx_char.service = gate_service.path
-        cmd_resp_char.service = gate_service.path
-        status_char.service = gate_service.path
-
         app.add_managed_object(gate_service)
         app.add_managed_object(cmd_tx_char)
         app.add_managed_object(cmd_resp_char)
@@ -249,9 +244,6 @@ def start_localgatt_server(ble_server: GatetorioBLEServer):
         config_service = ConfigurationService(2, ble_server)
         input_config_char = InputConfigChar(1, config_service, ble_server)
 
-        # Attach characteristic to service
-        input_config_char.service = config_service.path
-
         app.add_managed_object(config_service)
         app.add_managed_object(input_config_char)
 
@@ -259,9 +251,6 @@ def start_localgatt_server(ble_server: GatetorioBLEServer):
         print("[BLE] Adding Diagnostics service (PRIMARY)...")
         diag_service = DiagnosticsService(3, ble_server)
         input_states_char = InputStatesChar(1, diag_service, ble_server)
-
-        # Attach characteristic to service
-        input_states_char.service = diag_service.path
 
         app.add_managed_object(diag_service)
         app.add_managed_object(input_states_char)
