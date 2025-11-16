@@ -672,12 +672,21 @@ class GatetorioBLEServer:
             """Return input configuration from input_config.json"""
             try:
                 import json
+                print("[BLE] ========================================")
+                print("[BLE] Input Config characteristic READ")
                 with open('/home/doowkcol/Gatetorio_Code/input_config.json', 'r') as f:
                     config = json.load(f)
                 config_json = json.dumps(config).encode('utf-8')
+                print(f"[BLE] Sending {len(config_json)} bytes")
+                print(f"[BLE] Data preview: {config_json[:200].decode('utf-8')}...")
+                print("[BLE] ========================================")
                 return list(config_json)
             except Exception as e:
-                print(f"[BLE] Error reading input config: {e}")
+                print("[BLE] ========================================")
+                print(f"[BLE] ERROR reading input config: {e}")
+                import traceback
+                traceback.print_exc()
+                print("[BLE] ========================================")
                 return list(b'{"error":"input config not available"}')
 
         ble_peripheral.add_characteristic(
@@ -697,6 +706,8 @@ class GatetorioBLEServer:
         def read_input_states():
             """Return current state of all inputs"""
             try:
+                print("[BLE] ========================================")
+                print("[BLE] Input States characteristic READ")
                 states = {}
                 # Read input config to get all input names
                 with open('/home/doowkcol/Gatetorio_Code/input_config.json', 'r') as f:
@@ -713,9 +724,17 @@ class GatetorioBLEServer:
                     }
 
                 states_json = json.dumps(states).encode('utf-8')
+                print(f"[BLE] Sending {len(states_json)} bytes")
+                print(f"[BLE] Active inputs: {[k for k,v in states.items() if v['active']]}")
+                print(f"[BLE] Data: {states_json.decode('utf-8')}")
+                print("[BLE] ========================================")
                 return list(states_json)
             except Exception as e:
-                print(f"[BLE] Error reading input states: {e}")
+                print("[BLE] ========================================")
+                print(f"[BLE] ERROR reading input states: {e}")
+                import traceback
+                traceback.print_exc()
+                print("[BLE] ========================================")
                 return list(b'{"error":"input states not available"}')
 
         ble_peripheral.add_characteristic(
