@@ -256,7 +256,7 @@ class ConfigDataChar(localGATT.Characteristic):
 
 
 class InputConfigChar(localGATT.Characteristic):
-    """Input Configuration characteristic (read-only)"""
+    """Input Configuration characteristic (read all, write single entry)"""
 
     def __init__(self, index, service, ble_server):
         self.ble_server = ble_server
@@ -266,7 +266,7 @@ class InputConfigChar(localGATT.Characteristic):
             CHAR_INPUT_CONFIG,   # uuid (str)
             [],
             False,
-            ['read']
+            ['read', 'write']
         )
 
     def ReadValue(self, options):
@@ -303,6 +303,78 @@ class InputConfigChar(localGATT.Characteristic):
             import traceback
             traceback.print_exc()
             return list(b'{"error":"not available"}')
+
+    def WriteValue(self, value, options):
+        """Write single input entry: [name, func_code, type_code, channel]"""
+        try:
+            # Decode incoming data
+            data = bytes(value).decode('utf-8')
+            print(f"[BLE] Input Config WRITE: {data}")
+            entry = json.loads(data)
+
+            # Validate format: [name, func_code, type_code, channel]
+            if not isinstance(entry, list) or len(entry) != 4:
+                print(f"[BLE] ERROR: Invalid format, expected [name, func, type, chan]")
+                return
+
+            input_name, func_code, type_code, channel = entry
+
+            # Reverse lookup for function code
+            FUNCTION_NAMES = {
+                0: None,
+                1: "close_limit_m1",
+                2: "open_limit_m1",
+                3: "close_limit_m2",
+                4: "open_limit_m2",
+                5: "cmd_open",
+                6: "cmd_close",
+                7: "cmd_stop",
+                8: "safety_stop_opening",
+                9: "safety_stop_closing",
+                10: "partial_1",
+                11: "partial_2"
+            }
+
+            # Reverse lookup for type code
+            TYPE_NAMES = {0: "NC", 1: "NC", 2: "NO", 3: "8K2"}
+
+            function_name = FUNCTION_NAMES.get(func_code)
+            type_name = TYPE_NAMES.get(type_code, "NC")
+
+            # Read current config
+            config_file = '/home/doowkcol/Gatetorio_Code/input_config.json'
+            with open(config_file, 'r') as f:
+                full_config = json.load(f)
+
+            # Update the specific input
+            if 'inputs' not in full_config:
+                full_config['inputs'] = {}
+
+            if input_name not in full_config['inputs']:
+                # Create new input entry
+                full_config['inputs'][input_name] = {
+                    "channel": channel,
+                    "enabled": True,
+                    "type": type_name,
+                    "function": function_name,
+                    "description": f"Input {input_name}"
+                }
+            else:
+                # Update existing input
+                full_config['inputs'][input_name]['channel'] = channel
+                full_config['inputs'][input_name]['type'] = type_name
+                full_config['inputs'][input_name]['function'] = function_name
+
+            # Write back to file
+            with open(config_file, 'w') as f:
+                json.dump(full_config, f, indent=2)
+
+            print(f"[BLE] Updated input {input_name}: func={function_name}, type={type_name}, chan={channel}")
+
+        except Exception as e:
+            print(f"[BLE] Error writing input config: {e}")
+            import traceback
+            traceback.print_exc()
 
 
 class DiagnosticsService(localGATT.Service):
