@@ -1,7 +1,7 @@
 ==========================================
 Gatetorio BLE Server
 ==========================================
-Starting at: Sun 16 Nov 10:40:59 GMT 2025
+Starting at: Sun 16 Nov 10:51:47 GMT 2025
 
 [Main] Initializing Gatetorio gate controller...
 [Main] WARNING: Make sure no other controller instance is running!
@@ -10,27 +10,14 @@ Starting at: Sun 16 Nov 10:40:59 GMT 2025
 [Main] Step 1: Waiting for hardware initialization...
 [Main] Step 2: Creating controller instance...
 Traceback (most recent call last):
-  File "/home/doowkcol/Gatetorio_Code/ble_server_localgatt.py", line 233, in start_localgatt_server
-    cmd_tx_char = CommandTxChar(1, gate_service, ble_server)
-  File "/home/doowkcol/Gatetorio_Code/ble_server_localgatt.py", line 36, in __init__
-    super().__init__(
-    ~~~~~~~~~~~~~~~~^
-        index,
-        ^^^^^^
-    ...<4 lines>...
-        ['write']
-        ^^^^^^^^^
-    )
-    ^
-  File "/usr/local/lib/python3.13/dist-packages/bluezero/localGATT.py", line 236, in __init__
-    self.path = f'{service_path}/char{characteristic_id:04d}'
-                                     ^^^^^^^^^^^^^^^^^^^^^^^
-ValueError: Unknown format code 'd' for object of type 'str'
+  File "/home/doowkcol/Gatetorio_Code/ble_server_localgatt.py", line 273, in start_localgatt_server
+    advert = advertisement.Advertisement(1, 'peripheral', local_name=device_name)
+TypeError: Advertisement.__init__() got an unexpected keyword argument 'local_name'
 Gate Controller V2 (Step 3 - Three Processes) initialized
   M1 travel time: 7.835115489037847s, M2 travel time: 8.557032567378949s
   M2 enabled: True
-  Motor Manager PID: 4517
-  Input Manager PID: 4518
+  Motor Manager PID: 4931
+  Input Manager PID: 4932
   Auto-close: ENABLED (5.0s)
 [STARTUP] Detected gate at CLOSED position (both motors at close limits)
 [Main] Step 3: Waiting for input manager to stabilize (5 seconds)...
@@ -56,9 +43,17 @@ Gatetorio BLE Server - localGATT Implementation
 [BLE] Using adapter: 2C:CF:67:A4:C4:D0
 [BLE] Creating GATT application...
 [BLE] Adding Gate Control service (PRIMARY)...
-[BLE] ERROR: Unknown format code 'd' for object of type 'str'
+[BLE] Adding Configuration service (PRIMARY)...
+[BLE] Adding Diagnostics service (PRIMARY)...
+[BLE] Registering GATT application with BlueZ...
+[BLE] ✓ GATT application registered
+[BLE] Creating advertisement: Gatetorio-7DF6
+[BLE] Advertising ONLY: 00001000-4751-5445-5254-494F00000000
+[BLE] Note: Config/Diagnostics are PRIMARY (discoverable after connection)
+[BLE] ERROR: Advertisement.__init__() got an unexpected keyword argument 'local_name'
 Exception in thread Thread-2 (_control_loop):
 Traceback (most recent call last):
+Process Process-2:
   File "/usr/lib/python3.13/threading.py", line 1043, in _bootstrap_inner
     self.run()
     ~~~~~~~~^^
@@ -68,8 +63,8 @@ Traceback (most recent call last):
   File "/home/doowkcol/Gatetorio_Code/gate_controller_v2.py", line 405, in _control_loop
     self._evaluate_commands(now)
     ~~~~~~~~~~~~~~~~~~~~~~~^^^^^
-  File "/home/doowkcol/Gatetorio_Code/gate_controller_v2.py", line 762, in _evaluate_commands
-    if self.shared['cmd_stop_active']:
+  File "/home/doowkcol/Gatetorio_Code/gate_controller_v2.py", line 769, in _evaluate_commands
+    if self.shared['cmd_open_active'] and self.shared['state'] in ['CLOSING', 'CLOSING_TO_PARTIAL_1', 'CLOSING_TO_PARTIAL_2']:
        ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
   File "<string>", line 2, in __getitem__
   File "/usr/lib/python3.13/multiprocessing/managers.py", line 830, in _callmethod
@@ -84,4 +79,13 @@ Traceback (most recent call last):
   File "/usr/lib/python3.13/multiprocessing/connection.py", line 384, in _send
     n = write(self._handle, buf)
 BrokenPipeError: [Errno 32] Broken pipe
-Process Process-2:
+Traceback (most recent call last):
+  File "/usr/lib/python3.13/multiprocessing/process.py", line 313, in _bootstrap
+    self.run()
+    ~~~~~~~~^^
+  File "/usr/lib/python3.13/multiprocessing/process.py", line 108, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/doowkcol/Gatetorio_Code/motor_manager.py", line 1832, in motor_manager_process
+    manager.run()
+    ~~~~~~~~~~~^^
