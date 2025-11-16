@@ -35,8 +35,8 @@ class CommandTxChar(localGATT.Characteristic):
         self.ble_server = ble_server
         super().__init__(
             index,
-            CHAR_COMMAND_TX,
             service.path,
+            CHAR_COMMAND_TX,
             [],          # initial value
             False,       # notifying
             ['write']
@@ -64,8 +64,8 @@ class CommandResponseChar(localGATT.Characteristic):
         self.ble_server = ble_server
         super().__init__(
             index,
-            CHAR_COMMAND_RESPONSE,
             service.path,
+            CHAR_COMMAND_RESPONSE,
             [],
             False,
             ['read']
@@ -83,8 +83,8 @@ class StatusChar(localGATT.Characteristic):
         self.ble_server = ble_server
         super().__init__(
             index,
-            CHAR_STATUS,
             service.path,
+            CHAR_STATUS,
             [],
             False,
             ['read', 'notify']
@@ -136,8 +136,8 @@ class InputConfigChar(localGATT.Characteristic):
         self.ble_server = ble_server
         super().__init__(
             index,
-            CHAR_INPUT_CONFIG,
             service.path,
+            CHAR_INPUT_CONFIG,
             [],
             False,
             ['read']
@@ -172,8 +172,8 @@ class InputStatesChar(localGATT.Characteristic):
         self.ble_server = ble_server
         super().__init__(
             index,
-            CHAR_INPUT_STATES,
             service.path,
+            CHAR_INPUT_STATES,
             [],
             False,
             ['read']
