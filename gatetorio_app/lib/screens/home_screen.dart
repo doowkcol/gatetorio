@@ -28,13 +28,32 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(width: 8),
             const Flexible(
               child: Text(
-                'Gatetorio',
+                'Gate<Torio',
                 overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
         actions: [
+          // Demo mode toggle (discreet hammer icon)
+          Consumer<BleService>(
+            builder: (context, bleService, child) {
+              return IconButton(
+                icon: Icon(
+                  Icons.construction,
+                  color: bleService.isDemoMode ? Colors.orange : Colors.grey.shade600,
+                ),
+                tooltip: bleService.isDemoMode ? 'Exit Demo Mode' : 'Enter Demo Mode',
+                onPressed: () {
+                  if (bleService.isDemoMode) {
+                    bleService.disconnect();
+                  } else {
+                    bleService.enableDemoMode();
+                  }
+                },
+              );
+            },
+          ),
           // Fleet Management - always visible
           Consumer<FleetService>(
             builder: (context, fleetService, child) {

@@ -15,65 +15,62 @@ class DeviceScanner extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header
+              // Simplified Header
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      // Gatetorio Logo
-                      Image.asset(
-                        'assets/images/GateTorio lightmode icon.png',
-                        height: 70,
-                        fit: BoxFit.contain,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Find Your Gate Controller',
-                        style: Theme.of(context).textTheme.titleLarge,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Make sure Bluetooth is enabled and the gate controller is powered on.',
-                        style: Theme.of(context).textTheme.bodySmall,
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                  child: Text(
+                    'Connect to Gate Controller',
+                    style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ),
               const SizedBox(height: 16),
 
-              // Scan button
-              ElevatedButton.icon(
-                onPressed: bleService.isScanning
-                    ? null
-                    : () => bleService.startScan(),
-                icon: Icon(bleService.isScanning
-                    ? Icons.stop
-                    : Icons.bluetooth_searching),
-                label: Text(bleService.isScanning
-                    ? 'Scanning...'
-                    : 'Start Scanning'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1565C0), // Blue scan button
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 48),
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // Demo Mode button
-              OutlinedButton.icon(
-                onPressed: () => bleService.enableDemoMode(),
-                icon: const Icon(Icons.preview),
-                label: const Text('Demo Mode (Preview UI)'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.orange,
-                  side: const BorderSide(color: Colors.orange, width: 2),
-                  minimumSize: const Size(double.infinity, 48),
-                ),
+              // Connection method buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: bleService.isScanning
+                          ? () => bleService.stopScan()
+                          : () => bleService.startScan(),
+                      icon: Icon(bleService.isScanning
+                          ? Icons.stop
+                          : Icons.bluetooth),
+                      label: Text(bleService.isScanning
+                          ? 'Stop'
+                          : 'Bluetooth'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1565C0),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(0, 48),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        // TODO: Implement web connection
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Web connection coming soon'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.language),
+                      label: const Text('Web'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1565C0),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(0, 48),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
@@ -108,7 +105,7 @@ class DeviceScanner extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Tap "Start Scanning" to search',
+                            'Tap "Bluetooth" to search',
                             style: TextStyle(
                               color: Colors.grey.shade500,
                               fontSize: 12,
@@ -179,7 +176,7 @@ class DeviceScanner extends StatelessWidget {
   }
 }
 
-class DeviceListItem extends StatelessWidget {
+class DeviceListItem extends StatefulWidget {
   final BleDeviceInfo device;
   final VoidCallback onTap;
 
@@ -188,6 +185,13 @@ class DeviceListItem extends StatelessWidget {
     required this.device,
     required this.onTap,
   });
+
+  @override
+  State<DeviceListItem> createState() => _DeviceListItemState();
+}
+
+class _DeviceListItemState extends State<DeviceListItem> {
+  bool _isConnecting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -199,14 +203,14 @@ class DeviceListItem extends StatelessWidget {
           color: Theme.of(context).colorScheme.primary,
         ),
         title: Text(
-          device.deviceName,
+          widget.device.deviceName,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'ID: ${device.deviceId}',
+              'ID: ${widget.device.deviceId}',
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
@@ -220,7 +224,7 @@ class DeviceListItem extends StatelessWidget {
                 const SizedBox(width: 4),
                 Flexible(
                   child: Text(
-                    '${device.signalStrength.displayName} (${device.rssi} dBm)',
+                    '${widget.device.signalStrength.displayName} (${widget.device.rssi} dBm)',
                     style: TextStyle(
                       color: _getSignalColor(),
                       fontSize: 12,
@@ -233,8 +237,29 @@ class DeviceListItem extends StatelessWidget {
           ],
         ),
         trailing: ElevatedButton(
-          onPressed: onTap,
-          child: const Text('Connect'),
+          onPressed: _isConnecting
+              ? null
+              : () async {
+                  setState(() => _isConnecting = true);
+                  await widget.onTap();
+                  if (mounted) {
+                    setState(() => _isConnecting = false);
+                  }
+                },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+          ),
+          child: _isConnecting
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : const Text('Connect'),
         ),
         isThreeLine: true,
       ),
@@ -242,7 +267,7 @@ class DeviceListItem extends StatelessWidget {
   }
 
   Color _getSignalColor() {
-    switch (device.signalStrength) {
+    switch (widget.device.signalStrength) {
       case SignalStrength.excellent:
         return Colors.green;
       case SignalStrength.good:
