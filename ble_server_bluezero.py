@@ -329,6 +329,14 @@ class GatetorioBLEServer:
             elif cmd_type == 'enable_engineer_mode':
                 return self._handle_enable_engineer_mode(value)
 
+            # Auto-learn commands
+            elif cmd_type == 'start_auto_learn':
+                return self._handle_start_auto_learn()
+            elif cmd_type == 'stop_auto_learn':
+                return self._handle_stop_auto_learn()
+            elif cmd_type == 'get_auto_learn_status':
+                return self._handle_get_auto_learn_status()
+
             else:
                 return {"success": False, "message": f"Unknown command: {cmd_type}"}
 
@@ -445,6 +453,40 @@ class GatetorioBLEServer:
             status = "enabled" if enabled else "disabled"
             print(f"[BLE] Engineer mode {status}")
             return {"success": True, "message": f"Engineer mode {status}"}
+        except Exception as e:
+            return {"success": False, "message": str(e)}
+
+    def _handle_start_auto_learn(self) -> Dict:
+        """Start auto-learn process"""
+        try:
+            # Check if engineer mode is enabled
+            if not self.config.engineer_mode_enabled:
+                return {"success": False, "message": "Engineer mode not enabled"}
+
+            # Start auto-learn
+            success = self.controller.start_auto_learn()
+            if success:
+                print("[BLE] Auto-learn started")
+                return {"success": True, "message": "Auto-learn started"}
+            else:
+                return {"success": False, "message": "Failed to start auto-learn"}
+        except Exception as e:
+            return {"success": False, "message": str(e)}
+
+    def _handle_stop_auto_learn(self) -> Dict:
+        """Stop auto-learn process"""
+        try:
+            self.controller.stop_auto_learn()
+            print("[BLE] Auto-learn stopped")
+            return {"success": True, "message": "Auto-learn stopped"}
+        except Exception as e:
+            return {"success": False, "message": str(e)}
+
+    def _handle_get_auto_learn_status(self) -> Dict:
+        """Get auto-learn status"""
+        try:
+            status = self.controller.get_auto_learn_status()
+            return {"success": True, "data": status}
         except Exception as e:
             return {"success": False, "message": str(e)}
 
