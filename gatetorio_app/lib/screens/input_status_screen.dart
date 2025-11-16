@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/ble_service.dart';
@@ -12,6 +13,7 @@ class InputStatusScreen extends StatefulWidget {
 
 class _InputStatusScreenState extends State<InputStatusScreen> {
   bool _isLoading = false;
+  Timer? _pollTimer;
 
   @override
   void initState() {
@@ -19,7 +21,38 @@ class _InputStatusScreenState extends State<InputStatusScreen> {
     // Defer data loading until after first build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInputData();
+      _startPolling();
     });
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Start polling input states at 1Hz
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _pollInputStates();
+    });
+  }
+
+  /// Poll only input states (config doesn't change)
+  Future<void> _pollInputStates() async {
+    if (!mounted) return;
+
+    final bleService = Provider.of<BleService>(context, listen: false);
+
+    // Only poll if connected and not in demo mode
+    if (!bleService.isDemoMode && bleService.isConnected) {
+      try {
+        await bleService.readInputStates();
+      } catch (e) {
+        // Silently fail - don't spam logs with poll errors
+      }
+    }
   }
 
   Future<void> _loadInputData() async {
