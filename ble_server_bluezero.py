@@ -27,7 +27,11 @@ from datetime import datetime
 try:
     from bluezero import adapter
     from bluezero import peripheral
+    from bluezero import localGATT
+    from bluezero import GATT
+    from bluezero import advertisement
     from bluezero import dbus_tools
+    from bluezero import async_tools
 except ImportError:
     print("ERROR: bluezero not installed")
     print("Install system packages first:")
@@ -139,9 +143,8 @@ class GatetorioBLEServer:
         self.last_diagnostics = b'{}'
         self.recent_logs = []
 
-        # Status update thread
-        self.status_thread = None
-        self.status_running = False
+        # Note: Status updates now use bluezero's async_tools timer (no threading needed)
+        # Old thread-based approach removed in favor of notify_callback pattern
 
         # Load configuration
         self._load_config()
@@ -429,13 +432,16 @@ class GatetorioBLEServer:
     def _get_status_json(self) -> bytes:
         """Generate current status JSON"""
         try:
+            # Get status from controller (calculates m1_percent, m2_percent)
+            controller_status = self.controller.get_status()
+
             status = {
-                "state": self.controller.shared.get('state', 'UNKNOWN'),
-                "m1_percent": self.controller.shared.get('m1_percent', 0),
-                "m2_percent": self.controller.shared.get('m2_percent', 0),
+                "state": controller_status['state'],
+                "m1_percent": int(controller_status['m1_percent']),
+                "m2_percent": int(controller_status['m2_percent']),
                 "m1_speed": self.controller.shared.get('m1_speed', 0),
                 "m2_speed": self.controller.shared.get('m2_speed', 0),
-                "auto_close_countdown": self.controller.shared.get('auto_close_countdown', 0),
+                "auto_close_countdown": controller_status['auto_close_countdown'],
                 "timestamp": int(time.time())
             }
             return json.dumps(status).encode('utf-8')
@@ -469,17 +475,9 @@ class GatetorioBLEServer:
 
         return status
 
-    def _status_update_loop(self):
-        """Background thread to update status"""
-        print("[BLE] Status update thread started")
-        while self.status_running:
-            try:
-                self.last_status = self._get_status_json()
-                time.sleep(STATUS_UPDATE_INTERVAL)
-            except Exception as e:
-                print(f"[BLE] Error in status update: {e}")
-                time.sleep(1.0)
-        print("[BLE] Status update thread stopped")
+    # Note: Old threading-based status update loop removed
+    # Status notifications now handled by async_tools timer in notify_callback
+    # See _add_gate_control_service() for the new implementation
 
     # ========================================================================
     # GATT SERVER CREATION
@@ -611,18 +609,44 @@ class GatetorioBLEServer:
         def read_status():
             return list(self._get_status_json())
 
+        def update_status(characteristic):
+            """Timer callback to send status notifications (called every 1 second)"""
+            try:
+                # Get latest status
+                status_json = self._get_status_json()
+                # Send notification by updating characteristic value
+                characteristic.set_value(list(status_json))
+                # Continue timer while notifications are active
+                return characteristic.is_notifying
+            except Exception as e:
+                print(f"[BLE] Error sending status notification: {e}")
+                import traceback
+                traceback.print_exc()
+                # Stop timer on error
+                return False
+
+        def notify_status(notifying, characteristic):
+            """Called when client enables/disables status notifications"""
+            if notifying:
+                print("[BLE] Status notifications enabled - starting 1Hz update timer")
+                # Start timer: calls update_status() every 1 second
+                async_tools.add_timer_seconds(STATUS_UPDATE_INTERVAL, update_status, characteristic)
+            else:
+                print("[BLE] Status notifications disabled")
+
         ble_peripheral.add_characteristic(
             srv_id=2, chr_id=3, uuid=CHAR_STATUS,
-            value=[], notifying=True, flags=['read', 'notify'],
-            read_callback=read_status
+            value=[], notifying=False, flags=['read', 'notify'],
+            read_callback=read_status,
+            notify_callback=notify_status
         )
 
     def _add_configuration_service(self, ble_peripheral):
-        """Add Configuration service (secondary - not advertised)"""
+        """Add Configuration service (PRIMARY - needed for discovery)"""
         print("[BLE] Adding Configuration service...")
 
-        # Secondary service (not included in advertisement to save space)
-        ble_peripheral.add_service(srv_id=3, uuid=SERVICE_CONFIGURATION, primary=False)
+        # PRIMARY service (Flutter app can't discover secondary services reliably)
+        ble_peripheral.add_service(srv_id=3, uuid=SERVICE_CONFIGURATION, primary=True)
 
         # Config Data (read/write)
         def read_config():
@@ -646,12 +670,81 @@ class GatetorioBLEServer:
             write_callback=write_config
         )
 
+        # Input Config (read-only)
+        def read_input_config():
+            """Return input configuration from input_config.json"""
+            try:
+                import json
+                print("[BLE] ========================================")
+                print("[BLE] Input Config characteristic READ")
+                with open('/home/doowkcol/Gatetorio_Code/input_config.json', 'r') as f:
+                    config = json.load(f)
+                config_json = json.dumps(config).encode('utf-8')
+                print(f"[BLE] Sending {len(config_json)} bytes")
+                print(f"[BLE] Data preview: {config_json[:200].decode('utf-8')}...")
+                print("[BLE] ========================================")
+                return list(config_json)
+            except Exception as e:
+                print("[BLE] ========================================")
+                print(f"[BLE] ERROR reading input config: {e}")
+                import traceback
+                traceback.print_exc()
+                print("[BLE] ========================================")
+                return list(b'{"error":"input config not available"}')
+
+        ble_peripheral.add_characteristic(
+            srv_id=3, chr_id=2, uuid=CHAR_INPUT_CONFIG,
+            value=[], notifying=False, flags=['read'],
+            read_callback=read_input_config
+        )
+
     def _add_diagnostics_service(self, ble_peripheral):
-        """Add Diagnostics service (secondary - not advertised)"""
+        """Add Diagnostics service (PRIMARY - needed for discovery)"""
         print("[BLE] Adding Diagnostics service...")
 
-        # Secondary service (not included in advertisement to save space)
-        ble_peripheral.add_service(srv_id=4, uuid=SERVICE_DIAGNOSTICS, primary=False)
+        # PRIMARY service (Flutter app can't discover secondary services reliably)
+        ble_peripheral.add_service(srv_id=4, uuid=SERVICE_DIAGNOSTICS, primary=True)
+
+        # Input States (read + notify)
+        def read_input_states():
+            """Return current state of all inputs"""
+            try:
+                print("[BLE] ========================================")
+                print("[BLE] Input States characteristic READ")
+                states = {}
+                # Read input config to get all input names
+                with open('/home/doowkcol/Gatetorio_Code/input_config.json', 'r') as f:
+                    input_config = json.load(f)['inputs']
+
+                # Get current state of each input from shared dict
+                for input_name, config in input_config.items():
+                    is_active = self.controller.shared.get(f'{input_name}_state', False)
+                    states[input_name] = {
+                        "active": is_active,
+                        "function": config.get('function'),
+                        "type": config.get('type'),
+                        "channel": config.get('channel')
+                    }
+
+                states_json = json.dumps(states).encode('utf-8')
+                print(f"[BLE] Sending {len(states_json)} bytes")
+                print(f"[BLE] Active inputs: {[k for k,v in states.items() if v['active']]}")
+                print(f"[BLE] Data: {states_json.decode('utf-8')}")
+                print("[BLE] ========================================")
+                return list(states_json)
+            except Exception as e:
+                print("[BLE] ========================================")
+                print(f"[BLE] ERROR reading input states: {e}")
+                import traceback
+                traceback.print_exc()
+                print("[BLE] ========================================")
+                return list(b'{"error":"input states not available"}')
+
+        ble_peripheral.add_characteristic(
+            srv_id=4, chr_id=1, uuid=CHAR_INPUT_STATES,
+            value=[], notifying=False, flags=['read'],
+            read_callback=read_input_states
+        )
 
         # System Status (read-only)
         def read_system_status():
@@ -662,7 +755,7 @@ class GatetorioBLEServer:
                 return list(b'{}')
 
         ble_peripheral.add_characteristic(
-            srv_id=4, chr_id=1, uuid=CHAR_SYSTEM_STATUS,
+            srv_id=4, chr_id=2, uuid=CHAR_SYSTEM_STATUS,
             value=[], notifying=False, flags=['read'],
             read_callback=read_system_status
         )
@@ -719,105 +812,22 @@ class GatetorioBLEServer:
     # ========================================================================
 
     def start(self):
-        """Start the BLE GATT server"""
+        """Start the BLE GATT server using pure localGATT implementation"""
         print("=" * 60)
-        print("Gatetorio BLE Server v1.0.0 (bluezero)")
+        print("Gatetorio BLE Server v1.0.0 (localGATT)")
         print("=" * 60)
         print(f"Hardware ID: {self.hardware_id}")
         print(f"User ID: {self.config.user_id}")
-        print(f"Stealth mode: {self.config.stealth_mode}")
-        print(f"Whitelist enabled: {self.config.whitelist_enabled}")
 
         # TESTING MODE: Keep pairing window open permanently
-        # TODO: Re-enable timed pairing window after testing
-        print("[BLE] TESTING MODE: Pairing window ALWAYS OPEN (device always visible)")
+        print("[BLE] TESTING MODE: Pairing window ALWAYS OPEN")
         print(f"[BLE] Device will be discoverable as: Gatetorio-{self.hardware_id[-4:]}")
-        self.pairing_window_active = True  # Keep open for testing
+        self.pairing_window_active = True
         self.config.pairing_mode = True
 
-        # Note: Normally we would call start_pairing_window() which auto-closes after 30s
-        # For testing, we keep it permanently open so device is always discoverable
-
-        # Start status update thread
-        self.status_running = True
-        self.status_thread = threading.Thread(target=self._status_update_loop, daemon=True)
-        self.status_thread.start()
-
-        # Build and run GATT server
-        try:
-            ble_peripheral = self.build_gatt_server()
-            print("[BLE] Starting GATT server...")
-
-            # Try to publish (register advertisement)
-            try:
-                print("[BLE] Registering BLE advertisement...")
-                ble_peripheral.publish()
-                print("[BLE] ✓ Advertisement registered successfully!")
-                print("[BLE] Ready for connections!")
-
-            except Exception as adv_error:
-                print(f"[BLE] ⚠ Advertisement registration failed: {adv_error}")
-                print("[BLE] This is often caused by:")
-                print("[BLE]   1. Another BLE advertisement already registered")
-                print("[BLE]   2. BlueZ caching old advertisements")
-                print("[BLE]   3. Bluetooth adapter in wrong state")
-                print()
-                print("[BLE] ATTEMPTING WORKAROUND...")
-                print("[BLE] Restarting Bluetooth service to clear old advertisements...")
-
-                # Try to restart Bluetooth to clear advertisements
-                import subprocess
-                try:
-                    subprocess.run(['systemctl', 'restart', 'bluetooth'],
-                                 check=True, timeout=10,
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    print("[BLE] ✓ Bluetooth service restarted")
-                    print("[BLE] Waiting 3 seconds for Bluetooth to stabilize...")
-                    time.sleep(3)
-
-                    # Rebuild peripheral after Bluetooth restart
-                    print("[BLE] Rebuilding GATT server...")
-                    ble_peripheral = self.build_gatt_server()
-
-                    # Try publish again
-                    print("[BLE] Attempting advertisement registration again...")
-                    ble_peripheral.publish()
-                    print("[BLE] ✓ Advertisement registered successfully (after restart)!")
-                    print("[BLE] Ready for connections!")
-
-                except subprocess.TimeoutExpired:
-                    print("[BLE] ERROR: Bluetooth restart timed out")
-                    raise RuntimeError("Could not restart Bluetooth service")
-                except subprocess.CalledProcessError as e:
-                    print(f"[BLE] ERROR: Bluetooth restart failed: {e}")
-                    print("[BLE] Try manually: sudo systemctl restart bluetooth")
-                    raise
-                except Exception as retry_error:
-                    print(f"[BLE] ERROR: Advertisement still failing after restart: {retry_error}")
-                    print()
-                    print("[BLE] MANUAL TROUBLESHOOTING REQUIRED:")
-                    print("[BLE]   1. Stop this script (Ctrl+C)")
-                    print("[BLE]   2. Restart Bluetooth: sudo systemctl restart bluetooth")
-                    print("[BLE]   3. Check status: sudo systemctl status bluetooth")
-                    print("[BLE]   4. Check for other BLE apps: ps aux | grep ble")
-                    print("[BLE]   5. Reboot if necessary: sudo reboot")
-                    raise
-
-            # Keep running
-            print("[BLE] Press Ctrl+C to stop")
-            while True:
-                time.sleep(1)
-
-        except KeyboardInterrupt:
-            print("\n[BLE] Shutting down...")
-            self.status_running = False
-            if self.status_thread:
-                self.status_thread.join(timeout=2)
-        except Exception as e:
-            print(f"[BLE] Error: {e}")
-            import traceback
-            traceback.print_exc()
-            self.status_running = False
+        # Use pure localGATT implementation (no peripheral.Peripheral)
+        from ble_server_localgatt import start_localgatt_server
+        start_localgatt_server(self)
 
 
 # ============================================================================
