@@ -206,20 +206,32 @@ class InputStatesChar(localGATT.Characteristic):
         )
 
     def ReadValue(self, options):
-        """Return current input states (active flags only)"""
+        """Return current input states (active flags + resistance for 8K2)"""
         try:
             print("[BLE] Input States READ")
             states = {}
             with open('/home/doowkcol/Gatetorio_Code/input_config.json', 'r') as f:
                 input_config = json.load(f)['inputs']
 
-            # Only send active state - metadata comes from InputConfigChar
-            for input_name in input_config.keys():
+            # Send active state + resistance for 8K2 inputs
+            for input_name, config in input_config.items():
                 is_active = self.ble_server.controller.shared.get(f'{input_name}_state', False)
-                states[input_name] = is_active  # Just true/false, not an object
+                input_type = config.get('type')
+
+                # For 8K2 inputs, include resistance reading
+                if input_type == '8K2':
+                    # Get voltage reading from shared dict
+                    voltage = self.ble_server.controller.shared.get(f'{input_name}_voltage', 0.0)
+                    # Send as [active, voltage] to save space
+                    states[input_name] = [is_active, round(voltage, 2)]
+                else:
+                    # Just boolean for NO/NC inputs
+                    states[input_name] = is_active
 
             states_json = json.dumps(states, separators=(',', ':')).encode('utf-8')
-            print(f"[BLE] Sending {len(states_json)} bytes (active states only)")
+            print(f"[BLE] Sending {len(states_json)} bytes (active states + 8K2 voltages)")
+            if len(states_json) > 186:
+                print(f"[BLE] WARNING: Data ({len(states_json)} bytes) may exceed BLE buffer limit (~186 bytes)")
             return list(states_json)
         except Exception as e:
             print(f"[BLE] Error reading input states: {e}")
