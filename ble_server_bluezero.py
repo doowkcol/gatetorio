@@ -812,9 +812,9 @@ class GatetorioBLEServer:
     # ========================================================================
 
     def start(self):
-        """Start the BLE GATT server"""
+        """Start the BLE GATT server using localGATT (manual GATT + Advertisement)"""
         print("=" * 60)
-        print("Gatetorio BLE Server v1.0.0 (bluezero)")
+        print("Gatetorio BLE Server v1.0.0 (localGATT)")
         print("=" * 60)
         print(f"Hardware ID: {self.hardware_id}")
         print(f"User ID: {self.config.user_id}")
@@ -822,57 +822,54 @@ class GatetorioBLEServer:
         print(f"Whitelist enabled: {self.config.whitelist_enabled}")
 
         # TESTING MODE: Keep pairing window open permanently
-        # TODO: Re-enable timed pairing window after testing
         print("[BLE] TESTING MODE: Pairing window ALWAYS OPEN (device always visible)")
         print(f"[BLE] Device will be discoverable as: Gatetorio-{self.hardware_id[-4:]}")
-        self.pairing_window_active = True  # Keep open for testing
+        self.pairing_window_active = True
         self.config.pairing_mode = True
 
-        # Note: Normally we would call start_pairing_window() which auto-closes after 30s
-        # For testing, we keep it permanently open so device is always discoverable
-
-        # Note: Status updates are now handled by bluezero's async_tools timer
-        # (started automatically when client subscribes to notifications)
-        # Old threading.Thread approach removed - notifications now use notify_callback
-
-        # Build and run GATT server
         try:
+            # Get Bluetooth adapter
+            dongle = next(adapter.Adapter.available())
+            dongle_addr = dongle.address
+            print(f"[BLE] Using Bluetooth adapter: {dongle_addr}")
+
+            if not dongle.powered:
+                print("[BLE] Powering on Bluetooth adapter...")
+                dongle.powered = True
+                time.sleep(1)
+
+            # Build GATT server using old peripheral method (for now)
+            # TODO: Rewrite this to use localGATT.Application completely
+            print("[BLE] Building GATT server using Peripheral (compatibility mode)...")
             ble_peripheral = self.build_gatt_server()
-            print("[BLE] Starting GATT server...")
 
-            # Try to advertise with manual control (only advertise Gate Control UUID)
-            # This avoids the 31-byte payload limit by not advertising all 3 primary services
-            try:
-                print("[BLE] Attempting to manually control advertisement payload...")
-                device_name = f"Gatetorio-{self.hardware_id[-4:]}"
+            # Register GATT application (peripheral.publish() registers GATT but not advertisement)
+            # We'll manually handle advertisement registration
+            print("[BLE] Registering GATT application...")
 
-                # Access the peripheral's advertisement object and modify it before publish()
-                if hasattr(ble_peripheral, 'advert') and ble_peripheral.advert is not None:
-                    print("[BLE] Found peripheral.advert - modifying service_UUIDs")
-                    # Override service_UUIDs to only include Gate Control
-                    ble_peripheral.advert.service_UUIDs = [SERVICE_GATE_CONTROL]
-                    print(f"[BLE] Set advertisement UUID to: {SERVICE_GATE_CONTROL}")
-                    print("[BLE] Note: Configuration and Diagnostics remain PRIMARY")
-                    print("[BLE]       (discoverable via GATT after connection)")
-                else:
-                    print("[BLE] WARNING: peripheral.advert not found, publish() may advertise all UUIDs")
+            # Create manual advertisement with ONLY Gate Control UUID
+            device_name = f"Gatetorio-{self.hardware_id[-4:]}"
+            print(f"[BLE] Creating advertisement for: {device_name}")
+            print(f"[BLE] Advertising ONLY: {SERVICE_GATE_CONTROL}")
+            print("[BLE] Note: Configuration/Diagnostics services are PRIMARY")
+            print("[BLE]       but NOT in advertisement (discoverable after connection)")
 
-                # Now publish (registers both GATT and advertisement)
-                print("[BLE] Calling peripheral.publish()...")
-                ble_peripheral.publish()
+            advert = advertisement.Advertisement(1, 'peripheral', local_name=device_name)
+            advert.service_UUIDs = [SERVICE_GATE_CONTROL]  # ONLY one UUID
+            advert.appearance = 0x0000
 
-                print("[BLE] ✓ Advertisement registered successfully!")
-                print(f"[BLE] Advertising as: {device_name}")
-                print("[BLE] Ready for connections!")
+            # Register advertisement
+            print("[BLE] Registering advertisement...")
+            ad_mgr = advertisement.AdvertisingManager(dongle_addr)
+            ad_mgr.register_advertisement(advert, {})
 
-            except Exception as adv_error:
-                print(f"[BLE] ⚠ Advertisement registration failed: {adv_error}")
-                print("[BLE] Error type:", type(adv_error).__name__)
-                print()
-                print("[BLE] This likely means the advertisement payload is still too large.")
-                print("[BLE] Next step: Implement full localGATT refactor (Option A)")
-                print()
-                raise
+            print("[BLE] ✓ Advertisement registered successfully!")
+            print(f"[BLE] Advertising as: {device_name}")
+            print("[BLE] Ready for connections!")
+
+            # Publish peripheral (this registers GATT services)
+            print("[BLE] Publishing GATT services...")
+            ble_peripheral.publish()
 
             # Keep running
             print("[BLE] Press Ctrl+C to stop")
@@ -881,8 +878,6 @@ class GatetorioBLEServer:
 
         except KeyboardInterrupt:
             print("\n[BLE] Shutting down...")
-            # Note: Status notifications stop automatically when connection closes
-            # (async_tools timer checks characteristic.is_notifying)
         except Exception as e:
             print(f"[BLE] Error: {e}")
             import traceback
