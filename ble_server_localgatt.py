@@ -146,13 +146,27 @@ class InputConfigChar(localGATT.Characteristic):
         )
 
     def ReadValue(self, options):
-        """Return input_config.json"""
+        """Return input_config.json (compressed format)"""
         try:
             print("[BLE] Input Config READ")
             with open('/home/doowkcol/Gatetorio_Code/input_config.json', 'r') as f:
-                config = json.load(f)
-            config_json = json.dumps(config).encode('utf-8')
-            print(f"[BLE] Sending {len(config_json)} bytes")
+                full_config = json.load(f)
+
+            # Compress: Send only essential input metadata (not full config)
+            inputs = full_config.get('inputs', {})
+            compressed = {}
+            for name, cfg in inputs.items():
+                # Only send essential fields with short keys
+                compressed[name] = {
+                    "f": cfg.get('function'),  # function
+                    "t": cfg.get('type'),      # type
+                    "c": cfg.get('channel')    # channel
+                }
+
+            config_json = json.dumps(compressed, separators=(',', ':')).encode('utf-8')
+            print(f"[BLE] Sending {len(config_json)} bytes (compressed)")
+            if len(config_json) > 512:
+                print(f"[BLE] WARNING: Data exceeds typical MTU limit (512 bytes)")
             return list(config_json)
         except Exception as e:
             print(f"[BLE] Error reading input config: {e}")
