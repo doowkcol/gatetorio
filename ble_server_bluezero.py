@@ -858,7 +858,12 @@ def main():
 
     try:
         print("[Main] Step 2: Creating controller instance...")
+        print("[Main] DEBUG: About to call GateController()")
+        import sys
+        sys.stdout.flush()
         controller = GateController()
+        print("[Main] DEBUG: GateController() returned successfully")
+        sys.stdout.flush()
 
         # CRITICAL: Wait for input manager to stabilize ADC readings
         # The input_manager process starts immediately but needs time
