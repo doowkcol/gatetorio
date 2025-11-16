@@ -226,14 +226,15 @@ class _InputCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
+      elevation: isActive ? 4 : 2,
+      color: isActive ? Colors.green.shade50 : null,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
           color: isActive
-              ? Colors.green.withOpacity(0.5)
+              ? Colors.green.withOpacity(0.7)
               : Colors.grey.withOpacity(0.2),
-          width: 2,
+          width: isActive ? 3 : 2,
         ),
       ),
       child: Padding(
