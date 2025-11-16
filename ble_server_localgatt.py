@@ -192,15 +192,18 @@ class InputStatesChar(localGATT.Characteristic):
 
             for input_name, config in input_config.items():
                 is_active = self.ble_server.controller.shared.get(f'{input_name}_state', False)
+                # Compact format to reduce size
                 states[input_name] = {
-                    "active": is_active,
-                    "function": config.get('function'),
-                    "type": config.get('type'),
-                    "channel": config.get('channel')
+                    "a": is_active,  # active (shortened)
+                    "f": config.get('function'),  # function
+                    "t": config.get('type'),  # type
+                    "c": config.get('channel')  # channel
                 }
 
-            states_json = json.dumps(states).encode('utf-8')
+            states_json = json.dumps(states, separators=(',', ':')).encode('utf-8')  # Compact JSON
             print(f"[BLE] Sending {len(states_json)} bytes")
+            if len(states_json) > 512:
+                print(f"[BLE] WARNING: Data exceeds typical MTU limit (512 bytes)")
             return list(states_json)
         except Exception as e:
             print(f"[BLE] Error reading input states: {e}")
