@@ -225,11 +225,11 @@ class _InputCard extends StatelessWidget {
     final stateText = isActive ? 'ACTIVE' : 'INACTIVE';
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 8),
       elevation: isActive ? 4 : 2,
       color: isActive ? Colors.green.shade50 : null,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         side: BorderSide(
           color: isActive
               ? Colors.green.withOpacity(0.7)
@@ -238,33 +238,49 @@ class _InputCard extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(10.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header row with input name and ADC channel
+            // Header row with input name, state, and ADC
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Input name
-                Text(
-                  input.name,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.cyan,
-                  ),
+                // Input name and state indicator inline
+                Row(
+                  children: [
+                    // State dot
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: stateColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Input name
+                    Text(
+                      input.name,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.cyan,
+                      ),
+                    ),
+                  ],
                 ),
                 // ADC label
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.blue.shade100,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     input.adcLabel,
                     style: TextStyle(
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
                       color: Colors.blue.shade900,
                     ),
@@ -272,146 +288,70 @@ class _InputCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
 
-            // Info row: Type and Function
+            // Type, Function, and State on one line
             Row(
               children: [
                 // Type badge
-                _InfoChip(
-                  label: 'Type',
-                  value: input.type,
-                  color: Colors.purple,
-                ),
-                const SizedBox(width: 12),
-                // Function display (no label, just value)
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: (input.function != null ? Colors.teal : Colors.orange).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: (input.function != null ? Colors.teal : Colors.orange).withOpacity(0.3),
-                      ),
-                    ),
-                    child: Text(
-                      input.functionDisplayName,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: input.function != null ? Colors.teal : Colors.orange,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Description
-            if (input.description.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Text(
-                  input.description,
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 13,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-
-            // State indicator
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // State badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: stateColor.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: stateColor, width: 2),
+                    color: Colors.purple.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.purple.withOpacity(0.3)),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: stateColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        stateText,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: stateColor.shade900,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    input.type,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.purple,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-
-                // Enabled/Disabled status
-                if (!input.enabled)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade100,
-                      borderRadius: BorderRadius.circular(8),
+                const SizedBox(width: 8),
+                // Function
+                Expanded(
+                  child: Text(
+                    input.functionDisplayName,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: input.function != null ? Colors.teal : Colors.orange,
+                      fontWeight: FontWeight.w600,
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.block, size: 16, color: Colors.red.shade900),
-                        const SizedBox(width: 4),
-                        Text(
-                          'DISABLED',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red.shade900,
-                          ),
-                        ),
-                      ],
-                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
+                ),
+                const SizedBox(width: 8),
+                // State text
+                Text(
+                  stateText,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: stateColor.shade700,
+                  ),
+                ),
               ],
             ),
 
-            // 8K2 specific info
+            // 8K2 specific info (if applicable)
             if (input.type == '8K2' && input.learnedResistance != null) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.amber.shade300),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.settings_input_component, size: 20, color: Colors.amber.shade900),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '8K2 Resistor: ${input.learnedResistance!.toStringAsFixed(0)}Ω '
-                        '(±${input.tolerancePercent?.toStringAsFixed(1)}%)',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.amber.shade900,
-                        ),
-                      ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(Icons.settings_input_component, size: 14, color: Colors.amber.shade700),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${input.learnedResistance!.toStringAsFixed(0)}Ω ±${input.tolerancePercent?.toStringAsFixed(1)}%',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.amber.shade800,
+                      fontWeight: FontWeight.w500,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ],
