@@ -843,47 +843,34 @@ class GatetorioBLEServer:
             # Try to advertise with manual control (only advertise Gate Control UUID)
             # This avoids the 31-byte payload limit by not advertising all 3 primary services
             try:
-                print("[BLE] Attempting to register advertisement with single UUID...")
-                # Try Option B from ChatGPT: use peripheral.advertise() if available
+                print("[BLE] Attempting to manually control advertisement payload...")
                 device_name = f"Gatetorio-{self.hardware_id[-4:]}"
-                ble_peripheral.advertise(
-                    name=device_name,
-                    services=[SERVICE_GATE_CONTROL],  # ONLY Gate Control UUID in advertisement
-                    appearance=0x0000
-                )
+
+                # Access the peripheral's advertisement object and modify it before publish()
+                if hasattr(ble_peripheral, 'advert') and ble_peripheral.advert is not None:
+                    print("[BLE] Found peripheral.advert - modifying service_UUIDs")
+                    # Override service_UUIDs to only include Gate Control
+                    ble_peripheral.advert.service_UUIDs = [SERVICE_GATE_CONTROL]
+                    print(f"[BLE] Set advertisement UUID to: {SERVICE_GATE_CONTROL}")
+                    print("[BLE] Note: Configuration and Diagnostics remain PRIMARY")
+                    print("[BLE]       (discoverable via GATT after connection)")
+                else:
+                    print("[BLE] WARNING: peripheral.advert not found, publish() may advertise all UUIDs")
+
+                # Now publish (registers both GATT and advertisement)
+                print("[BLE] Calling peripheral.publish()...")
+                ble_peripheral.publish()
+
                 print("[BLE] ✓ Advertisement registered successfully!")
                 print(f"[BLE] Advertising as: {device_name}")
-                print(f"[BLE] Advertising UUID: {SERVICE_GATE_CONTROL}")
-                print("[BLE] Note: Configuration and Diagnostics services are PRIMARY")
-                print("[BLE]       but NOT advertised (discoverable after connection)")
                 print("[BLE] Ready for connections!")
-
-            except AttributeError as attr_error:
-                print(f"[BLE] ⚠ peripheral.advertise() method not available: {attr_error}")
-                print("[BLE] This bluezero version doesn't support peripheral.advertise()")
-                print("[BLE] Need to refactor to use localGATT + Advertisement API (Option A)")
-                print()
-                print("[BLE] IMPLEMENTATION REQUIRED:")
-                print("[BLE] The code needs to be refactored to use:")
-                print("[BLE]   - localGATT.Application() for GATT server")
-                print("[BLE]   - advertisement.Advertisement() for manual advertisement")
-                print("[BLE]   - Only advertise Gate Control UUID")
-                print("[BLE]   - Keep all 3 services as PRIMARY (discoverable after connection)")
-                print()
-                raise RuntimeError("peripheral.advertise() not available - need localGATT refactor")
 
             except Exception as adv_error:
                 print(f"[BLE] ⚠ Advertisement registration failed: {adv_error}")
                 print("[BLE] Error type:", type(adv_error).__name__)
-                print("[BLE] This could be caused by:")
-                print("[BLE]   1. Payload size limit (31 bytes for legacy advertising)")
-                print("[BLE]   2. Another BLE advertisement already registered")
-                print("[BLE]   3. BlueZ caching old advertisements")
-                print("[BLE]   4. Bluetooth adapter in wrong state")
                 print()
-                print("[BLE] If error is 'org.bluez.Error.Failed', this likely means:")
-                print("[BLE]   The advertisement payload is too large (3 UUIDs exceed 31 bytes)")
-                print("[BLE]   Need to use localGATT refactor approach")
+                print("[BLE] This likely means the advertisement payload is still too large.")
+                print("[BLE] Next step: Implement full localGATT refactor (Option A)")
                 print()
                 raise
 
