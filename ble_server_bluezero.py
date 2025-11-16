@@ -95,6 +95,22 @@ CHAR_PAIRING_CONTROL = BASE_UUID.format(0x4001)
 CHAR_WHITELIST = BASE_UUID.format(0x4002)
 CHAR_ENGINEER_MODE = BASE_UUID.format(0x4003)
 
+# Input function codes for BLE compression
+INPUT_FUNCTION_CODES = {
+    "close_limit_m1": 1,
+    "open_limit_m1": 2,
+    "close_limit_m2": 3,
+    "open_limit_m2": 4,
+    "cmd_open": 5,
+    "cmd_close": 6,
+    "cmd_stop": 7,
+    "safety_stop_opening": 8,
+    "safety_stop_closing": 9,
+    "partial_1": 10,
+    "partial_2": 11,
+    None: 0  # No function
+}
+
 # File paths
 CONFIG_DIR = pathlib.Path("/home/doowkcol/Gatetorio_Code")
 BLE_CONFIG_FILE = CONFIG_DIR / "ble_config.json"

@@ -17,7 +17,8 @@ from ble_server_bluezero import (
     SERVICE_GATE_CONTROL, SERVICE_CONFIGURATION, SERVICE_DIAGNOSTICS,
     CHAR_COMMAND_TX, CHAR_COMMAND_RESPONSE, CHAR_STATUS,
     CHAR_INPUT_CONFIG, CHAR_INPUT_STATES,
-    STATUS_UPDATE_INTERVAL
+    STATUS_UPDATE_INTERVAL,
+    INPUT_FUNCTION_CODES
 )
 
 class GateControlService(localGATT.Service):
@@ -146,30 +147,34 @@ class InputConfigChar(localGATT.Characteristic):
         )
 
     def ReadValue(self, options):
-        """Return input_config.json (compressed format)"""
+        """Return input_config.json (compressed format with numeric function codes)"""
         try:
             print("[BLE] Input Config READ")
             with open('/home/doowkcol/Gatetorio_Code/input_config.json', 'r') as f:
                 full_config = json.load(f)
 
-            # Compress: Send only essential input metadata (not full config)
+            # Compress: Send only essential input metadata with numeric function codes
             inputs = full_config.get('inputs', {})
             compressed = {}
             for name, cfg in inputs.items():
-                # Only send essential fields with short keys
+                function_name = cfg.get('function')
+                function_code = INPUT_FUNCTION_CODES.get(function_name, 0)
+
                 compressed[name] = {
-                    "f": cfg.get('function'),  # function
-                    "t": cfg.get('type'),      # type
-                    "c": cfg.get('channel')    # channel
+                    "f": function_code,        # function code (int)
+                    "t": cfg.get('type'),      # type (str)
+                    "c": cfg.get('channel')    # channel (int)
                 }
 
             config_json = json.dumps(compressed, separators=(',', ':')).encode('utf-8')
-            print(f"[BLE] Sending {len(config_json)} bytes (compressed)")
+            print(f"[BLE] Sending {len(config_json)} bytes (compressed with numeric codes)")
             if len(config_json) > 512:
                 print(f"[BLE] WARNING: Data exceeds typical MTU limit (512 bytes)")
             return list(config_json)
         except Exception as e:
             print(f"[BLE] Error reading input config: {e}")
+            import traceback
+            traceback.print_exc()
             return list(b'{"error":"not available"}')
 
 
