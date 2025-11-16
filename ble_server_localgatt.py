@@ -147,18 +147,52 @@ class ConfigDataChar(localGATT.Characteristic):
         )
 
     def ReadValue(self, options):
-        """Return gate configuration from gate_config.json"""
+        """Return gate configuration from gate_config.json (ultra-compressed)"""
         try:
             print("[BLE] Config Data READ")
             config_file = '/home/doowkcol/Gatetorio_Code/gate_config.json'
             with open(config_file, 'r') as f:
                 config = json.load(f)
 
-            config_json = json.dumps(config, separators=(',', ':')).encode('utf-8')
-            print(f"[BLE] Sending {len(config_json)} bytes (gate config)")
+            # Ultra-compress: Array format with fixed order (saves ~50% vs object)
+            # Order: [run_time, pause_time, m1_open_delay, m2_close_delay, auto_close_time,
+            #         safety_reverse_time, deadman_speed, step_logic_mode, p1_percent, p2_percent,
+            #         p_return_pause, auto_close_en, learning_en, m1_limit_sw, m2_limit_sw,
+            #         limit_sw_en, open_slowdown%, close_slowdown%, learning_speed, open_speed,
+            #         close_speed, p1_auto_close, p2_auto_close, m1_run_time, m2_run_time, m2_enabled]
+            compressed = [
+                round(config.get("run_time", 12.0), 2),
+                round(config.get("pause_time", 5.0), 2),
+                round(config.get("motor1_open_delay", 2.0), 2),
+                round(config.get("motor2_close_delay", 5.0), 2),
+                round(config.get("auto_close_time", 5.0), 2),
+                round(config.get("safety_reverse_time", 1.5), 2),
+                round(config.get("deadman_speed", 0.3), 2),
+                config.get("step_logic_mode", 4),
+                config.get("partial_1_percent", 50),
+                config.get("partial_2_percent", 70),
+                round(config.get("partial_return_pause", 2.0), 2),
+                1 if config.get("auto_close_enabled", True) else 0,
+                1 if config.get("learning_mode_enabled", False) else 0,
+                1 if config.get("motor1_use_limit_switches", True) else 0,
+                1 if config.get("motor2_use_limit_switches", True) else 0,
+                1 if config.get("limit_switches_enabled", True) else 0,
+                round(config.get("opening_slowdown_percent", 0.5), 2),
+                round(config.get("closing_slowdown_percent", 20.0), 2),
+                round(config.get("learning_speed", 0.3), 2),
+                round(config.get("open_speed", 1.0), 2),
+                round(config.get("close_speed", 1.0), 2),
+                round(config.get("partial_1_auto_close_time", 5.0), 2),
+                round(config.get("partial_2_auto_close_time", 5.0), 2),
+                round(config.get("motor1_run_time", 7.83), 2),
+                round(config.get("motor2_run_time", 8.56), 2),
+                1 if config.get("motor2_enabled", True) else 0
+            ]
+
+            config_json = json.dumps(compressed, separators=(',', ':')).encode('utf-8')
+            print(f"[BLE] Sending {len(config_json)} bytes (compressed gate config)")
             if len(config_json) > 186:
                 print(f"[BLE] WARNING: Gate config ({len(config_json)} bytes) exceeds BLE buffer limit")
-                print(f"[BLE] Data may be truncated - consider compressing or splitting")
             return list(config_json)
         except FileNotFoundError:
             print(f"[BLE] Error: gate_config.json not found")
@@ -170,11 +204,42 @@ class ConfigDataChar(localGATT.Characteristic):
             return list(b'{}')
 
     def WriteValue(self, value, options):
-        """Write gate configuration to gate_config.json"""
+        """Write gate configuration to gate_config.json (decompress from short keys)"""
         try:
             raw_bytes = bytes(value)
             print(f"[BLE] Config Data WRITE: {len(raw_bytes)} bytes")
-            config_data = json.loads(raw_bytes.decode('utf-8'))
+            compressed = json.loads(raw_bytes.decode('utf-8'))
+
+            # Decompress: array to full config
+            # Must match the order in ReadValue
+            config_data = {
+                "run_time": compressed[0] if len(compressed) > 0 else 12.0,
+                "pause_time": compressed[1] if len(compressed) > 1 else 5.0,
+                "motor1_open_delay": compressed[2] if len(compressed) > 2 else 2.0,
+                "motor2_close_delay": compressed[3] if len(compressed) > 3 else 5.0,
+                "auto_close_time": compressed[4] if len(compressed) > 4 else 5.0,
+                "safety_reverse_time": compressed[5] if len(compressed) > 5 else 1.5,
+                "deadman_speed": compressed[6] if len(compressed) > 6 else 0.3,
+                "step_logic_mode": compressed[7] if len(compressed) > 7 else 4,
+                "partial_1_percent": compressed[8] if len(compressed) > 8 else 50,
+                "partial_2_percent": compressed[9] if len(compressed) > 9 else 70,
+                "partial_return_pause": compressed[10] if len(compressed) > 10 else 2.0,
+                "auto_close_enabled": bool(compressed[11]) if len(compressed) > 11 else True,
+                "learning_mode_enabled": bool(compressed[12]) if len(compressed) > 12 else False,
+                "motor1_use_limit_switches": bool(compressed[13]) if len(compressed) > 13 else True,
+                "motor2_use_limit_switches": bool(compressed[14]) if len(compressed) > 14 else True,
+                "limit_switches_enabled": bool(compressed[15]) if len(compressed) > 15 else True,
+                "opening_slowdown_percent": compressed[16] if len(compressed) > 16 else 0.5,
+                "closing_slowdown_percent": compressed[17] if len(compressed) > 17 else 20.0,
+                "learning_speed": compressed[18] if len(compressed) > 18 else 0.3,
+                "open_speed": compressed[19] if len(compressed) > 19 else 1.0,
+                "close_speed": compressed[20] if len(compressed) > 20 else 1.0,
+                "partial_1_auto_close_time": compressed[21] if len(compressed) > 21 else 5.0,
+                "partial_2_auto_close_time": compressed[22] if len(compressed) > 22 else 5.0,
+                "motor1_run_time": compressed[23] if len(compressed) > 23 else 7.83,
+                "motor2_run_time": compressed[24] if len(compressed) > 24 else 8.56,
+                "motor2_enabled": bool(compressed[25]) if len(compressed) > 25 else True
+            }
 
             # Write to file
             config_file = '/home/doowkcol/Gatetorio_Code/gate_config.json'
