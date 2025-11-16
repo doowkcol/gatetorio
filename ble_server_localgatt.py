@@ -147,26 +147,47 @@ class ConfigDataChar(localGATT.Characteristic):
         )
 
     def ReadValue(self, options):
-        """Return gate configuration"""
+        """Return gate configuration from gate_config.json"""
         try:
             print("[BLE] Config Data READ")
-            config_json = json.dumps(self.ble_server.controller.config, separators=(',', ':')).encode('utf-8')
+            config_file = '/home/doowkcol/Gatetorio_Code/gate_config.json'
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+
+            config_json = json.dumps(config, separators=(',', ':')).encode('utf-8')
             print(f"[BLE] Sending {len(config_json)} bytes (gate config)")
+            if len(config_json) > 186:
+                print(f"[BLE] WARNING: Gate config ({len(config_json)} bytes) exceeds BLE buffer limit")
+                print(f"[BLE] Data may be truncated - consider compressing or splitting")
             return list(config_json)
+        except FileNotFoundError:
+            print(f"[BLE] Error: gate_config.json not found")
+            return list(b'{"error":"config file not found"}')
         except Exception as e:
             print(f"[BLE] Error reading config: {e}")
+            import traceback
+            traceback.print_exc()
             return list(b'{}')
 
     def WriteValue(self, value, options):
-        """Write gate configuration"""
+        """Write gate configuration to gate_config.json"""
         try:
             raw_bytes = bytes(value)
             print(f"[BLE] Config Data WRITE: {len(raw_bytes)} bytes")
             config_data = json.loads(raw_bytes.decode('utf-8'))
-            response = self.ble_server._handle_set_config(config_data)
-            print(f"[BLE] Config updated successfully")
+
+            # Write to file
+            config_file = '/home/doowkcol/Gatetorio_Code/gate_config.json'
+            with open(config_file, 'w') as f:
+                json.dump(config_data, f, indent=2)
+
+            # Reload controller config
+            self.ble_server.controller.reload_config()
+            print(f"[BLE] Config updated and reloaded successfully")
         except Exception as e:
             print(f"[BLE] Error writing config: {e}")
+            import traceback
+            traceback.print_exc()
 
 
 class InputConfigChar(localGATT.Characteristic):
