@@ -639,11 +639,11 @@ class GatetorioBLEServer:
         )
 
     def _add_configuration_service(self, ble_peripheral):
-        """Add Configuration service (secondary - not advertised)"""
+        """Add Configuration service (PRIMARY - needed for discovery)"""
         print("[BLE] Adding Configuration service...")
 
-        # Secondary service (not included in advertisement to save space)
-        ble_peripheral.add_service(srv_id=3, uuid=SERVICE_CONFIGURATION, primary=False)
+        # PRIMARY service (Flutter app can't discover secondary services reliably)
+        ble_peripheral.add_service(srv_id=3, uuid=SERVICE_CONFIGURATION, primary=True)
 
         # Config Data (read/write)
         def read_config():
@@ -696,11 +696,11 @@ class GatetorioBLEServer:
         )
 
     def _add_diagnostics_service(self, ble_peripheral):
-        """Add Diagnostics service (secondary - not advertised)"""
+        """Add Diagnostics service (PRIMARY - needed for discovery)"""
         print("[BLE] Adding Diagnostics service...")
 
-        # Secondary service (not included in advertisement to save space)
-        ble_peripheral.add_service(srv_id=4, uuid=SERVICE_DIAGNOSTICS, primary=False)
+        # PRIMARY service (Flutter app can't discover secondary services reliably)
+        ble_peripheral.add_service(srv_id=4, uuid=SERVICE_DIAGNOSTICS, primary=True)
 
         # Input States (read + notify)
         def read_input_states():
