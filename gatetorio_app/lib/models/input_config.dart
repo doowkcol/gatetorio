@@ -23,16 +23,22 @@ class InputConfig {
   });
 
   /// Parse from JSON received from BLE
+  /// Supports both old format and new compact format with keys:
+  /// - "c" = channel
+  /// - "e" = enabled
+  /// - "t" = type
+  /// - "f" = function
+  /// - "d" = description
   factory InputConfig.fromJson(String name, Map<String, dynamic> json) {
     return InputConfig(
       name: name,
-      channel: (json['channel'] as num?)?.toInt() ?? 0,
-      enabled: json['enabled'] ?? true,
-      type: json['type'] ?? 'NO',
-      function: json['function'],
-      description: json['description'] ?? '',
-      tolerancePercent: (json['tolerance_percent'] as num?)?.toDouble(),
-      learnedResistance: (json['learned_resistance'] as num?)?.toDouble(),
+      channel: (json['c'] ?? json['channel'] as num?)?.toInt() ?? 0,
+      enabled: json['e'] ?? json['enabled'] ?? true,
+      type: json['t'] ?? json['type'] ?? 'NO',
+      function: json['f'] ?? json['function'],
+      description: json['d'] ?? json['description'] ?? '',
+      tolerancePercent: (json['tol'] ?? json['tolerance_percent'] as num?)?.toDouble(),
+      learnedResistance: (json['lr'] ?? json['learned_resistance'] as num?)?.toDouble(),
     );
   }
 
@@ -147,21 +153,47 @@ class InputStates {
   });
 
   /// Parse from JSON received from BLE
+  /// Supports both old format and new compact format with keys:
+  /// - "a" = active (replaces "active")
+  /// - "f" = function (replaces "function")
+  /// - "t" = type (replaces "type")
+  /// - "c" = channel (replaces "channel")
   factory InputStates.fromJson(Map<String, dynamic> json) {
     final statesMap = <String, bool>{};
     final rawValuesMap = <String, double>{};
 
-    // Parse states
-    final statesJson = json['states'] as Map<String, dynamic>? ?? {};
-    statesJson.forEach((key, value) {
-      statesMap[key] = value as bool? ?? false;
-    });
+    // Check if using old format (has 'states' key) or new compact format
+    if (json.containsKey('states')) {
+      // OLD FORMAT: {"states": {"IN1": true, ...}, "raw_values": {...}, "timestamp": ...}
+      final statesJson = json['states'] as Map<String, dynamic>? ?? {};
+      statesJson.forEach((key, value) {
+        statesMap[key] = value as bool? ?? false;
+      });
 
-    // Parse raw values if present
-    final rawJson = json['raw_values'] as Map<String, dynamic>? ?? {};
-    rawJson.forEach((key, value) {
-      rawValuesMap[key] = (value as num?)?.toDouble() ?? 0.0;
-    });
+      final rawJson = json['raw_values'] as Map<String, dynamic>? ?? {};
+      rawJson.forEach((key, value) {
+        rawValuesMap[key] = (value as num?)?.toDouble() ?? 0.0;
+      });
+    } else {
+      // NEW COMPACT FORMAT: {"IN1": {"a": true, "f": "...", "t": "...", "c": 0}, ...}
+      json.forEach((key, value) {
+        if (key == 'timestamp') return; // Skip timestamp key
+
+        if (value is Map<String, dynamic>) {
+          // Extract active state using compact key "a" or fallback to "active"
+          statesMap[key] = value['a'] as bool? ?? value['active'] as bool? ?? false;
+
+          // Extract raw value if present (voltage or other measurement)
+          final rawValue = value['v'] ?? value['voltage'] ?? value['raw'];
+          if (rawValue != null) {
+            rawValuesMap[key] = (rawValue as num?)?.toDouble() ?? 0.0;
+          }
+        } else if (value is bool) {
+          // Simple format: just input name -> active state
+          statesMap[key] = value;
+        }
+      });
+    }
 
     return InputStates(
       states: statesMap,
