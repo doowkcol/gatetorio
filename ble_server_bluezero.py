@@ -23,10 +23,29 @@ from typing import Dict, Optional, Set
 from dataclasses import dataclass
 from datetime import datetime
 
-# NOTE: bluezero imports moved to ble_server_localgatt.py to avoid
+# NOTE: bluezero imports happen in _ensure_bluezero_imported() to avoid
 # dbus/multiprocessing conflicts. Importing dbus before forking child
-# processes causes hangs. The localGATT implementation imports bluezero
-# only after the GateController has been created.
+# processes causes hangs. We import bluezero AFTER GateController is created.
+
+_bluezero_imported = False
+
+def _ensure_bluezero_imported():
+    """Import bluezero after controller initialization to avoid dbus/multiprocessing conflicts"""
+    global _bluezero_imported
+    if not _bluezero_imported:
+        try:
+            # Import at function level, not module level
+            import bluezero
+            _bluezero_imported = True
+            print("[BLE] Bluezero imported successfully")
+        except ImportError:
+            print("ERROR: bluezero not installed")
+            print("Install system packages first:")
+            print("  sudo apt-get install python3-dbus libdbus-1-dev libglib2.0-dev bluez")
+            print("Then install Python package:")
+            print("  pip3 install bluezero")
+            import sys
+            sys.exit(1)
 
 try:
     import psutil
@@ -807,6 +826,9 @@ class GatetorioBLEServer:
         print("=" * 60)
         print(f"Hardware ID: {self.hardware_id}")
         print(f"User ID: {self.config.user_id}")
+
+        # Ensure bluezero is imported (happens after controller init)
+        _ensure_bluezero_imported()
 
         # TESTING MODE: Keep pairing window open permanently
         print("[BLE] TESTING MODE: Pairing window ALWAYS OPEN")
