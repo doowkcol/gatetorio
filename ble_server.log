@@ -1,7 +1,7 @@
 ==========================================
 Gatetorio BLE Server
 ==========================================
-Starting at: Sat 15 Nov 23:57:07 GMT 2025
+Starting at: Sun 16 Nov 00:26:39 GMT 2025
 
 ==========================================
 Gatetorio BLE Server Startup
@@ -29,8 +29,8 @@ Step 4: Starting BLE server...
 Gate Controller V2 (Step 3 - Three Processes) initialized
   M1 travel time: 7.835115489037847s, M2 travel time: 8.557032567378949s
   M2 enabled: True
-  Motor Manager PID: 6579
-  Input Manager PID: 6580
+  Motor Manager PID: 3157
+  Input Manager PID: 3158
   Auto-close: ENABLED (5.0s)
 Motor Manager initialized
 Motor Manager process started
@@ -93,7 +93,7 @@ Whitelist enabled: True
 [BLE] Registering BLE advertisement...
 Advertisement registered
 [BLE] Status notifications enabled - starting 1Hz update timer
-[INPUT RAW] IN5                  func=cmd_open             raw=ACTIVE was=inactive V=3.30
+[INPUT RAW] IN5                  func=cmd_open             raw=ACTIVE was=inactive V=3.31
 [INPUT DEBOUNCED] IN5                  func=cmd_open             → ACTIVE
 [INPUT] cmd_open             → ACTIVE
 
@@ -113,15 +113,13 @@ Advertisement registered
 [FAULT] M1 LIMIT_MISSING: OPENING - open limit not activated at 7.84s (consecutive MOVEMENTS: 1)
 [INPUT RAW] IN2                  func=open_limit_m1        raw=ACTIVE was=inactive V=3.31
 [INPUT DEBOUNCED] IN2                  func=open_limit_m1        → ACTIVE
-[LIMIT SWITCH] M1 OPEN limit reached - position was 7.91s (100.9%), setting to 7.84s (100%)
+[LIMIT SWITCH] M1 OPEN limit reached - position was 7.94s (101.3%), setting to 7.84s (100%)
 [FAULT] M1 fault counter cleared (was 1)
 [FAULT] M2 LIMIT_MISSING: OPENING - open limit not activated at 8.56s (consecutive MOVEMENTS: 1)
 [INPUT RAW] IN3                  func=open_limit_m2        raw=ACTIVE was=inactive V=3.31
 [INPUT DEBOUNCED] IN3                  func=open_limit_m2        → ACTIVE
-[LIMIT SWITCH] M2 OPEN limit reached - position was 8.66s (101.1%), setting to 8.56s (100%)
-[FAULT] M2 fault counter cleared (was 1)
 [COMPLETION] OPEN complete! M1: limit=True, M2: limit=True
-[_complete_open] BEFORE: state=OPENING, M1=7.84, M2=8.56
+[_complete_open] BEFORE: state=OPENING, M1=7.84, M2=8.72
 [_complete_open] AFTER: state=OPEN, movement_command=None
 Gates OPEN
 Auto-close triggered (from full OPEN) - sending momentary CLOSE pulse
@@ -134,79 +132,66 @@ Auto-close pulse - no PO sustained, closing fully
 [INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
 [INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
 [INPUT DEBOUNCED] IN2                  func=open_limit_m1        → inactive
-[FAULT] M2 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 1)
+[FAULT] M2 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 2)
 [INPUT RAW] IN4                  func=close_limit_m2       raw=ACTIVE was=inactive V=0.00
 [INPUT DEBOUNCED] IN4                  func=close_limit_m2       → ACTIVE
-[LIMIT SWITCH] M2 CLOSE limit reached - position was 0.08s (0.9%), setting to 0.0s (0%)
-[FAULT] M2 fault counter cleared (was 1)
+[LIMIT SWITCH] M2 CLOSE limit reached - position was 0.07s (0.8%), setting to 0.0s (0%)
+[FAULT] M2 fault counter cleared (was 2)
 [INPUT RAW] IN1                  func=close_limit_m1       raw=ACTIVE was=inactive V=0.00
 [INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
 [COMPLETION] CLOSE complete! M1: limit=True, M2: limit=True
-[_complete_close] BEFORE: state=CLOSING, M1=0.14, M2=0.00
+[_complete_close] BEFORE: state=CLOSING, M1=0.11, M2=-0.00
 [_complete_close] AFTER: state=CLOSED, movement_command=None
 Gates CLOSED
-Process Process-3:
-Traceback (most recent call last):
-  File "/usr/lib/python3.13/multiprocessing/process.py", line 313, in _bootstrap
-    self.run()
-    ~~~~~~~~^^
-  File "/usr/lib/python3.13/multiprocessing/process.py", line 108, in run
-    self._target(*self._args, **self._kwargs)
-    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/doowkcol/Gatetorio_Code/input_manager.py", line 534, in input_manager_process
-    manager.run()
-    ~~~~~~~~~~~^^
-  File "/home/doowkcol/Gatetorio_Code/input_manager.py", line 213, in run
-    self._sample_all_inputs(consecutive_active, consecutive_inactive)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/doowkcol/Gatetorio_Code/input_manager.py", line 257, in _sample_all_inputs
-    self._process_single_input(input_name, input_cfg, consecutive_active,
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                              consecutive_inactive, now)
-                              ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/doowkcol/Gatetorio_Code/input_manager.py", line 273, in _process_single_input
-    value = self.analog_inputs[channel].value
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/adafruit_ads1x15/analog_in.py", line 56, in value
-    return self._ads.read(pin)
-           ~~~~~~~~~~~~~~^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/adafruit_ads1x15/ads1x15.py", line 330, in read
-    return self._read(pin)
-           ~~~~~~~~~~^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/adafruit_ads1x15/ads1x15.py", line 362, in _read
-    while not self._conversion_complete():
-              ~~~~~~~~~~~~~~~~~~~~~~~~~^^
-  File "/usr/local/lib/python3.13/dist-packages/adafruit_ads1x15/ads1x15.py", line 376, in _conversion_complete
-    return self._read_register(_ADS1X15_POINTER_CONFIG) & 0x8000
-           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/adafruit_ads1x15/ads1x15.py", line 402, in _read_register
-    i2c.write_then_readinto(bytearray([reg]), self.buf, in_end=2)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/adafruit_bus_device/i2c_device.py", line 135, in write_then_readinto
-    self.i2c.writeto_then_readfrom(
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-        self.device_address,
-        ^^^^^^^^^^^^^^^^^^^^
-    ...<5 lines>...
-        in_end=in_end,
-        ^^^^^^^^^^^^^^
-    )
-    ^
-  File "/usr/local/lib/python3.13/dist-packages/busio.py", line 240, in writeto_then_readfrom
-    return self._i2c.writeto_then_readfrom(
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-        address,
-        ^^^^^^^^
-    ...<6 lines>...
-        stop=stop,
-        ^^^^^^^^^^
-    )
-    ^
-  File "/usr/local/lib/python3.13/dist-packages/adafruit_blinka/microcontroller/generic_linux/i2c.py", line 98, in writeto_then_readfrom
-    readin = self._i2c_bus.read_i2c_block_data(
-        address, buffer_out[out_start:out_end], in_end - in_start
-    )
-  File "/usr/local/lib/python3.13/dist-packages/Adafruit_PureIO/smbus.py", line 264, in read_i2c_block_data
-    ioctl(self._device.fileno(), I2C_RDWR, request)
-    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-OSError: [Errno 121] Remote I/O error
+[BLE] ========================================
+[BLE] Received write to Command TX
+[BLE] Raw bytes (55): b'{"cmd":"pulse","key":"cmd_open","timestamp":1763253106}'
+[BLE] Decoded: {"cmd":"pulse","key":"cmd_open","timestamp":1763253106}
+[BLE] Command: pulse cmd_open
+
+>>> [_execute_open CALLED] M1:0.0s M2:0.0s
+    Current state: CLOSED, safety_reversing: False
+    Flags: cmd_open=True, stop_opening_active=False
+[BLE] Response: {'success': True, 'message': 'Pulse sent: cmd_open'}
+[BLE] ========================================
+[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
+[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
+[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → inactive
+[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
+[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
+[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → inactive
+[FAULT] M1 LIMIT_MISSING: OPENING - open limit not activated at 7.84s (consecutive MOVEMENTS: 1)
+[INPUT RAW] IN2                  func=open_limit_m1        raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → ACTIVE
+[FAULT] M1 fault counter cleared (was 1)
+[LIMIT SWITCH] M1 OPEN limit reached - position was 7.93s (101.3%), setting to 7.84s (100%)
+[FAULT] M2 LIMIT_MISSING: OPENING - open limit not activated at 8.56s (consecutive MOVEMENTS: 1)
+[INPUT RAW] IN3                  func=open_limit_m2        raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → ACTIVE
+[LIMIT SWITCH] M2 OPEN limit reached - position was 8.65s (101.1%), setting to 8.56s (100%)[COMPLETION] OPEN complete! M1: limit=True, M2: limit=True
+
+[_complete_open] BEFORE: state=OPENING, M1=7.84, M2=8.65
+[_complete_open] AFTER: state=OPEN, movement_command=None
+Gates OPEN
+Auto-close triggered (from full OPEN) - sending momentary CLOSE pulse
+Auto-close pulse - no PO sustained, closing fully
+
+>>> CLOSE command - M1:7.8s M2:8.6s
+[INPUT RAW] IN3                  func=open_limit_m2        raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN3                  func=open_limit_m2        raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → inactive
+[INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → inactive
+[INPUT RAW] IN4                  func=close_limit_m2       raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → ACTIVE
+[LIMIT SWITCH] M2 CLOSE limit reached - position was 0.11s (1.3%), setting to 0.0s (0%)
+[FAULT] M2 fault counter cleared (was 1)
+[FAULT] M1 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 1)
+[INPUT RAW] IN1                  func=close_limit_m1       raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
+[LIMIT SWITCH] M1 CLOSE limit reached - position was 0.09s (1.2%), setting to 0.0s (0%)
+[COMPLETION] CLOSE complete! M1: limit=True, M2: limit=True
+[_complete_close] BEFORE: state=CLOSING, M1=0.00, M2=-0.00
+[_complete_close] AFTER: state=CLOSED, movement_command=None
+Gates CLOSED
