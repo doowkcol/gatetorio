@@ -23,27 +23,45 @@ class _InputStatusScreenState extends State<InputStatusScreen> {
   }
 
   Future<void> _loadInputData() async {
+    debugPrint('=== InputStatusScreen._loadInputData() called ===');
     setState(() => _isLoading = true);
 
     final bleService = Provider.of<BleService>(context, listen: false);
 
-    // Debug: Check demo mode and data availability
-    print('InputStatusScreen: isDemoMode = ${bleService.isDemoMode}');
-    print('InputStatusScreen: inputConfig = ${bleService.inputConfig}');
-    print('InputStatusScreen: inputStates = ${bleService.inputStates}');
+    // Debug: Check connection and mode
+    debugPrint('InputStatusScreen: isConnected = ${bleService.isConnected}');
+    debugPrint('InputStatusScreen: isDemoMode = ${bleService.isDemoMode}');
+    debugPrint('InputStatusScreen: inputConfig before read = ${bleService.inputConfig}');
+    debugPrint('InputStatusScreen: inputStates before read = ${bleService.inputStates}');
 
     // In demo mode, data is already available
     if (!bleService.isDemoMode) {
-      // Load both input config and input states from BLE
-      await Future.wait([
-        bleService.readInputConfig(),
-        bleService.readInputStates(),
-      ]);
+      debugPrint('InputStatusScreen: Not in demo mode, attempting to read from BLE...');
+
+      try {
+        // Load both input config and input states from BLE
+        debugPrint('InputStatusScreen: Calling readInputConfig()...');
+        final configResult = await bleService.readInputConfig();
+        debugPrint('InputStatusScreen: readInputConfig() returned: $configResult');
+
+        debugPrint('InputStatusScreen: Calling readInputStates()...');
+        final statesResult = await bleService.readInputStates();
+        debugPrint('InputStatusScreen: readInputStates() returned: $statesResult');
+      } catch (e, stackTrace) {
+        debugPrint('InputStatusScreen: ERROR loading input data: $e');
+        debugPrint('InputStatusScreen: Stack trace: $stackTrace');
+      }
+    } else {
+      debugPrint('InputStatusScreen: In demo mode, using existing data');
     }
+
+    debugPrint('InputStatusScreen: inputConfig after read = ${bleService.inputConfig}');
+    debugPrint('InputStatusScreen: inputStates after read = ${bleService.inputStates}');
 
     if (mounted) {
       setState(() => _isLoading = false);
     }
+    debugPrint('=== InputStatusScreen._loadInputData() completed ===');
   }
 
   @override

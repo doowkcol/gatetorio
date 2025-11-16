@@ -310,35 +310,45 @@ class BleService extends ChangeNotifier {
       );
 
       // Find Configuration Service (optional - may not exist on all devices)
+      debugPrint("Looking for Configuration Service ${_configurationServiceUuid}...");
       try {
         final configService = services.firstWhere(
           (s) => s.uuid == _configurationServiceUuid,
         );
+        debugPrint("Configuration service FOUND! Looking for characteristics...");
 
+        debugPrint("  Looking for Config Data characteristic ${_configDataUuid}...");
         _configDataChar = configService.characteristics.firstWhere(
           (c) => c.uuid == _configDataUuid,
         );
+        debugPrint("  Config Data characteristic FOUND!");
 
+        debugPrint("  Looking for Input Config characteristic ${_inputConfigUuid}...");
         _inputConfigChar = configService.characteristics.firstWhere(
           (c) => c.uuid == _inputConfigUuid,
         );
+        debugPrint("  Input Config characteristic FOUND!");
       } catch (e) {
-        debugPrint("Configuration service not available: $e");
+        debugPrint("Configuration service NOT available: $e");
         _configDataChar = null;
         _inputConfigChar = null;
       }
 
       // Find Diagnostics Service (optional - may not exist on all devices)
+      debugPrint("Looking for Diagnostics Service ${_diagnosticsServiceUuid}...");
       try {
         final diagnosticsService = services.firstWhere(
           (s) => s.uuid == _diagnosticsServiceUuid,
         );
+        debugPrint("Diagnostics service FOUND! Looking for characteristics...");
 
+        debugPrint("  Looking for Input States characteristic ${_inputStatesUuid}...");
         _inputStatesChar = diagnosticsService.characteristics.firstWhere(
           (c) => c.uuid == _inputStatesUuid,
         );
+        debugPrint("  Input States characteristic FOUND!");
       } catch (e) {
-        debugPrint("Diagnostics service not available: $e");
+        debugPrint("Diagnostics service NOT available: $e");
         _inputStatesChar = null;
       }
 
@@ -510,28 +520,43 @@ class BleService extends ChangeNotifier {
 
   /// Read input configuration from BLE device
   Future<InputConfigData?> readInputConfig() async {
+    debugPrint("=== readInputConfig() called ===");
+
     // Handle demo mode
     if (_isDemoMode) {
       debugPrint("Demo mode: Returning sample input config");
       return _inputConfig;
     }
 
+    debugPrint("Checking if input config characteristic is available...");
+    debugPrint("_inputConfigChar is null: ${_inputConfigChar == null}");
+
     if (_inputConfigChar == null) {
+      debugPrint("ERROR: Input config characteristic not available");
       _lastError = "Input config characteristic not available";
       notifyListeners();
       return null;
     }
 
     try {
-      debugPrint("Reading input configuration...");
+      debugPrint("Reading input configuration from characteristic ${_inputConfigUuid}...");
       final value = await _inputConfigChar!.read();
+      debugPrint("Input config read: ${value.length} bytes");
+
       if (value.isNotEmpty) {
+        final jsonString = utf8.decode(value);
+        debugPrint("Input config JSON: $jsonString");
+
         _inputConfig = InputConfigData.fromBytes(value);
-        debugPrint("Input config loaded: $_inputConfig");
+        debugPrint("Input config parsed successfully: $_inputConfig");
         notifyListeners();
         return _inputConfig;
+      } else {
+        debugPrint("WARNING: Input config read was empty");
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint("ERROR: Failed to read input config: $e");
+      debugPrint("Stack trace: $stackTrace");
       _lastError = "Failed to read input config: $e";
       notifyListeners();
     }
@@ -540,28 +565,43 @@ class BleService extends ChangeNotifier {
 
   /// Read input states from BLE device
   Future<InputStates?> readInputStates() async {
+    debugPrint("=== readInputStates() called ===");
+
     // Handle demo mode
     if (_isDemoMode) {
       debugPrint("Demo mode: Returning sample input states");
       return _inputStates;
     }
 
+    debugPrint("Checking if input states characteristic is available...");
+    debugPrint("_inputStatesChar is null: ${_inputStatesChar == null}");
+
     if (_inputStatesChar == null) {
+      debugPrint("ERROR: Input states characteristic not available");
       _lastError = "Input states characteristic not available";
       notifyListeners();
       return null;
     }
 
     try {
-      debugPrint("Reading input states...");
+      debugPrint("Reading input states from characteristic ${_inputStatesUuid}...");
       final value = await _inputStatesChar!.read();
+      debugPrint("Input states read: ${value.length} bytes");
+
       if (value.isNotEmpty) {
+        final jsonString = utf8.decode(value);
+        debugPrint("Input states JSON: $jsonString");
+
         _inputStates = InputStates.fromBytes(value);
-        debugPrint("Input states loaded: $_inputStates");
+        debugPrint("Input states parsed successfully: $_inputStates");
         notifyListeners();
         return _inputStates;
+      } else {
+        debugPrint("WARNING: Input states read was empty");
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint("ERROR: Failed to read input states: $e");
+      debugPrint("Stack trace: $stackTrace");
       _lastError = "Failed to read input states: $e";
       notifyListeners();
     }
