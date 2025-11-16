@@ -1,14 +1,11 @@
 ==========================================
 Gatetorio BLE Server
 ==========================================
-Starting at: Sun 16 Nov 11:10:02 GMT 2025
+Starting at: Sun 16 Nov 11:14:42 GMT 2025
 
-Traceback (most recent call last):
-  File "/home/doowkcol/Gatetorio_Code/ble_server_bluezero.py", line 110, in <module>
-    class GatetorioBLEServer:
-    ...<707 lines>...
-            start_localgatt_server(self)
-  File "/home/doowkcol/Gatetorio_Code/ble_server_bluezero.py", line 474, in GatetorioBLEServer
-    def build_gatt_server(self) -> peripheral.Peripheral:
-                                   ^^^^^^^^^^
-NameError: name 'peripheral' is not defined
+[Main] Initializing Gatetorio gate controller...
+[Main] WARNING: Make sure no other controller instance is running!
+[Main] Close the desktop launcher before starting BLE server.
+
+[Main] Step 1: Waiting for hardware initialization...
+[Main] Step 2: Creating controller instance...
