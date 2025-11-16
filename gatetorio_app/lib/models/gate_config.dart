@@ -101,14 +101,67 @@ class GateConfig {
     );
   }
 
-  /// Parse from raw bytes received from BLE characteristic
-  factory GateConfig.fromBytes(List<int> bytes) {
-    final jsonString = utf8.decode(bytes);
-    final json = jsonDecode(jsonString) as Map<String, dynamic>;
-    return GateConfig.fromJson(json);
+  /// Parse from ultra-compressed array format (71 bytes)
+  /// Array format in exact order:
+  /// [0] run_time, [1] pause_time, [2] motor1_open_delay, [3] motor2_close_delay,
+  /// [4] auto_close_time, [5] safety_reverse_time, [6] deadman_speed,
+  /// [7] step_logic_mode, [8] partial_1_percent, [9] partial_2_percent,
+  /// [10] partial_return_pause, [11] auto_close_enabled, [12] learning_mode_enabled,
+  /// [13] motor1_use_limit_switches, [14] motor2_use_limit_switches,
+  /// [15] limit_switches_enabled, [16] opening_slowdown_percent,
+  /// [17] closing_slowdown_percent, [18] learning_speed, [19] open_speed,
+  /// [20] close_speed, [21] partial_1_auto_close_time, [22] partial_2_auto_close_time,
+  /// [23] motor1_run_time, [24] motor2_run_time, [25] motor2_enabled
+  factory GateConfig.fromArray(List<dynamic> array) {
+    if (array.length < 26) {
+      throw FormatException('Config array must have at least 26 elements, got ${array.length}');
+    }
+
+    return GateConfig(
+      motor1RunTime: (array[23] as num).toDouble(),
+      motor2RunTime: (array[24] as num).toDouble(),
+      motor2Enabled: (array[25] as num) == 1,
+      pauseTime: (array[1] as num).toDouble(),
+      motor1OpenDelay: (array[2] as num).toDouble(),
+      motor2CloseDelay: (array[3] as num).toDouble(),
+      autoCloseTime: (array[4] as num).toDouble(),
+      autoCloseEnabled: (array[11] as num) == 1,
+      safetyReverseTime: (array[5] as num).toDouble(),
+      deadmanSpeed: (array[6] as num).toDouble(),
+      stepLogicMode: (array[7] as num).toInt(),
+      partial1Percent: (array[8] as num).toInt(),
+      partial2Percent: (array[9] as num).toInt(),
+      partial1AutoCloseTime: (array[21] as num).toDouble(),
+      partial2AutoCloseTime: (array[22] as num).toDouble(),
+      partialReturnPause: (array[10] as num).toDouble(),
+      motor1UseLimitSwitches: (array[13] as num) == 1,
+      motor2UseLimitSwitches: (array[14] as num) == 1,
+      openSpeed: (array[19] as num).toDouble(),
+      closeSpeed: (array[20] as num).toDouble(),
+      learningSpeed: (array[18] as num).toDouble(),
+      openingSlowdownPercent: (array[16] as num).toDouble(),
+      closingSlowdownPercent: (array[17] as num).toDouble(),
+    );
   }
 
-  /// Convert to JSON for BLE transmission
+  /// Parse from raw bytes received from BLE characteristic
+  /// Auto-detects array or object format
+  factory GateConfig.fromBytes(List<int> bytes) {
+    final jsonString = utf8.decode(bytes);
+    final decoded = jsonDecode(jsonString);
+
+    if (decoded is List) {
+      // New ultra-compressed array format
+      return GateConfig.fromArray(decoded);
+    } else if (decoded is Map<String, dynamic>) {
+      // Old JSON object format
+      return GateConfig.fromJson(decoded);
+    } else {
+      throw FormatException('Unexpected config format: ${decoded.runtimeType}');
+    }
+  }
+
+  /// Convert to JSON for BLE transmission (old format)
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{
       'motor1_run_time': motor1RunTime,
@@ -145,9 +198,45 @@ class GateConfig {
     return json;
   }
 
-  /// Convert to bytes for BLE write operation
+  /// Convert to ultra-compressed array format for BLE transmission (71 bytes)
+  /// Uses same order as fromArray for consistency
+  List<dynamic> toArray() {
+    // Note: run_time is deprecated but kept at index 0 for compatibility
+    final runTime = motor1RunTime; // Use M1 as the primary run time
+
+    return [
+      runTime,                    // [0] run_time (deprecated, using M1)
+      pauseTime,                  // [1] pause_time
+      motor1OpenDelay,           // [2] motor1_open_delay
+      motor2CloseDelay,          // [3] motor2_close_delay
+      autoCloseTime,             // [4] auto_close_time
+      safetyReverseTime,         // [5] safety_reverse_time
+      deadmanSpeed,              // [6] deadman_speed
+      stepLogicMode,             // [7] step_logic_mode
+      partial1Percent,           // [8] partial_1_percent
+      partial2Percent,           // [9] partial_2_percent
+      partialReturnPause,        // [10] partial_return_pause
+      autoCloseEnabled ? 1 : 0,  // [11] auto_close_enabled
+      0,                         // [12] learning_mode_enabled (not used in app)
+      motor1UseLimitSwitches ? 1 : 0, // [13] motor1_use_limit_switches
+      motor2UseLimitSwitches ? 1 : 0, // [14] motor2_use_limit_switches
+      0,                         // [15] limit_switches_enabled (not used in app)
+      openingSlowdownPercent,    // [16] opening_slowdown_percent
+      closingSlowdownPercent,    // [17] closing_slowdown_percent
+      learningSpeed,             // [18] learning_speed
+      openSpeed,                 // [19] open_speed
+      closeSpeed,                // [20] close_speed
+      partial1AutoCloseTime,     // [21] partial_1_auto_close_time
+      partial2AutoCloseTime,     // [22] partial_2_auto_close_time
+      motor1RunTime,             // [23] motor1_run_time
+      motor2RunTime,             // [24] motor2_run_time
+      motor2Enabled ? 1 : 0,     // [25] motor2_enabled
+    ];
+  }
+
+  /// Convert to bytes for BLE write operation (uses compressed array format)
   List<int> toBytes() {
-    return utf8.encode(jsonEncode(toJson()));
+    return utf8.encode(jsonEncode(toArray()));
   }
 
   /// Create a copy with modified fields
