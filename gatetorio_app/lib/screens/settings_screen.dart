@@ -13,8 +13,9 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+  late TabController _tabController;
 
   // Controllers for text fields
   final Map<String, TextEditingController> _controllers = {};
@@ -40,6 +41,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 4, vsync: this);
     _initializeControllers();
     // Defer config loading until after first build
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -344,6 +346,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
+    _tabController.dispose();
     for (final controller in _controllers.values) {
       controller.dispose();
     }
@@ -381,6 +384,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(icon: Icon(Icons.timer), text: 'Timings'),
+            Tab(icon: Icon(Icons.settings), text: 'Partial'),
+            Tab(icon: Icon(Icons.speed), text: 'Speeds'),
+            Tab(icon: Icon(Icons.school), text: 'Learning'),
+          ],
+        ),
       ),
       body: Stack(
         children: [
@@ -394,413 +406,451 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // Main content
           _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : RefreshIndicator(
-                  onRefresh: _loadConfiguration,
-                  child: Form(
-                    key: _formKey,
-                    child: ListView(
-                padding: const EdgeInsets.all(16.0),
-                children: [
-                  // Basic Timing Settings Section
-                  _buildSectionHeader('⚙️ Basic Timing Settings', Icons.timer),
-                  _buildNumberField(
-                    'Motor 1 Travel Time (s)',
-                    'motor1_run_time',
-                    'Time for M1 to fully open/close',
+              : Form(
+                  key: _formKey,
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildTimingsTab(),
+                      _buildPartialTab(),
+                      _buildSpeedsTab(),
+                      _buildLearningTab(),
+                    ],
                   ),
-                  _buildNumberField(
-                    'Motor 2 Travel Time (s)',
-                    'motor2_run_time',
-                    'Time for M2 to fully open/close',
-                  ),
-                  _buildNumberField(
-                    'Pause Time (s)',
-                    'pause_time',
-                    'Pause between movements',
-                  ),
-                  _buildNumberField(
-                    'M2 Opening Delay (s)',
-                    'motor1_open_delay',
-                    'Delay before M2 starts opening (M1 goes first)',
-                  ),
-                  _buildNumberField(
-                    'M1 Closing Delay (s)',
-                    'motor2_close_delay',
-                    'Delay before M1 starts closing (M2 goes first)',
-                  ),
-                  _buildNumberField(
-                    'Auto-Close Time (s)',
-                    'auto_close_time',
-                    'Seconds before auto-close from OPEN',
-                  ),
-                  _buildSwitchTile(
-                    'Auto-Close Enabled',
-                    _autoCloseEnabled,
-                    (value) => setState(() {
-                      _autoCloseEnabled = value;
-                      _hasChanges = true;
-                    }),
-                  ),
-                  _buildNumberField(
-                    'Safety Reverse Time (s)',
-                    'safety_reverse_time',
-                    'Reverse duration on safety trigger',
-                  ),
-                  _buildNumberField(
-                    'Deadman Speed (0-1)',
-                    'deadman_speed',
-                    'Speed multiplier for deadman control',
-                  ),
-                  _buildNumberField(
-                    'Step Logic Mode (1-4)',
-                    'step_logic_mode',
-                    'Step logic behavior mode',
-                    isInt: true,
-                  ),
-                  _buildNumberField(
-                    'PO1 Position (%)',
-                    'partial_1_percent',
-                    'Partial open 1 target percentage',
-                    isInt: true,
-                  ),
-                  _buildNumberField(
-                    'PO2 Position (%)',
-                    'partial_2_percent',
-                    'Partial open 2 target percentage',
-                    isInt: true,
-                  ),
-                  _buildNumberField(
-                    'PO1 Auto-Close (s)',
-                    'partial_1_auto_close_time',
-                    'Auto-close time for partial position 1',
-                  ),
-                  _buildNumberField(
-                    'PO2 Auto-Close (s)',
-                    'partial_2_auto_close_time',
-                    'Auto-close time for partial position 2',
-                  ),
-                  _buildNumberField(
-                    'Partial Return Pause (s)',
-                    'partial_return_pause',
-                    'Pause before returning from partial',
-                  ),
+                ),
+        ],
+      ),
+      bottomNavigationBar: _buildBottomBar(),
+    );
+  }
 
-                  const SizedBox(height: 24),
+  Widget _buildBottomBar() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.7),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: ElevatedButton.icon(
+          onPressed: _hasChanges && !_isLoading ? _saveConfiguration : null,
+          icon: const Icon(Icons.save),
+          label: const Text('SAVE CONFIGURATION'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+        ),
+      ),
+    );
+  }
 
-                  // Speed & Slowdown Settings Section
-                  _buildSectionHeader('🎚️ Speed & Slowdown Settings', Icons.speed),
-                  _buildSlider(
-                    'Open Speed',
-                    _openSpeed,
-                    0.1,
-                    1.0,
-                    (value) => setState(() {
-                      _openSpeed = value;
-                      _hasChanges = true;
-                    }),
-                    '${(_openSpeed * 100).toInt()}%',
-                  ),
-                  _buildSlider(
-                    'Close Speed',
-                    _closeSpeed,
-                    0.1,
-                    1.0,
-                    (value) => setState(() {
-                      _closeSpeed = value;
-                      _hasChanges = true;
-                    }),
-                    '${(_closeSpeed * 100).toInt()}%',
-                  ),
-                  _buildSlider(
-                    'Learning Speed',
-                    _learningSpeed,
-                    0.1,
-                    1.0,
-                    (value) => setState(() {
-                      _learningSpeed = value;
-                      _hasChanges = true;
-                    }),
-                    '${(_learningSpeed * 100).toInt()}%',
-                  ),
-                  _buildSlider(
-                    'Opening Slowdown %',
-                    _openingSlowdownPercent,
-                    0.5,
-                    20.0,
-                    (value) => setState(() {
-                      _openingSlowdownPercent = value;
-                      _hasChanges = true;
-                    }),
-                    '${_openingSlowdownPercent.toStringAsFixed(1)}%',
-                  ),
-                  _buildSlider(
-                    'Closing Slowdown %',
-                    _closingSlowdownPercent,
-                    0.5,
-                    20.0,
-                    (value) => setState(() {
-                      _closingSlowdownPercent = value;
-                      _hasChanges = true;
-                    }),
-                    '${_closingSlowdownPercent.toStringAsFixed(1)}%',
-                  ),
+  Widget _buildTimingsTab() {
+    return RefreshIndicator(
+      onRefresh: _loadConfiguration,
+      child: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          _buildSectionHeader('⚙️ Basic Timing Settings', Icons.timer),
+          _buildNumberField(
+            'Motor 1 Travel Time (s)',
+            'motor1_run_time',
+            'Time for M1 to fully open/close',
+          ),
+          _buildNumberField(
+            'Motor 2 Travel Time (s)',
+            'motor2_run_time',
+            'Time for M2 to fully open/close',
+          ),
+          _buildNumberField(
+            'Pause Time (s)',
+            'pause_time',
+            'Pause between movements',
+          ),
+          _buildNumberField(
+            'M2 Opening Delay (s)',
+            'motor1_open_delay',
+            'Delay before M2 starts opening (M1 goes first)',
+          ),
+          _buildNumberField(
+            'M1 Closing Delay (s)',
+            'motor2_close_delay',
+            'Delay before M1 starts closing (M2 goes first)',
+          ),
+          _buildNumberField(
+            'Auto-Close Time (s)',
+            'auto_close_time',
+            'Seconds before auto-close from OPEN',
+          ),
+          _buildSwitchTile(
+            'Auto-Close Enabled',
+            _autoCloseEnabled,
+            (value) => setState(() {
+              _autoCloseEnabled = value;
+              _hasChanges = true;
+            }),
+          ),
+          _buildNumberField(
+            'Safety Reverse Time (s)',
+            'safety_reverse_time',
+            'Reverse duration on safety trigger',
+          ),
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
 
-                  const SizedBox(height: 24),
+  Widget _buildPartialTab() {
+    return RefreshIndicator(
+      onRefresh: _loadConfiguration,
+      child: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          _buildSectionHeader('🎯 Partial Open Positions', Icons.settings),
+          _buildNumberField(
+            'PO1 Position (%)',
+            'partial_1_percent',
+            'Partial open 1 target percentage',
+            isInt: true,
+          ),
+          _buildNumberField(
+            'PO2 Position (%)',
+            'partial_2_percent',
+            'Partial open 2 target percentage',
+            isInt: true,
+          ),
+          _buildNumberField(
+            'PO1 Auto-Close (s)',
+            'partial_1_auto_close_time',
+            'Auto-close time for partial position 1',
+          ),
+          _buildNumberField(
+            'PO2 Auto-Close (s)',
+            'partial_2_auto_close_time',
+            'Auto-close time for partial position 2',
+          ),
+          _buildNumberField(
+            'Partial Return Pause (s)',
+            'partial_return_pause',
+            'Pause before returning from partial',
+          ),
+          const SizedBox(height: 16),
+          _buildSectionHeader('🎮 Logic Settings', Icons.psychology),
+          _buildNumberField(
+            'Step Logic Mode (1-4)',
+            'step_logic_mode',
+            'Step logic behavior mode',
+            isInt: true,
+          ),
+          _buildNumberField(
+            'Deadman Speed (0-1)',
+            'deadman_speed',
+            'Speed multiplier for deadman control',
+          ),
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
 
-                  // Limit Switch Configuration Section
-                  _buildSectionHeader('🔌 Limit Switch Configuration', Icons.electrical_services),
+  Widget _buildSpeedsTab() {
+    return RefreshIndicator(
+      onRefresh: _loadConfiguration,
+      child: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          _buildSectionHeader('🎚️ Speed & Slowdown Settings', Icons.speed),
+          _buildSlider(
+            'Open Speed',
+            _openSpeed,
+            0.1,
+            1.0,
+            (value) => setState(() {
+              _openSpeed = value;
+              _hasChanges = true;
+            }),
+            '${(_openSpeed * 100).toInt()}%',
+          ),
+          _buildSlider(
+            'Close Speed',
+            _closeSpeed,
+            0.1,
+            1.0,
+            (value) => setState(() {
+              _closeSpeed = value;
+              _hasChanges = true;
+            }),
+            '${(_closeSpeed * 100).toInt()}%',
+          ),
+          _buildSlider(
+            'Learning Speed',
+            _learningSpeed,
+            0.1,
+            1.0,
+            (value) => setState(() {
+              _learningSpeed = value;
+              _hasChanges = true;
+            }),
+            '${(_learningSpeed * 100).toInt()}%',
+          ),
+          _buildSlider(
+            'Opening Slowdown %',
+            _openingSlowdownPercent,
+            0.5,
+            20.0,
+            (value) => setState(() {
+              _openingSlowdownPercent = value;
+              _hasChanges = true;
+            }),
+            '${_openingSlowdownPercent.toStringAsFixed(1)}%',
+          ),
+          _buildSlider(
+            'Closing Slowdown %',
+            _closingSlowdownPercent,
+            0.5,
+            20.0,
+            (value) => setState(() {
+              _closingSlowdownPercent = value;
+              _hasChanges = true;
+            }),
+            '${_closingSlowdownPercent.toStringAsFixed(1)}%',
+          ),
+          const SizedBox(height: 16),
+          _buildSectionHeader('🔌 Limit Switch Configuration', Icons.electrical_services),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text(
+              'Enable if motors have physical limit switches at end positions',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+          ),
+          _buildSwitchTile(
+            'Motor 1 use limit switches',
+            _motor1UseLimitSwitches,
+            (value) => setState(() {
+              _motor1UseLimitSwitches = value;
+              _hasChanges = true;
+            }),
+          ),
+          _buildSwitchTile(
+            'Motor 2 use limit switches',
+            _motor2UseLimitSwitches,
+            (value) => setState(() {
+              _motor2UseLimitSwitches = value;
+              _hasChanges = true;
+            }),
+          ),
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLearningTab() {
+    return RefreshIndicator(
+      onRefresh: _loadConfiguration,
+      child: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          _buildSectionHeader('🤖 Auto-Learn Travel Times', Icons.auto_fix_high),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text(
+              'Automatically measure motor travel times using limit switches',
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+          ),
+          // Engineer Mode Toggle (Red Warning Frame)
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF440000),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red.shade700, width: 3),
+            ),
+            child: Column(
+              children: [
+                SwitchListTile(
+                  title: const Text(
+                    '🔧 ENGINEER MODE',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.yellow,
+                      fontSize: 14,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'Enable before auto-learn',
+                    style: TextStyle(color: Colors.orange, fontSize: 12),
+                  ),
+                  value: _engineerModeEnabled,
+                  onChanged: (value) => _toggleEngineerMode(value),
+                  activeColor: Colors.yellow,
+                  tileColor: const Color(0xFF440000),
+                ),
+                if (_engineerModeEnabled)
                   const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    padding: EdgeInsets.only(top: 8.0),
                     child: Text(
-                      'Enable if motors have physical limit switches at end positions',
-                      style: TextStyle(color: Colors.grey, fontSize: 13),
-                    ),
-                  ),
-                  _buildSwitchTile(
-                    'Motor 1 use limit switches',
-                    _motor1UseLimitSwitches,
-                    (value) => setState(() {
-                      _motor1UseLimitSwitches = value;
-                      _hasChanges = true;
-                    }),
-                  ),
-                  _buildSwitchTile(
-                    'Motor 2 use limit switches',
-                    _motor2UseLimitSwitches,
-                    (value) => setState(() {
-                      _motor2UseLimitSwitches = value;
-                      _hasChanges = true;
-                    }),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Auto-Learn Travel Times Section
-                  _buildSectionHeader('🤖 Auto-Learn Travel Times', Icons.auto_fix_high),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    child: Text(
-                      'Automatically measure motor travel times using limit switches',
-                      style: TextStyle(color: Colors.grey, fontSize: 13),
-                    ),
-                  ),
-
-                  // Engineer Mode Toggle (Red Warning Frame)
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF440000),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.shade700, width: 3),
-                    ),
-                    child: Column(
-                      children: [
-                        SwitchListTile(
-                          title: const Text(
-                            '🔧 ENGINEER MODE',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.yellow,
-                              fontSize: 14,
-                            ),
-                          ),
-                          subtitle: const Text(
-                            'Enable before auto-learn',
-                            style: TextStyle(color: Colors.orange, fontSize: 12),
-                          ),
-                          value: _engineerModeEnabled,
-                          onChanged: (value) => _toggleEngineerMode(value),
-                          activeColor: Colors.yellow,
-                          tileColor: const Color(0xFF440000),
-                        ),
-                        if (_engineerModeEnabled)
-                          const Padding(
-                            padding: EdgeInsets.only(top: 8.0),
-                            child: Text(
-                              'WARNING: Engineer mode blocks normal OPEN/CLOSE commands',
-                              style: TextStyle(
-                                color: Colors.orange,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-
-                  // Learned Times Display
-                  Consumer<BleService>(
-                    builder: (context, bleService, child) {
-                      final config = bleService.currentConfig;
-                      return Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade900.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.blue.shade300, width: 2),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Icons.schedule, color: Colors.blue.shade700, size: 20),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Learned Travel Times',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blue.shade900,
-                                    fontSize: 15,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            _buildLearnedTime('M1 Open', config?.learnedM1Open),
-                            _buildLearnedTime('M1 Close', config?.learnedM1Close),
-                            _buildLearnedTime('M2 Open', config?.learnedM2Open),
-                            _buildLearnedTime('M2 Close', config?.learnedM2Close),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-
-                  // Auto-learn Status
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.black87,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      'Status: $_autoLearnStatus',
-                      style: const TextStyle(
-                        color: Colors.yellow,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                      'WARNING: Engineer mode blocks normal OPEN/CLOSE commands',
+                      style: TextStyle(
+                        color: Colors.orange,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
                       ),
                       textAlign: TextAlign.center,
                     ),
                   ),
-
-                  // Limit Switch Warning
-                  if (!_motor1UseLimitSwitches || !_motor2UseLimitSwitches)
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade100,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.orange.shade300, width: 2),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.warning_amber, color: Colors.orange.shade900, size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Note: Engineer mode and limit switches must be enabled',
-                              style: TextStyle(
-                                color: Colors.orange.shade900,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  // Auto-learn Control Buttons
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Row(
+              ],
+            ),
+          ),
+          // Learned Times Display
+          Consumer<BleService>(
+            builder: (context, bleService, child) {
+              final config = bleService.currentConfig;
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade900.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.shade300, width: 2),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _engineerModeEnabled && !_autoLearnActive
-                                ? _startAutoLearn
-                                : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              disabledBackgroundColor: Colors.grey.shade400,
-                            ),
-                            child: const Text(
-                              'START AUTO-LEARN',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _autoLearnActive ? _stopAutoLearn : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              disabledBackgroundColor: Colors.grey.shade400,
-                            ),
-                            child: const Text(
-                              'STOP AUTO-LEARN',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
+                        Icon(Icons.schedule, color: Colors.blue.shade700, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Learned Travel Times',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade900,
+                            fontSize: 15,
                           ),
                         ),
                       ],
                     ),
-                  ),
-
-                  // Save Learned Times Button
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: OutlinedButton.icon(
-                      onPressed: _saveLearnedTimes,
-                      icon: const Icon(Icons.save_alt),
-                      label: const Text('SAVE LEARNED TIMES'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        side: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                    const SizedBox(height: 12),
+                    _buildLearnedTime('M1 Open', config?.learnedM1Open),
+                    _buildLearnedTime('M1 Close', config?.learnedM1Close),
+                    _buildLearnedTime('M2 Open', config?.learnedM2Open),
+                    _buildLearnedTime('M2 Close', config?.learnedM2Close),
+                  ],
+                ),
+              );
+            },
+          ),
+          // Auto-learn Status
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.black87,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              'Status: $_autoLearnStatus',
+              style: const TextStyle(
+                color: Colors.yellow,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          // Limit Switch Warning
+          if (!_motor1UseLimitSwitches || !_motor2UseLimitSwitches)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade100,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade300, width: 2),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber, color: Colors.orange.shade900, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Note: Engineer mode and limit switches must be enabled',
+                      style: TextStyle(
+                        color: Colors.orange.shade900,
+                        fontSize: 12,
                       ),
                     ),
                   ),
-
-                  const SizedBox(height: 32),
-
-                  // Save Button
-                  ElevatedButton.icon(
-                    onPressed: _hasChanges && !_isLoading ? _saveConfiguration : null,
-                    icon: const Icon(Icons.save),
-                    label: const Text('SAVE CONFIGURATION'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Reload Button
-                  OutlinedButton.icon(
-                    onPressed: !_isLoading ? _loadConfiguration : null,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('RELOAD FROM DEVICE'),
-                  ),
-
-                  const SizedBox(height: 32),
                 ],
               ),
             ),
+          // Auto-learn Control Buttons
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _engineerModeEnabled && !_autoLearnActive
+                        ? _startAutoLearn
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      disabledBackgroundColor: Colors.grey.shade400,
+                    ),
+                    child: const Text(
+                      'START AUTO-LEARN',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _autoLearnActive ? _stopAutoLearn : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      disabledBackgroundColor: Colors.grey.shade400,
+                    ),
+                    child: const Text(
+                      'STOP AUTO-LEARN',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
+          // Save Learned Times Button
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: OutlinedButton.icon(
+              onPressed: _saveLearnedTimes,
+              icon: const Icon(Icons.save_alt),
+              label: const Text('SAVE LEARNED TIMES'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                side: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
         ],
       ),
     );
