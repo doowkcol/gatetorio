@@ -33,7 +33,7 @@ class CommandTxChar(localGATT.Characteristic):
 
     def __init__(self, char_id, ble_server):
         self.ble_server = ble_server
-        super().__init__(char_id, CHAR_COMMAND_TX, localGATT.Service, False, ['write'])
+        super().__init__(char_id, CHAR_COMMAND_TX, ['write'])
 
     def WriteValue(self, value, options):
         """Handle command write"""
@@ -55,7 +55,7 @@ class CommandResponseChar(localGATT.Characteristic):
 
     def __init__(self, char_id, ble_server):
         self.ble_server = ble_server
-        super().__init__(char_id, CHAR_COMMAND_RESPONSE, localGATT.Service, False, ['read'])
+        super().__init__(char_id, CHAR_COMMAND_RESPONSE, ['read'])
 
     def ReadValue(self, options):
         """Return last command response"""
@@ -67,7 +67,7 @@ class StatusChar(localGATT.Characteristic):
 
     def __init__(self, char_id, ble_server):
         self.ble_server = ble_server
-        super().__init__(char_id, CHAR_STATUS, localGATT.Service, False, ['read', 'notify'])
+        super().__init__(char_id, CHAR_STATUS, ['read', 'notify'])
         self.notifying = False
 
     def ReadValue(self, options):
@@ -113,7 +113,7 @@ class InputConfigChar(localGATT.Characteristic):
 
     def __init__(self, char_id, ble_server):
         self.ble_server = ble_server
-        super().__init__(char_id, CHAR_INPUT_CONFIG, localGATT.Service, False, ['read'])
+        super().__init__(char_id, CHAR_INPUT_CONFIG, ['read'])
 
     def ReadValue(self, options):
         """Return input_config.json"""
@@ -142,7 +142,7 @@ class InputStatesChar(localGATT.Characteristic):
 
     def __init__(self, char_id, ble_server):
         self.ble_server = ble_server
-        super().__init__(char_id, CHAR_INPUT_STATES, localGATT.Service, False, ['read'])
+        super().__init__(char_id, CHAR_INPUT_STATES, ['read'])
 
     def ReadValue(self, options):
         """Return current input states"""
