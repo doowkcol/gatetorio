@@ -27,11 +27,6 @@ class GateControlService(localGATT.Service):
         self.ble_server = ble_server
         super().__init__(service_id, SERVICE_GATE_CONTROL, True)  # PRIMARY
 
-        # Add characteristics
-        self.add_characteristic(CommandTxChar(1, self.ble_server))
-        self.add_characteristic(CommandResponseChar(2, self.ble_server))
-        self.add_characteristic(StatusChar(3, self.ble_server))
-
 
 class CommandTxChar(localGATT.Characteristic):
     """Command TX characteristic (write-only)"""
@@ -112,9 +107,6 @@ class ConfigurationService(localGATT.Service):
         self.ble_server = ble_server
         super().__init__(service_id, SERVICE_CONFIGURATION, True)  # PRIMARY
 
-        # Add Input Config characteristic
-        self.add_characteristic(InputConfigChar(1, self.ble_server))
-
 
 class InputConfigChar(localGATT.Characteristic):
     """Input Configuration characteristic (read-only)"""
@@ -143,9 +135,6 @@ class DiagnosticsService(localGATT.Service):
     def __init__(self, service_id, ble_server):
         self.ble_server = ble_server
         super().__init__(service_id, SERVICE_DIAGNOSTICS, True)  # PRIMARY
-
-        # Add Input States characteristic
-        self.add_characteristic(InputStatesChar(1, self.ble_server))
 
 
 class InputStatesChar(localGATT.Characteristic):
@@ -203,18 +192,35 @@ def start_localgatt_server(ble_server: GatetorioBLEServer):
         print("[BLE] Creating GATT application...")
         app = localGATT.Application()
 
-        # Add services
+        # Add Gate Control service and characteristics
         print("[BLE] Adding Gate Control service (PRIMARY)...")
         gate_service = GateControlService(1, ble_server)
-        app.add_service(gate_service)
+        app.add_managed_object(gate_service)
 
+        cmd_tx_char = CommandTxChar(1, ble_server)
+        app.add_managed_object(cmd_tx_char)
+
+        cmd_resp_char = CommandResponseChar(2, ble_server)
+        app.add_managed_object(cmd_resp_char)
+
+        status_char = StatusChar(3, ble_server)
+        app.add_managed_object(status_char)
+
+        # Add Configuration service and characteristics
         print("[BLE] Adding Configuration service (PRIMARY)...")
         config_service = ConfigurationService(2, ble_server)
-        app.add_service(config_service)
+        app.add_managed_object(config_service)
 
+        input_config_char = InputConfigChar(1, ble_server)
+        app.add_managed_object(input_config_char)
+
+        # Add Diagnostics service and characteristics
         print("[BLE] Adding Diagnostics service (PRIMARY)...")
         diag_service = DiagnosticsService(3, ble_server)
-        app.add_service(diag_service)
+        app.add_managed_object(diag_service)
+
+        input_states_char = InputStatesChar(1, ble_server)
+        app.add_managed_object(input_states_char)
 
         # Register GATT application
         print("[BLE] Registering GATT application with BlueZ...")
