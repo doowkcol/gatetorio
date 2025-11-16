@@ -242,48 +242,26 @@ class _InputCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header row with input name, state, and ADC
+            // Header row with input name and state indicator
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Input name and state indicator inline
-                Row(
-                  children: [
-                    // State dot
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: stateColor,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Input name
-                    Text(
-                      input.name,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.cyan,
-                      ),
-                    ),
-                  ],
-                ),
-                // ADC label
+                // State dot
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  width: 10,
+                  height: 10,
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade100,
-                    borderRadius: BorderRadius.circular(6),
+                    color: stateColor,
+                    shape: BoxShape.circle,
                   ),
-                  child: Text(
-                    input.adcLabel,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue.shade900,
-                    ),
+                ),
+                const SizedBox(width: 8),
+                // Input name
+                Text(
+                  input.name,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.cyan,
                   ),
                 ),
               ],
