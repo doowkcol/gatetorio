@@ -812,90 +812,22 @@ class GatetorioBLEServer:
     # ========================================================================
 
     def start(self):
-        """Start the BLE GATT server using localGATT (manual GATT + Advertisement)"""
+        """Start the BLE GATT server using pure localGATT implementation"""
         print("=" * 60)
         print("Gatetorio BLE Server v1.0.0 (localGATT)")
         print("=" * 60)
         print(f"Hardware ID: {self.hardware_id}")
         print(f"User ID: {self.config.user_id}")
-        print(f"Stealth mode: {self.config.stealth_mode}")
-        print(f"Whitelist enabled: {self.config.whitelist_enabled}")
 
         # TESTING MODE: Keep pairing window open permanently
-        print("[BLE] TESTING MODE: Pairing window ALWAYS OPEN (device always visible)")
+        print("[BLE] TESTING MODE: Pairing window ALWAYS OPEN")
         print(f"[BLE] Device will be discoverable as: Gatetorio-{self.hardware_id[-4:]}")
         self.pairing_window_active = True
         self.config.pairing_mode = True
 
-        try:
-            # Get Bluetooth adapter
-            dongle = next(adapter.Adapter.available())
-            dongle_addr = dongle.address
-            print(f"[BLE] Using Bluetooth adapter: {dongle_addr}")
-
-            if not dongle.powered:
-                print("[BLE] Powering on Bluetooth adapter...")
-                dongle.powered = True
-                time.sleep(1)
-
-            # Build GATT server using peripheral (keeps all callbacks working)
-            print("[BLE] Building GATT server using Peripheral...")
-            ble_peripheral = self.build_gatt_server()
-
-            # Try to publish - this will register GATT but fail on advertisement (3 UUIDs too big)
-            # We catch the failure and manually register a smaller advertisement
-            print("[BLE] Attempting peripheral.publish() (will fail on advertisement)...")
-            gatt_registered = False
-
-            try:
-                ble_peripheral.publish()
-                # If we get here, it worked (unexpected)
-                print("[BLE] ✓ peripheral.publish() succeeded (unexpected - 3 UUIDs fit!)")
-                print("[BLE] Ready for connections!")
-                gatt_registered = True
-
-            except Exception as pub_error:
-                print(f"[BLE] peripheral.publish() failed as expected: {pub_error}")
-                print("[BLE] GATT services may already be registered, advertisement failed")
-                gatt_registered = True  # Assume GATT succeeded even though advertisement failed
-
-            # Now manually register advertisement with ONLY one UUID
-            if gatt_registered:
-                device_name = f"Gatetorio-{self.hardware_id[-4:]}"
-                print()
-                print("[BLE] Manually registering advertisement with single UUID...")
-                print(f"[BLE] Device name: {device_name}")
-                print(f"[BLE] Advertising ONLY: {SERVICE_GATE_CONTROL}")
-                print("[BLE] Note: Configuration/Diagnostics are PRIMARY (discoverable after connection)")
-
-                advert = advertisement.Advertisement(1, 'peripheral', local_name=device_name)
-                advert.service_UUIDs = [SERVICE_GATE_CONTROL]  # ONLY one UUID
-                advert.appearance = 0x0000
-
-                try:
-                    ad_mgr = advertisement.AdvertisingManager(dongle_addr)
-                    ad_mgr.register_advertisement(advert, {})
-                    print("[BLE] ✓ Manual advertisement registered successfully!")
-                    print("[BLE] Ready for connections!")
-                except Exception as ad_error:
-                    print(f"[BLE] ✗ Manual advertisement failed: {ad_error}")
-                    print("[BLE] This might mean peripheral.publish() already registered one")
-                    raise
-            else:
-                print("[BLE] ERROR: GATT registration failed")
-                raise RuntimeError("Failed to register GATT services")
-
-            # Keep running
-            print("[BLE] Press Ctrl+C to stop")
-            while True:
-                time.sleep(1)
-
-        except KeyboardInterrupt:
-            print("\n[BLE] Shutting down...")
-        except Exception as e:
-            print(f"[BLE] Error: {e}")
-            import traceback
-            traceback.print_exc()
+        # Use pure localGATT implementation (no peripheral.Peripheral)
+        from ble_server_localgatt import start_localgatt_server
+        start_localgatt_server(self)
 
 
 # ============================================================================
