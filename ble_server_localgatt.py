@@ -147,29 +147,33 @@ class InputConfigChar(localGATT.Characteristic):
         )
 
     def ReadValue(self, options):
-        """Return input_config.json (compressed format with numeric function codes)"""
+        """Return input_config.json (ultra-compressed array format)"""
         try:
             print("[BLE] Input Config READ")
             with open('/home/doowkcol/Gatetorio_Code/input_config.json', 'r') as f:
                 full_config = json.load(f)
 
-            # Compress: Send only essential input metadata with numeric function codes
+            # Ultra-compress: Use array format [name, function_code, type, channel]
+            # Type codes: NC=1, NO=2, 8K2=3
+            TYPE_CODES = {"NC": 1, "NO": 2, "8K2": 3}
+
             inputs = full_config.get('inputs', {})
-            compressed = {}
+            compressed = []
             for name, cfg in inputs.items():
                 function_name = cfg.get('function')
                 function_code = INPUT_FUNCTION_CODES.get(function_name, 0)
+                type_str = cfg.get('type')
+                type_code = TYPE_CODES.get(type_str, 0)
+                channel = cfg.get('channel', 0)
 
-                compressed[name] = {
-                    "f": function_code,        # function code (int)
-                    "t": cfg.get('type'),      # type (str)
-                    "c": cfg.get('channel')    # channel (int)
-                }
+                # Array format: [name, func, type, chan]
+                compressed.append([name, function_code, type_code, channel])
 
             config_json = json.dumps(compressed, separators=(',', ':')).encode('utf-8')
-            print(f"[BLE] Sending {len(config_json)} bytes (compressed with numeric codes)")
-            if len(config_json) > 512:
-                print(f"[BLE] WARNING: Data exceeds typical MTU limit (512 bytes)")
+            print(f"[BLE] Sending {len(config_json)} bytes (array format)")
+            print(f"[BLE] Format: [[name,func,type,chan],...]")
+            if len(config_json) > 186:
+                print(f"[BLE] WARNING: Data ({len(config_json)} bytes) may exceed BLE buffer limit (~186 bytes)")
             return list(config_json)
         except Exception as e:
             print(f"[BLE] Error reading input config: {e}")
