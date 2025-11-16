@@ -178,7 +178,7 @@ class DeviceScanner extends StatelessWidget {
 
 class DeviceListItem extends StatefulWidget {
   final BleDeviceInfo device;
-  final VoidCallback onTap;
+  final Future<void> Function() onTap;
 
   const DeviceListItem({
     super.key,
