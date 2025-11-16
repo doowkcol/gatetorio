@@ -270,7 +270,8 @@ def start_localgatt_server(ble_server: GatetorioBLEServer):
         print(f"[BLE] Advertising ONLY: {SERVICE_GATE_CONTROL}")
         print("[BLE] Note: Config/Diagnostics are PRIMARY (discoverable after connection)")
 
-        advert = advertisement.Advertisement(1, 'peripheral', local_name=device_name)
+        advert = advertisement.Advertisement(1, 'peripheral')
+        advert.local_name = device_name
         advert.service_UUIDs = [SERVICE_GATE_CONTROL]  # ONLY one UUID
         advert.appearance = 0x0000
 
