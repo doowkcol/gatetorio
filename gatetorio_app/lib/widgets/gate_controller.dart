@@ -37,6 +37,7 @@ class GateController extends StatelessWidget {
 
               // Additional Controls
               _AdditionalControls(
+                status: status,
                 onCommand: (command) => _sendCommand(context, bleService, command),
               ),
             ],
@@ -400,12 +401,18 @@ class _MotorIndicator extends StatelessWidget {
 }
 
 class _AdditionalControls extends StatelessWidget {
+  final GateStatus? status;
   final Function(GateCommand) onCommand;
 
-  const _AdditionalControls({required this.onCommand});
+  const _AdditionalControls({
+    required this.status,
+    required this.onCommand,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final canSendPartial = status?.canSendPartialCommand ?? false;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -422,12 +429,12 @@ class _AdditionalControls extends StatelessWidget {
               runSpacing: 8,
               children: [
                 OutlinedButton.icon(
-                  onPressed: () => onCommand(GateCommand.partial1),
+                  onPressed: canSendPartial ? () => onCommand(GateCommand.partial1) : null,
                   icon: const Icon(Icons.looks_one),
                   label: const Text('Partial 1'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: () => onCommand(GateCommand.partial2),
+                  onPressed: canSendPartial ? () => onCommand(GateCommand.partial2) : null,
                   icon: const Icon(Icons.looks_two),
                   label: const Text('Partial 2'),
                 ),

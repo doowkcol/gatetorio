@@ -43,8 +43,11 @@ class GateStatus {
     return GateStatus.fromJson(json);
   }
 
-  /// Check if commands can be sent in the current state
+  /// Check if basic commands (OPEN, CLOSE, STOP) can be sent in the current state
   bool get canSendCommand => state.canSendCommand;
+
+  /// Check if partial position commands (PO1, PO2) can be sent in the current state
+  bool get canSendPartialCommand => state.canSendPartialCommand;
 
   /// Get M1 speed as percentage (0-100)
   int get m1SpeedPercent => (m1Speed * 100).round();
@@ -190,6 +193,12 @@ enum GateState {
       this == GateState.reversingFromOpen ||
       this == GateState.reversingFromClose;
 
-  bool get canSendCommand =>
+  /// Can send basic commands (OPEN, CLOSE, STOP)
+  /// Only blocked in ERROR state
+  bool get canSendCommand => this != GateState.error;
+
+  /// Can send partial position commands (PO1, PO2)
+  /// Requires known position - blocked in UNKNOWN and ERROR states
+  bool get canSendPartialCommand =>
       this != GateState.error && this != GateState.unknown;
 }
