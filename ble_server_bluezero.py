@@ -23,22 +23,10 @@ from typing import Dict, Optional, Set
 from dataclasses import dataclass
 from datetime import datetime
 
-# Check for bluezero
-try:
-    from bluezero import adapter
-    from bluezero import peripheral
-    from bluezero import localGATT
-    from bluezero import GATT
-    from bluezero import advertisement
-    from bluezero import dbus_tools
-    from bluezero import async_tools
-except ImportError:
-    print("ERROR: bluezero not installed")
-    print("Install system packages first:")
-    print("  sudo apt-get install python3-dbus libdbus-1-dev libglib2.0-dev bluez")
-    print("Then install Python package:")
-    print("  pip3 install bluezero")
-    sys.exit(1)
+# NOTE: bluezero imports moved to ble_server_localgatt.py to avoid
+# dbus/multiprocessing conflicts. Importing dbus before forking child
+# processes causes hangs. The localGATT implementation imports bluezero
+# only after the GateController has been created.
 
 try:
     import psutil
