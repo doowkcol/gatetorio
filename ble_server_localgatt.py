@@ -33,7 +33,14 @@ class CommandTxChar(localGATT.Characteristic):
 
     def __init__(self, char_id, ble_server):
         self.ble_server = ble_server
-        super().__init__(char_id, CHAR_COMMAND_TX, [], False, ['write'])
+        # Use keyword arguments to be explicit about parameter mapping
+        super().__init__(
+            char_id,
+            CHAR_COMMAND_TX,
+            value=[],
+            notifying=False,
+            flags=['write']
+        )
 
     def WriteValue(self, value, options):
         """Handle command write"""
@@ -55,7 +62,13 @@ class CommandResponseChar(localGATT.Characteristic):
 
     def __init__(self, char_id, ble_server):
         self.ble_server = ble_server
-        super().__init__(char_id, CHAR_COMMAND_RESPONSE, [], False, ['read'])
+        super().__init__(
+            char_id,
+            CHAR_COMMAND_RESPONSE,
+            value=[],
+            notifying=False,
+            flags=['read']
+        )
 
     def ReadValue(self, options):
         """Return last command response"""
@@ -67,7 +80,13 @@ class StatusChar(localGATT.Characteristic):
 
     def __init__(self, char_id, ble_server):
         self.ble_server = ble_server
-        super().__init__(char_id, CHAR_STATUS, [], False, ['read', 'notify'])
+        super().__init__(
+            char_id,
+            CHAR_STATUS,
+            value=[],
+            notifying=False,
+            flags=['read', 'notify']
+        )
         self.notifying = False
 
     def ReadValue(self, options):
@@ -113,7 +132,13 @@ class InputConfigChar(localGATT.Characteristic):
 
     def __init__(self, char_id, ble_server):
         self.ble_server = ble_server
-        super().__init__(char_id, CHAR_INPUT_CONFIG, [], False, ['read'])
+        super().__init__(
+            char_id,
+            CHAR_INPUT_CONFIG,
+            value=[],
+            notifying=False,
+            flags=['read']
+        )
 
     def ReadValue(self, options):
         """Return input_config.json"""
@@ -142,7 +167,13 @@ class InputStatesChar(localGATT.Characteristic):
 
     def __init__(self, char_id, ble_server):
         self.ble_server = ble_server
-        super().__init__(char_id, CHAR_INPUT_STATES, [], False, ['read'])
+        super().__init__(
+            char_id,
+            CHAR_INPUT_STATES,
+            value=[],
+            notifying=False,
+            flags=['read']
+        )
 
     def ReadValue(self, options):
         """Return current input states"""
