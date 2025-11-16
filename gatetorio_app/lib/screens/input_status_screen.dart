@@ -154,10 +154,12 @@ class _InputStatusScreenState extends State<InputStatusScreen> {
                     final inputName = sortedInputs[index - 1];
                     final input = inputConfig.inputs[inputName]!;
                     final isActive = inputStates?.isActive(inputName) ?? false;
+                    final voltage = inputStates?.getRawValue(inputName);
 
                     return _InputCard(
                       input: input,
                       isActive: isActive,
+                      voltage: voltage,
                     );
                   },
                 );
@@ -213,10 +215,12 @@ class _InputStatusScreenState extends State<InputStatusScreen> {
 class _InputCard extends StatelessWidget {
   final InputConfig input;
   final bool isActive;
+  final double? voltage;
 
   const _InputCard({
     required this.input,
     required this.isActive,
+    this.voltage,
   });
 
   void _showInputEditor(BuildContext context) {
@@ -232,9 +236,7 @@ class _InputCard extends StatelessWidget {
     final stateColor = isActive ? Colors.green : Colors.grey;
     final stateText = isActive ? 'ACTIVE' : 'INACTIVE';
 
-    return GestureDetector(
-      onTap: () => _showInputEditor(context),
-      child: Card(
+    return Card(
       margin: const EdgeInsets.only(bottom: 8),
       elevation: isActive ? 4 : 2,
       color: isActive ? Colors.green.shade50 : null,
@@ -252,7 +254,7 @@ class _InputCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header row with input name and state indicator
+            // Header row with input name, state indicator, and edit button
             Row(
               children: [
                 // State dot
@@ -266,13 +268,24 @@ class _InputCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 // Input name
-                Text(
-                  input.name,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.cyan,
+                Expanded(
+                  child: Text(
+                    input.name,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.cyan,
+                    ),
                   ),
+                ),
+                // Edit button
+                IconButton(
+                  icon: const Icon(Icons.settings, size: 20),
+                  onPressed: () => _showInputEditor(context),
+                  tooltip: 'Configure input',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  color: Colors.grey.shade700,
                 ),
               ],
             ),
@@ -324,27 +337,49 @@ class _InputCard extends StatelessWidget {
               ],
             ),
 
-            // 8K2 specific info (if applicable)
-            if (input.type == '8K2' && input.learnedResistance != null) ...[
+            // 8K2 specific info (voltage reading and learned resistance)
+            if (input.type == '8K2') ...[
               const SizedBox(height: 6),
               Row(
                 children: [
-                  Icon(Icons.settings_input_component, size: 14, color: Colors.amber.shade700),
+                  Icon(Icons.electrical_services, size: 14, color: Colors.amber.shade700),
                   const SizedBox(width: 4),
-                  Text(
-                    '${input.learnedResistance!.toStringAsFixed(0)}Ω ±${input.tolerancePercent?.toStringAsFixed(1)}%',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.amber.shade800,
-                      fontWeight: FontWeight.w500,
+                  if (voltage != null)
+                    Text(
+                      '${voltage!.toStringAsFixed(3)}V',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.amber.shade800,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  else
+                    Text(
+                      'No voltage reading',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey.shade600,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
-                  ),
+                  if (input.learnedResistance != null) ...[
+                    const SizedBox(width: 8),
+                    Icon(Icons.settings_input_component, size: 14, color: Colors.grey.shade600),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Learned: ${input.learnedResistance!.toStringAsFixed(0)}Ω ±${input.tolerancePercent?.toStringAsFixed(1)}%',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ],
           ],
         ),
-      ),
       ),
     );
   }
@@ -364,25 +399,34 @@ class _InputEditorState extends State<_InputEditor> {
   late String? _function;
   late bool _enabled;
   late String _description;
+  late double? _tolerancePercent;
+  late double? _learnedResistance;
   bool _isSaving = false;
+  bool _isLearning = false;
 
   // Available input types
   static const List<String> _types = ['NO', 'NC', '8K2'];
 
-  // Available functions with display names
+  // Available functions with display names (matches gate_ui.py)
   static const Map<String?, String> _functionOptions = {
-    null: 'Not Used',
-    'close_limit_m1': 'Close Limit M1',
-    'open_limit_m1': 'Open Limit M1',
-    'close_limit_m2': 'Close Limit M2',
-    'open_limit_m2': 'Open Limit M2',
-    'cmd_open': 'Cmd Open',
-    'cmd_close': 'Cmd Close',
-    'cmd_stop': 'Cmd Stop',
-    'safety_stop_opening': 'Safety Stop Opening',
-    'safety_stop_closing': 'Safety Stop Closing',
-    'partial_1': 'Partial 1',
-    'partial_2': 'Partial 2',
+    null: '[None - Disabled]',
+    'cmd_open': 'Open Command',
+    'cmd_close': 'Close Command',
+    'cmd_stop': 'Stop Command',
+    'photocell_closing': 'Photocell (Closing)',
+    'photocell_opening': 'Photocell (Opening)',
+    'safety_stop_closing': 'Safety Edge (Stop Closing)',
+    'safety_stop_opening': 'Safety Edge (Stop Opening)',
+    'deadman_open': 'Deadman Open',
+    'deadman_close': 'Deadman Close',
+    'timed_open': 'Timed Open',
+    'partial_1': 'Partial Open 1',
+    'partial_2': 'Partial Open 2',
+    'step_logic': 'Step Logic',
+    'open_limit_m1': 'Limit Switch - M1 OPEN',
+    'close_limit_m1': 'Limit Switch - M1 CLOSE',
+    'open_limit_m2': 'Limit Switch - M2 OPEN',
+    'close_limit_m2': 'Limit Switch - M2 CLOSE',
   };
 
   @override
@@ -392,6 +436,8 @@ class _InputEditorState extends State<_InputEditor> {
     _function = widget.input.function;
     _enabled = widget.input.enabled;
     _description = widget.input.description;
+    _tolerancePercent = widget.input.tolerancePercent ?? 10.0;
+    _learnedResistance = widget.input.learnedResistance;
   }
 
   Future<void> _save() async {
@@ -408,8 +454,8 @@ class _InputEditorState extends State<_InputEditor> {
         type: _type,
         function: _function,
         description: _description,
-        tolerancePercent: widget.input.tolerancePercent,
-        learnedResistance: widget.input.learnedResistance,
+        tolerancePercent: _tolerancePercent,
+        learnedResistance: _learnedResistance,
       );
 
       // Update in the service's inputConfig
@@ -470,6 +516,63 @@ class _InputEditorState extends State<_InputEditor> {
             backgroundColor: Colors.red,
           ),
         );
+      }
+    }
+  }
+
+  Future<void> _learn() async {
+    setState(() => _isLearning = true);
+
+    try {
+      final bleService = Provider.of<BleService>(context, listen: false);
+
+      // Read current input states to get the voltage reading
+      final inputStates = await bleService.readInputStates();
+
+      if (inputStates != null) {
+        final voltage = inputStates.getRawValue(widget.input.name);
+
+        if (voltage != null && voltage > 0 && voltage.isFinite) {
+          // Successfully learned the resistance
+          setState(() {
+            _learnedResistance = voltage; // Store voltage as resistance value
+          });
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Learned: ${voltage.toStringAsFixed(3)}V'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } else {
+          // Invalid reading
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Invalid reading: ${voltage?.toString() ?? "null"}'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        }
+      } else {
+        throw Exception('Failed to read input states');
+      }
+    } catch (e) {
+      debugPrint('Error learning resistance: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error learning: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLearning = false);
       }
     }
   }
@@ -604,6 +707,111 @@ class _InputEditorState extends State<_InputEditor> {
               _description = value;
             },
           ),
+
+          // 8K2 specific controls (tolerance and learn)
+          if (_type == '8K2') ...[
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber.shade300),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.settings_input_component, size: 20, color: Colors.amber.shade800),
+                      const SizedBox(width: 8),
+                      Text(
+                        '8K2 Safety Edge Configuration',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.amber.shade900,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Tolerance field
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: TextEditingController(
+                            text: _tolerancePercent?.toStringAsFixed(1) ?? '10.0',
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'Tolerance (%)',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.tune),
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          onChanged: (value) {
+                            final parsed = double.tryParse(value);
+                            if (parsed != null) {
+                              _tolerancePercent = parsed;
+                            }
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // Learn button
+                      ElevatedButton.icon(
+                        onPressed: _isLearning ? null : _learn,
+                        icon: _isLearning
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Icon(Icons.psychology),
+                        label: Text(_isLearning ? 'Learning...' : 'LEARN'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Show learned value
+                  if (_learnedResistance != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Learned: ${_learnedResistance!.toStringAsFixed(3)}V ±${_tolerancePercent?.toStringAsFixed(1)}%',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.green.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Not learned yet',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
 
           // Action buttons

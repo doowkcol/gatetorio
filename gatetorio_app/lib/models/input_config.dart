@@ -47,6 +47,12 @@ class InputConfig {
         case 9: return 'safety_stop_closing';
         case 10: return 'partial_1';
         case 11: return 'partial_2';
+        case 12: return 'photocell_closing';
+        case 13: return 'photocell_opening';
+        case 14: return 'deadman_open';
+        case 15: return 'deadman_close';
+        case 16: return 'timed_open';
+        case 17: return 'step_logic';
         default: return null; // Unknown code
       }
     }
@@ -226,6 +232,12 @@ class InputConfigData {
       case 'safety_stop_closing': return 9;
       case 'partial_1': return 10;
       case 'partial_2': return 11;
+      case 'photocell_closing': return 12;
+      case 'photocell_opening': return 13;
+      case 'deadman_open': return 14;
+      case 'deadman_close': return 15;
+      case 'timed_open': return 16;
+      case 'step_logic': return 17;
       default: return 0; // Unknown function
     }
   }
@@ -301,11 +313,12 @@ class InputStates {
   });
 
   /// Parse from JSON received from BLE
-  /// Supports both old format and new compact format with keys:
-  /// - "a" = active (replaces "active")
-  /// - "f" = function (replaces "function")
-  /// - "t" = type (replaces "type")
-  /// - "c" = channel (replaces "channel")
+  /// Supports multiple formats:
+  /// - Old format: {"states": {"IN1": true, ...}, "raw_values": {...}}
+  /// - Compact object format: {"IN1": {"a": true, "v": 1.234}, ...}
+  /// - Mixed-type format: {"IN1": true, "IN2": [true, 1.234], ...}
+  ///   - boolean for NO/NC inputs
+  ///   - [bool, float] for 8K2 inputs (state + voltage for diagnostics)
   factory InputStates.fromJson(Map<String, dynamic> json) {
     final statesMap = <String, bool>{};
     final rawValuesMap = <String, double>{};
@@ -323,12 +336,20 @@ class InputStates {
         rawValuesMap[key] = (value as num?)?.toDouble() ?? 0.0;
       });
     } else {
-      // NEW COMPACT FORMAT: {"IN1": {"a": true, "f": "...", "t": "...", "c": 0}, ...}
+      // NEW FORMATS
       json.forEach((key, value) {
         if (key == 'timestamp') return; // Skip timestamp key
 
-        if (value is Map<String, dynamic>) {
-          // Extract active state using compact key "a" or fallback to "active"
+        if (value is List) {
+          // MIXED-TYPE FORMAT (8K2): [bool, float] = [active, voltage]
+          if (value.isNotEmpty) {
+            statesMap[key] = (value[0] as bool?) ?? false;
+            if (value.length > 1) {
+              rawValuesMap[key] = (value[1] as num?)?.toDouble() ?? 0.0;
+            }
+          }
+        } else if (value is Map<String, dynamic>) {
+          // COMPACT OBJECT FORMAT: {"a": true, "v": 1.234}
           statesMap[key] = value['a'] as bool? ?? value['active'] as bool? ?? false;
 
           // Extract raw value if present (voltage or other measurement)
@@ -337,7 +358,7 @@ class InputStates {
             rawValuesMap[key] = (rawValue as num?)?.toDouble() ?? 0.0;
           }
         } else if (value is bool) {
-          // Simple format: just input name -> active state
+          // MIXED-TYPE FORMAT (NO/NC): boolean = active
           statesMap[key] = value;
         }
       });
