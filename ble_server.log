@@ -1,7 +1,7 @@
 ==========================================
 Gatetorio BLE Server
 ==========================================
-Starting at: Sun 16 Nov 09:54:19 GMT 2025
+Starting at: Sun 16 Nov 10:11:25 GMT 2025
 
 ==========================================
 Gatetorio BLE Server Startup
@@ -29,8 +29,8 @@ Step 4: Starting BLE server...
 Gate Controller V2 (Step 3 - Three Processes) initialized
   M1 travel time: 7.835115489037847s, M2 travel time: 8.557032567378949s
   M2 enabled: True
-  Motor Manager PID: 28063
-  Input Manager PID: 28064
+  Motor Manager PID: 30389
+  Input Manager PID: 30390
   Auto-close: ENABLED (5.0s)
 Motor Manager initialized
 Motor Manager process started
@@ -107,57 +107,28 @@ Process Process-2:
 Exception in thread Thread-2 (_control_loop):
 Traceback (most recent call last):
 Traceback (most recent call last):
-Process Process-3:
   File "/usr/lib/python3.13/threading.py", line 1043, in _bootstrap_inner
     self.run()
     ~~~~~~~~^^
   File "/usr/lib/python3.13/threading.py", line 994, in run
     self._target(*self._args, **self._kwargs)
     ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/doowkcol/Gatetorio_Code/gate_controller_v2.py", line 405, in _control_loop
-    self._evaluate_commands(now)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^
-  File "/home/doowkcol/Gatetorio_Code/gate_controller_v2.py", line 664, in _evaluate_commands
-    if self.shared['deadman_open_active'] or self.shared['deadman_close_active']:
-                                             ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
-  File "<string>", line 2, in __getitem__
-  File "/usr/lib/python3.13/multiprocessing/managers.py", line 831, in _callmethod
-    kind, result = conn.recv()
-                   ~~~~~~~~~^^
-  File "/usr/lib/python3.13/multiprocessing/connection.py", line 250, in recv
-    buf = self._recv_bytes()
-  File "/usr/lib/python3.13/multiprocessing/connection.py", line 430, in _recv_bytes
-    buf = self._recv(4)
-  File "/usr/lib/python3.13/multiprocessing/connection.py", line 395, in _recv
-    chunk = read(handle, remaining)
-ConnectionResetError: [Errno 104] Connection reset by peer
-  File "/usr/lib/python3.13/multiprocessing/process.py", line 313, in _bootstrap
-    self.run()
-    ~~~~~~~~^^
-  File "/usr/lib/python3.13/multiprocessing/process.py", line 108, in run
-    self._target(*self._args, **self._kwargs)
-    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/doowkcol/Gatetorio_Code/motor_manager.py", line 1832, in motor_manager_process
-    manager.run()
-    ~~~~~~~~~~~^^
-  File "/home/doowkcol/Gatetorio_Code/motor_manager.py", line 341, in run
-    self._process_limit_switches(now)
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
-  File "/home/doowkcol/Gatetorio_Code/motor_manager.py", line 1069, in _process_limit_switches
-    if self.motor2_use_limit_switches and self.shared.get('open_limit_m2_active', False):
-                                          ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "<string>", line 2, in get
-  File "/usr/lib/python3.13/multiprocessing/managers.py", line 831, in _callmethod
-    kind, result = conn.recv()
-                   ~~~~~~~~~^^
-  File "/usr/lib/python3.13/multiprocessing/connection.py", line 250, in recv
-    buf = self._recv_bytes()
-  File "/usr/lib/python3.13/multiprocessing/connection.py", line 430, in _recv_bytes
-    buf = self._recv(4)
-  File "/usr/lib/python3.13/multiprocessing/connection.py", line 395, in _recv
-    chunk = read(handle, remaining)
-ConnectionResetError: [Errno 104] Connection reset by peer
-Traceback (most recent call last):
+  File "/home/doowkcol/Gatetorio_Code/gate_controller_v2.py", line 396, in _control_loop
+    self.shared['controller_heartbeat'] = now
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<string>", line 2, in __setitem__
+  File "/usr/lib/python3.13/multiprocessing/managers.py", line 830, in _callmethod
+    conn.send((self._id, methodname, args, kwds))
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/multiprocessing/connection.py", line 206, in send
+    self._send_bytes(_ForkingPickler.dumps(obj))
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/multiprocessing/connection.py", line 427, in _send_bytes
+    self._send(header + buf)
+    ~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/multiprocessing/connection.py", line 384, in _send
+    n = write(self._handle, buf)
+BrokenPipeError: [Errno 32] Broken pipe
 
 ==========================================
 BLE server stopped
