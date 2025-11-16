@@ -217,11 +217,25 @@ class _InputCard extends StatelessWidget {
   final bool isActive;
   final double? voltage;
 
+  // Constants for resistance calculation
+  static const double _VCC = 3.3; // Raspberry Pi supply voltage
+  static const double _PULLUP_RESISTANCE = 10000.0; // 10K pull-up resistor
+
   const _InputCard({
     required this.input,
     required this.isActive,
     this.voltage,
   });
+
+  /// Calculate resistance from voltage using voltage divider formula
+  /// V_measured = Vcc * (R_sensor / (R_pullup + R_sensor))
+  /// Solving for R_sensor: R_sensor = (V_measured * R_pullup) / (Vcc - V_measured)
+  double? _calculateResistance(double voltage) {
+    if (voltage <= 0 || voltage >= _VCC) return null;
+
+    final resistance = (voltage * _PULLUP_RESISTANCE) / (_VCC - voltage);
+    return resistance;
+  }
 
   void _showInputEditor(BuildContext context) {
     showModalBottomSheet(
@@ -337,25 +351,34 @@ class _InputCard extends StatelessWidget {
               ],
             ),
 
-            // 8K2 specific info (voltage reading and learned resistance)
+            // 8K2 specific info (calculated resistance and learned resistance)
             if (input.type == '8K2') ...[
               const SizedBox(height: 6),
               Row(
                 children: [
                   Icon(Icons.electrical_services, size: 14, color: Colors.amber.shade700),
                   const SizedBox(width: 4),
-                  if (voltage != null)
+                  if (voltage != null && _calculateResistance(voltage!) != null)
                     Text(
-                      '${voltage!.toStringAsFixed(3)}V',
+                      '${_calculateResistance(voltage!)!.toStringAsFixed(0)}Ω',
                       style: TextStyle(
                         fontSize: 10,
                         color: Colors.amber.shade800,
                         fontWeight: FontWeight.bold,
                       ),
                     )
+                  else if (voltage != null)
+                    Text(
+                      'Out of range',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.red.shade600,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
                   else
                     Text(
-                      'No voltage reading',
+                      'No reading',
                       style: TextStyle(
                         fontSize: 10,
                         color: Colors.grey.shade600,
@@ -367,7 +390,7 @@ class _InputCard extends StatelessWidget {
                     Icon(Icons.settings_input_component, size: 14, color: Colors.grey.shade600),
                     const SizedBox(width: 4),
                     Text(
-                      'Learned: ${input.learnedResistance!.toStringAsFixed(0)}Ω ±${input.tolerancePercent?.toStringAsFixed(1)}%',
+                      'Target: ${input.learnedResistance!.toStringAsFixed(0)}Ω ±${input.tolerancePercent?.toStringAsFixed(1)}%',
                       style: TextStyle(
                         fontSize: 10,
                         color: Colors.grey.shade700,
@@ -579,18 +602,19 @@ class _InputEditorState extends State<_InputEditor> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header
+    return SingleChildScrollView(
+      child: Container(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header
           Row(
             children: [
               Icon(
@@ -643,6 +667,7 @@ class _InputEditorState extends State<_InputEditor> {
           // Type dropdown
           DropdownButtonFormField<String>(
             value: _type,
+            isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Input Type',
               border: OutlineInputBorder(),
@@ -665,6 +690,7 @@ class _InputEditorState extends State<_InputEditor> {
           // Function dropdown
           DropdownButtonFormField<String?>(
             value: _function,
+            isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Function',
               border: OutlineInputBorder(),
@@ -673,7 +699,10 @@ class _InputEditorState extends State<_InputEditor> {
             items: _functionOptions.entries.map((entry) {
               return DropdownMenuItem(
                 value: entry.key,
-                child: Text(entry.value),
+                child: Text(
+                  entry.value,
+                  overflow: TextOverflow.ellipsis,
+                ),
               );
             }).toList(),
             onChanged: (value) {
@@ -849,6 +878,7 @@ class _InputEditorState extends State<_InputEditor> {
             ],
           ),
         ],
+        ),
       ),
     );
   }
