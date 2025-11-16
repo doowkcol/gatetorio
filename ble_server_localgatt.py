@@ -25,6 +25,7 @@ class GateControlService(localGATT.Service):
 
     def __init__(self, service_id, ble_server):
         self.ble_server = ble_server
+        self.service_id = service_id  # Store for characteristics
         super().__init__(service_id, SERVICE_GATE_CONTROL, True)  # PRIMARY
 
 
@@ -34,12 +35,12 @@ class CommandTxChar(localGATT.Characteristic):
     def __init__(self, index, service, ble_server):
         self.ble_server = ble_server
         super().__init__(
-            index,
-            service.path,
-            CHAR_COMMAND_TX,
-            [],          # initial value
-            False,       # notifying
-            ['write']
+            service.service_id,  # service_id (int)
+            index,               # characteristic_id (int)
+            CHAR_COMMAND_TX,     # uuid (str)
+            [],                  # value
+            False,               # notifying
+            ['write']            # flags
         )
 
     def WriteValue(self, value, options):
@@ -63,9 +64,9 @@ class CommandResponseChar(localGATT.Characteristic):
     def __init__(self, index, service, ble_server):
         self.ble_server = ble_server
         super().__init__(
-            index,
-            service.path,
-            CHAR_COMMAND_RESPONSE,
+            service.service_id,    # service_id (int)
+            index,                 # characteristic_id (int)
+            CHAR_COMMAND_RESPONSE, # uuid (str)
             [],
             False,
             ['read']
@@ -82,9 +83,9 @@ class StatusChar(localGATT.Characteristic):
     def __init__(self, index, service, ble_server):
         self.ble_server = ble_server
         super().__init__(
-            index,
-            service.path,
-            CHAR_STATUS,
+            service.service_id,  # service_id (int)
+            index,               # characteristic_id (int)
+            CHAR_STATUS,         # uuid (str)
             [],
             False,
             ['read', 'notify']
@@ -126,6 +127,7 @@ class ConfigurationService(localGATT.Service):
 
     def __init__(self, service_id, ble_server):
         self.ble_server = ble_server
+        self.service_id = service_id  # Store for characteristics
         super().__init__(service_id, SERVICE_CONFIGURATION, True)  # PRIMARY
 
 
@@ -135,9 +137,9 @@ class InputConfigChar(localGATT.Characteristic):
     def __init__(self, index, service, ble_server):
         self.ble_server = ble_server
         super().__init__(
-            index,
-            service.path,
-            CHAR_INPUT_CONFIG,
+            service.service_id,  # service_id (int)
+            index,               # characteristic_id (int)
+            CHAR_INPUT_CONFIG,   # uuid (str)
             [],
             False,
             ['read']
@@ -162,6 +164,7 @@ class DiagnosticsService(localGATT.Service):
 
     def __init__(self, service_id, ble_server):
         self.ble_server = ble_server
+        self.service_id = service_id  # Store for characteristics
         super().__init__(service_id, SERVICE_DIAGNOSTICS, True)  # PRIMARY
 
 
@@ -171,9 +174,9 @@ class InputStatesChar(localGATT.Characteristic):
     def __init__(self, index, service, ble_server):
         self.ble_server = ble_server
         super().__init__(
-            index,
-            service.path,
-            CHAR_INPUT_STATES,
+            service.service_id,  # service_id (int)
+            index,               # characteristic_id (int)
+            CHAR_INPUT_STATES,   # uuid (str)
             [],
             False,
             ['read']
