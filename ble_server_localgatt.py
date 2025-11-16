@@ -31,15 +31,15 @@ class GateControlService(localGATT.Service):
 class CommandTxChar(localGATT.Characteristic):
     """Command TX characteristic (write-only)"""
 
-    def __init__(self, char_id, ble_server):
+    def __init__(self, index, service, ble_server):
         self.ble_server = ble_server
-        # Use keyword arguments to be explicit about parameter mapping
         super().__init__(
-            char_id,
+            index,
             CHAR_COMMAND_TX,
-            value=[],
-            notifying=False,
-            flags=['write']
+            service,
+            [],          # initial value
+            False,       # notifying
+            ['write']
         )
 
     def WriteValue(self, value, options):
@@ -60,14 +60,15 @@ class CommandTxChar(localGATT.Characteristic):
 class CommandResponseChar(localGATT.Characteristic):
     """Command Response characteristic (read-only)"""
 
-    def __init__(self, char_id, ble_server):
+    def __init__(self, index, service, ble_server):
         self.ble_server = ble_server
         super().__init__(
-            char_id,
+            index,
             CHAR_COMMAND_RESPONSE,
-            value=[],
-            notifying=False,
-            flags=['read']
+            service,
+            [],
+            False,
+            ['read']
         )
 
     def ReadValue(self, options):
@@ -78,14 +79,15 @@ class CommandResponseChar(localGATT.Characteristic):
 class StatusChar(localGATT.Characteristic):
     """Status characteristic (read + notify)"""
 
-    def __init__(self, char_id, ble_server):
+    def __init__(self, index, service, ble_server):
         self.ble_server = ble_server
         super().__init__(
-            char_id,
+            index,
             CHAR_STATUS,
-            value=[],
-            notifying=False,
-            flags=['read', 'notify']
+            service,
+            [],
+            False,
+            ['read', 'notify']
         )
         self.notifying = False
 
@@ -130,14 +132,15 @@ class ConfigurationService(localGATT.Service):
 class InputConfigChar(localGATT.Characteristic):
     """Input Configuration characteristic (read-only)"""
 
-    def __init__(self, char_id, ble_server):
+    def __init__(self, index, service, ble_server):
         self.ble_server = ble_server
         super().__init__(
-            char_id,
+            index,
             CHAR_INPUT_CONFIG,
-            value=[],
-            notifying=False,
-            flags=['read']
+            service,
+            [],
+            False,
+            ['read']
         )
 
     def ReadValue(self, options):
@@ -165,14 +168,15 @@ class DiagnosticsService(localGATT.Service):
 class InputStatesChar(localGATT.Characteristic):
     """Input States characteristic (read-only)"""
 
-    def __init__(self, char_id, ble_server):
+    def __init__(self, index, service, ble_server):
         self.ble_server = ble_server
         super().__init__(
-            char_id,
+            index,
             CHAR_INPUT_STATES,
-            value=[],
-            notifying=False,
-            flags=['read']
+            service,
+            [],
+            False,
+            ['read']
         )
 
     def ReadValue(self, options):
@@ -226,31 +230,40 @@ def start_localgatt_server(ble_server: GatetorioBLEServer):
         # Add Gate Control service and characteristics
         print("[BLE] Adding Gate Control service (PRIMARY)...")
         gate_service = GateControlService(1, ble_server)
+        cmd_tx_char = CommandTxChar(1, gate_service, ble_server)
+        cmd_resp_char = CommandResponseChar(2, gate_service, ble_server)
+        status_char = StatusChar(3, gate_service, ble_server)
+
+        # Attach characteristics to service (D-Bus path)
+        cmd_tx_char.service = gate_service.path
+        cmd_resp_char.service = gate_service.path
+        status_char.service = gate_service.path
+
         app.add_managed_object(gate_service)
-
-        cmd_tx_char = CommandTxChar(1, ble_server)
         app.add_managed_object(cmd_tx_char)
-
-        cmd_resp_char = CommandResponseChar(2, ble_server)
         app.add_managed_object(cmd_resp_char)
-
-        status_char = StatusChar(3, ble_server)
         app.add_managed_object(status_char)
 
         # Add Configuration service and characteristics
         print("[BLE] Adding Configuration service (PRIMARY)...")
         config_service = ConfigurationService(2, ble_server)
-        app.add_managed_object(config_service)
+        input_config_char = InputConfigChar(1, config_service, ble_server)
 
-        input_config_char = InputConfigChar(1, ble_server)
+        # Attach characteristic to service
+        input_config_char.service = config_service.path
+
+        app.add_managed_object(config_service)
         app.add_managed_object(input_config_char)
 
         # Add Diagnostics service and characteristics
         print("[BLE] Adding Diagnostics service (PRIMARY)...")
         diag_service = DiagnosticsService(3, ble_server)
-        app.add_managed_object(diag_service)
+        input_states_char = InputStatesChar(1, diag_service, ble_server)
 
-        input_states_char = InputStatesChar(1, ble_server)
+        # Attach characteristic to service
+        input_states_char.service = diag_service.path
+
+        app.add_managed_object(diag_service)
         app.add_managed_object(input_states_char)
 
         # Register GATT application
