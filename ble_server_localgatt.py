@@ -197,27 +197,20 @@ class InputStatesChar(localGATT.Characteristic):
         )
 
     def ReadValue(self, options):
-        """Return current input states"""
+        """Return current input states (active flags only)"""
         try:
             print("[BLE] Input States READ")
             states = {}
             with open('/home/doowkcol/Gatetorio_Code/input_config.json', 'r') as f:
                 input_config = json.load(f)['inputs']
 
-            for input_name, config in input_config.items():
+            # Only send active state - metadata comes from InputConfigChar
+            for input_name in input_config.keys():
                 is_active = self.ble_server.controller.shared.get(f'{input_name}_state', False)
-                # Compact format to reduce size
-                states[input_name] = {
-                    "a": is_active,  # active (shortened)
-                    "f": config.get('function'),  # function
-                    "t": config.get('type'),  # type
-                    "c": config.get('channel')  # channel
-                }
+                states[input_name] = is_active  # Just true/false, not an object
 
-            states_json = json.dumps(states, separators=(',', ':')).encode('utf-8')  # Compact JSON
-            print(f"[BLE] Sending {len(states_json)} bytes")
-            if len(states_json) > 512:
-                print(f"[BLE] WARNING: Data exceeds typical MTU limit (512 bytes)")
+            states_json = json.dumps(states, separators=(',', ':')).encode('utf-8')
+            print(f"[BLE] Sending {len(states_json)} bytes (active states only)")
             return list(states_json)
         except Exception as e:
             print(f"[BLE] Error reading input states: {e}")
