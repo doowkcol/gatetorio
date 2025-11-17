@@ -1,0 +1,319 @@
+==========================================
+Gatetorio Gate Controller UI
+==========================================
+Starting at: Mon 17 Nov 23:48:18 GMT 2025
+
+Motor Manager initialized
+Motor Manager process started
+[LIMIT SWITCH] M1 OPEN limit reached - position was 4.15s (53.0%), setting to 7.84s (100%)
+[LIMIT HUNT] M1 synced to OPEN limit
+[FAULT] M2 LIMIT_MISSING: OPENING - open limit not activated at 8.56s (consecutive MOVEMENTS: 1)
+[FAULT] M2 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 2)
+[LIMIT SWITCH] M2 CLOSE limit reached - position was -0.08s (-0.9%), setting to 0.0s (0%)
+[LIMIT HUNT] M2 synced to CLOSE limit
+[FAULT] M2 fault counter cleared (was 2)
+[FAULT] M1 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 1)
+[FAULT] M1 fault counter cleared (was 1)
+Motor Manager process stopped
+Input Manager: ADC1 initialized at address 0x48 (ADDR->GND)
+Input Manager: ADC2 initialized at address 0x49 (ADDR->VDD)
+Input Manager: 2 ADC(s) initialized successfully (8 channels available)
+Input Manager initialized:
+  Inputs configured: 8
+  Sample rate: 0.01s (100.0Hz)
+  ADC available: True
+  Channels available: 8
+Input Manager: Starting main loop
+
+================================================================================
+CONFIGURED INPUTS (8 total):
+================================================================================
+  IN1                  Ch= 0 Type=NC  Func=close_limit_m1       [ENABLED]
+  IN2                  Ch= 1 Type=NO  Func=open_limit_m1        [ENABLED]
+  IN3                  Ch= 2 Type=NO  Func=open_limit_m2        [ENABLED]
+  IN4                  Ch= 3 Type=NC  Func=close_limit_m2       [ENABLED]
+  IN5                  Ch= 4 Type=NO  Func=cmd_open             [ENABLED]
+  IN6                  Ch= 5 Type=8K2 Func=safety_stop_opening  [ENABLED]
+  IN7                  Ch= 6 Type=NO  Func=None                 [ENABLED]
+  IN8                  Ch= 7 Type=NO  Func=None                 [ENABLED]
+================================================================================
+
+[INPUT RAW] IN2                  func=open_limit_m1        raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → ACTIVE
+[INPUT RAW] IN3                  func=open_limit_m2        raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → ACTIVE
+[INPUT RAW] IN3                  func=open_limit_m2        raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN3                  func=open_limit_m2        raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → inactive
+[INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → inactive
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN6                  func=safety_stop_opening  → ACTIVE
+[INPUT] safety_stop_opening  → ACTIVE
+[INPUT RAW] IN4                  func=close_limit_m2       raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → ACTIVE
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - starting 1.0s hold-off timer
+[SAFETY DEACTIVATION] IN6                  - holding for 1.00s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - holding for 0.69s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - holding for 0.37s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - starting 1.0s hold-off timer
+[SAFETY DEACTIVATION] IN6                  - holding for 1.00s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - holding for 0.68s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - starting 1.0s hold-off timer
+[SAFETY DEACTIVATION] IN6                  - holding for 1.00s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - starting 1.0s hold-off timer
+[SAFETY DEACTIVATION] IN6                  - holding for 1.00s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - holding for 0.68s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - holding for 0.37s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - holding for 0.05s more
+[INPUT RAW] IN1                  func=close_limit_m1       raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - 1.0s elapsed, deactivating
+[INPUT DEBOUNCED] IN6                  func=safety_stop_opening  → inactive
+[INPUT] safety_stop_opening  → inactive
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=ACTIVE was=inactive V=-0.00
+[INPUT DEBOUNCED] IN6                  func=safety_stop_opening  → ACTIVE
+[INPUT] safety_stop_opening  → ACTIVE
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - starting 1.0s hold-off timer
+[SAFETY DEACTIVATION] IN6                  - holding for 1.00s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - holding for 0.69s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - holding for 0.37s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - holding for 0.06s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - 1.0s elapsed, deactivating
+[INPUT DEBOUNCED] IN6                  func=safety_stop_opening  → inactive
+[INPUT] safety_stop_opening  → inactive
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN6                  func=safety_stop_opening  → ACTIVE
+[INPUT] safety_stop_opening  → ACTIVE
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - starting 1.0s hold-off timer
+[SAFETY DEACTIVATION] IN6                  - holding for 1.00s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - holding for 0.68s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - holding for 0.37s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - holding for 0.05s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - 1.0s elapsed, deactivating
+[INPUT DEBOUNCED] IN6                  func=safety_stop_opening  → inactive
+[INPUT] safety_stop_opening  → inactive
+[INPUT RAW] IN5                  func=cmd_open             raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN5                  func=cmd_open             → ACTIVE
+[INPUT] cmd_open             → ACTIVE
+[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
+[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
+[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → inactive
+[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
+[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
+[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → inactive
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=ACTIVE was=inactive V=-0.00
+[INPUT DEBOUNCED] IN6                  func=safety_stop_opening  → ACTIVE
+[INPUT] safety_stop_opening  → ACTIVE
+[INPUT RAW] IN4                  func=close_limit_m2       raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → ACTIVE
+[INPUT RAW] IN5                  func=cmd_open             raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - starting 1.0s hold-off timer
+[SAFETY DEACTIVATION] IN6                  - holding for 1.00s more
+[INPUT RAW] IN5                  func=cmd_open             raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN5                  func=cmd_open             → inactive
+[INPUT] cmd_open             → inactive
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - holding for 0.68s more
+[INPUT RAW] IN1                  func=close_limit_m1       raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - holding for 0.36s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - holding for 0.04s more
+[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[SAFETY DEACTIVATION] IN6                  - 1.0s elapsed, deactivating
+[INPUT DEBOUNCED] IN6                  func=safety_stop_opening  → inactive
+[INPUT] safety_stop_opening  → inactive
+Input Manager: Shutting down
+Gate Controller V2 (Step 3 - Three Processes) initialized
+  M1 travel time: 7.835115489037847s, M2 travel time: 8.557032567378949s
+  M2 enabled: True
+  Motor Manager PID: 4599
+  Input Manager PID: 4600
+  Auto-close: ENABLED (5.0s)
+[STARTUP] Position UNKNOWN - motors between limits
+  M1: open=False, close=False → NEEDS SYNC
+  M2: open=False, close=False → NEEDS SYNC
+  Commands will operate at 30% speed until both motors synced to limits
+  Normal operation: OPEN/CLOSE work normally, just slower for safety
+Window created
+Status label created
+Open button created
+All UI elements created
+Building input displays for 8 inputs: ['IN1', 'IN2', 'IN3', 'IN4', 'IN5', 'IN6', 'IN7', 'IN8']
+Creating display for IN1...
+  ✓ Display created for IN1
+Creating display for IN2...
+  ✓ Display created for IN2
+Creating display for IN3...
+  ✓ Display created for IN3
+Creating display for IN4...
+  ✓ Display created for IN4
+Creating display for IN5...
+  ✓ Display created for IN5
+Creating display for IN6...
+  ✓ Display created for IN6
+Creating display for IN7...
+  ✓ Display created for IN7
+Creating display for IN8...
+  ✓ Display created for IN8
+Total input displays created: 8
+Window created
+Starting mainloop
+OPEN button activated!
+OPEN from UNKNOWN - opening to locate limits
+
+>>> [_execute_open CALLED] M1:0.0s M2:0.0s
+    Current state: UNKNOWN, safety_reversing: False
+    Flags: cmd_open=True, stop_opening_active=False
+[COMPLETION] OPEN complete! M1: limit=True, M2: limit=True
+[_complete_open] BEFORE: state=OPENING, M1=7.84, M2=8.57
+[_complete_open] AFTER: state=OPEN, movement_command=None
+Gates OPEN
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+Starting auto-close timer (OPEN released)
+OPEN button deactivated
+Auto-close triggered (from full OPEN) - sending momentary CLOSE pulse
+Auto-close pulse - no PO sustained, closing fully
+
+>>> CLOSE command - M1:7.8s M2:8.6s
+[COMPLETION] CLOSE complete! M1: limit=True, M2: limit=True
+[_complete_close] BEFORE: state=CLOSING, M1=-0.35, M2=-0.00
+[_complete_close] AFTER: state=CLOSED, movement_command=None
+Gates CLOSED
+
+>>> [_execute_open CALLED] M1:0.0s M2:0.0s
+    Current state: CLOSED, safety_reversing: False
+    Flags: cmd_open=True, stop_opening_active=False
+[SAFETY CRITICAL] STOP OPENING triggered during OPENING
+  photocell_closing_active=False
+  cmd_close_active=False
+STOP OPENING triggered during OPENING - 1.5s full reverse then STOP
+[SAFETY BLOCK] Safety edge acting as STOP - blocking all commands
+Safety reversal complete - STOPPING
+  Marked STOP OPENING as reversed (edge still active: False)
+
+>>> STOP command - M1:4.6s M2:2.6s
+
+>>> [_execute_open CALLED] M1:4.6s M2:2.6s
+    Current state: STOPPED, safety_reversing: False
+    Flags: cmd_open=True, stop_opening_active=False
+[SAFETY CRITICAL] STOP OPENING triggered during OPENING
+  photocell_closing_active=False
+  cmd_close_active=False
+STOP OPENING triggered during OPENING - 1.5s full reverse then STOP
+[SAFETY BLOCK] Safety edge acting as STOP - blocking all commands
+Safety reversal complete - STOPPING
+  Marked STOP OPENING as reversed (edge still active: False)
+
+>>> STOP command - M1:4.6s M2:2.6s
+
+>>> [_execute_open CALLED] M1:4.6s M2:2.6s
+    Current state: STOPPED, safety_reversing: False
+    Flags: cmd_open=True, stop_opening_active=False
+[SAFETY CRITICAL] STOP OPENING triggered during OPENING
+  photocell_closing_active=False
+  cmd_close_active=False
+STOP OPENING triggered during OPENING - 1.5s full reverse then STOP
+[SAFETY BLOCK] Safety edge acting as STOP - blocking all commands
+Safety reversal complete - STOPPING
+  Marked STOP OPENING as reversed (edge still active: False)
+
+>>> STOP command - M1:4.6s M2:2.6s
+Exit button pressed - shutting down all processes
+Shutting down gate controller...
+Gate controller shutdown complete
+Exiting Python process
