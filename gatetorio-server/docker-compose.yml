@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # Mosquitto MQTT Broker
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: gatetorio-mosquitto
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    restart: unless-stopped
+
+  # FastAPI Server
+  api:
+    build: .
+    container_name: gatetorio-api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./gatetorio.db
+      - MQTT_BROKER_HOST=mosquitto
+      - MQTT_BROKER_PORT=1883
+      - DEBUG=True
+    volumes:
+      - ./app:/app/app
+      - ./gatetorio.db:/app/gatetorio.db
+      - ./uploads:/app/uploads
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
+
+networks:
+  default:
+    name: gatetorio-network
