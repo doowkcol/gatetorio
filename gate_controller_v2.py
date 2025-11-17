@@ -637,29 +637,28 @@ class GateController:
         Decide if operations should start, stop, or continue.
         This runs EVERY cycle - inputs are read from flags.
         """
-        
-        # DEBUG: Print ALL command flags every cycle when any safety edge active
-        # (Commented out to reduce log spam - uncomment for debugging)
-        # if self.shared['safety_stop_opening_active'] or self.shared['safety_stop_closing_active']:
-        #     print(f"\n[CYCLE DEBUG] state={self.shared['state']}, "
-        #           f"reversing={self.shared['safety_reversing']}, "
-        #           f"movement_cmd={self.shared['movement_command']}")
-        #     print(f"  Commands: open={self.shared['cmd_open_active']}, "
-        #           f"close={self.shared['cmd_close_active']}, "
-        #           f"stop={self.shared['cmd_stop_active']}")
-        #     print(f"  Photocells: closing={self.shared['photocell_closing_active']}, "
-        #           f"opening={self.shared['photocell_opening_active']}")
-        #     print(f"  Safety: stop_opening_active={self.shared['safety_stop_opening_active']}, "
-        #           f"stop_opening_reversed={self.shared.get('safety_stop_opening_reversed', False)}, "
-        #           f"stop_opening_triggered={self.shared.get('safety_stop_opening_triggered', False)}")
-        #     print(f"  Safety: stop_closing_active={self.shared['safety_stop_closing_active']}, "
-        #           f"stop_closing_reversed={self.shared.get('safety_stop_closing_reversed', False)}, "
-        #           f"stop_closing_triggered={self.shared.get('safety_stop_closing_triggered', False)}")
-        pass
-        # Debug: Print flag states when any command is active (DISABLED - too spammy)
-        # if self.shared['cmd_open_active'] or self.shared['cmd_close_active'] or self.shared['cmd_stop_active']:
-        #     print(f"[EVAL] State:{self.shared['state']} Open:{self.shared['cmd_open_active']} Close:{self.shared['cmd_close_active']} Stop:{self.shared['cmd_stop_active']}")
-        
+
+        # Track active command flags for logging (only print on changes)
+        if not hasattr(self, '_last_cmd_state'):
+            self._last_cmd_state = {}
+
+        current_cmd_state = {
+            'cmd_open': self.shared['cmd_open_active'],
+            'cmd_close': self.shared['cmd_close_active'],
+            'cmd_stop': self.shared['cmd_stop_active'],
+            'safety_stop_opening': self.shared['safety_stop_opening_active'],
+            'safety_stop_closing': self.shared['safety_stop_closing_active'],
+            'safety_stop_opening_reversed': self.shared.get('safety_stop_opening_reversed', False),
+            'safety_stop_closing_reversed': self.shared.get('safety_stop_closing_reversed', False),
+        }
+
+        # Only print when command states change
+        if current_cmd_state != self._last_cmd_state:
+            active_cmds = [k for k, v in current_cmd_state.items() if v]
+            if active_cmds:
+                print(f"[COMMANDS ACTIVE] {', '.join(active_cmds)} | state={self.shared['state']}")
+            self._last_cmd_state = current_cmd_state.copy()
+
         # DEADMAN CONTROLS - Override everything (except safety which runs separately)
         if self.shared['deadman_open_active'] or self.shared['deadman_close_active']:
             # Let _process_deadman_controls handle this
@@ -1342,17 +1341,39 @@ class GateController:
         # Reset trigger flags when edges released
         # BUT: Don't automatically clear 'reversed' flag - it acts as a safety lock
         # Once reversed, gate stays STOPPED until user explicitly releases obstruction AND presses new command
-        # Reversed flag is only cleared when edge confirmed released (debounced by input manager)
-        # AND gate is in a stopped state (not moving)
+        # Reversed flag is only cleared when:
+        # 1. Edge confirmed released (debounced by input manager - 1 second hold-off)
+        # 2. AND gate is in a stopped state (not moving)
+        # 3. AND the conflicting command is also inactive (prevents cycling)
         if not self.shared['safety_stop_closing_active']:
             self.shared['safety_stop_closing_triggered'] = False
-            # Only clear reversed if gate is stopped and edge has been released
-            if self.shared['state'] in ['STOPPED', 'CLOSED', 'OPEN', 'PARTIAL_1', 'PARTIAL_2']:
+            # Only clear reversed if gate is stopped, edge released, AND close commands inactive
+            closing_commands_active = (
+                self.shared['cmd_close_active'] or
+                self.shared.get('auto_close_pulse', False) or
+                self.shared.get('partial_1_auto_close_pulse', False) or
+                self.shared.get('partial_2_auto_close_pulse', False) or
+                self.shared.get('timed_open_close_pulse', False)
+            )
+            if (self.shared['state'] in ['STOPPED', 'CLOSED', 'OPEN', 'PARTIAL_1', 'PARTIAL_2'] and
+                not closing_commands_active):
+                if self.shared.get('safety_stop_closing_reversed', False):
+                    print("[SAFETY CLEAR] STOP CLOSING reversed flag cleared - edge inactive AND close commands released")
                 self.shared['safety_stop_closing_reversed'] = False
+
         if not self.shared['safety_stop_opening_active']:
             self.shared['safety_stop_opening_triggered'] = False
-            # Only clear reversed if gate is stopped and edge has been released
-            if self.shared['state'] in ['STOPPED', 'CLOSED', 'OPEN', 'PARTIAL_1', 'PARTIAL_2']:
+            # Only clear reversed if gate is stopped, edge released, AND open commands inactive
+            opening_commands_active = (
+                self.shared['cmd_open_active'] or
+                self.shared['timed_open_active'] or
+                self.shared['partial_1_active'] or
+                self.shared['partial_2_active']
+            )
+            if (self.shared['state'] in ['STOPPED', 'CLOSED', 'OPEN', 'PARTIAL_1', 'PARTIAL_2'] and
+                not opening_commands_active):
+                if self.shared.get('safety_stop_opening_reversed', False):
+                    print("[SAFETY CLEAR] STOP OPENING reversed flag cleared - edge inactive AND open commands released")
                 self.shared['safety_stop_opening_reversed'] = False
         
         # STOP CLOSING edge
