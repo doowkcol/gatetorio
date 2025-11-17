@@ -15,14 +15,14 @@
   "motor1_use_limit_switches": true,
   "motor2_use_limit_switches": true,
   "limit_switches_enabled": true,
-  "opening_slowdown_percent": 0.5,
-  "closing_slowdown_percent": 20.0,
+  "opening_slowdown_percent": 20.0,
+  "closing_slowdown_percent": 0.5,
   "learning_speed": 0.3,
   "open_speed": 1.0,
   "close_speed": 1.0,
   "partial_1_auto_close_time": 5.0,
   "partial_2_auto_close_time": 5.0,
-  "motor1_run_time": 7.835115489037847,
-  "motor2_run_time": 8.557032567378949,
+  "motor1_run_time": 8.071919840647375,
+  "motor2_run_time": 8.198906222383972,
   "motor2_enabled": true
 }
