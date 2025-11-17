@@ -510,23 +510,17 @@ class _InputEditorState extends State<_InputEditor> {
         learnedResistance: _learnedResistance,
       );
 
-      // Update in the service's inputConfig
-      if (bleService.inputConfig != null) {
-        final updatedInputs = Map<String, InputConfig>.from(bleService.inputConfig!.inputs);
-        updatedInputs[widget.input.name] = updatedInput;
+      // Write single input to BLE - server expects: ["IN1", func_code, type_code, channel]
+      await bleService.writeSingleInput(updatedInput);
 
-        // Write to BLE - this will write the entire config back
-        await bleService.writeInputConfig(InputConfigData(inputs: updatedInputs));
-
-        if (mounted) {
-          Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${widget.input.name} configuration saved'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${widget.input.name} configuration saved'),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
       debugPrint('Error saving input config: $e');

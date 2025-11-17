@@ -98,6 +98,23 @@ class InputConfig {
     return json;
   }
 
+  /// Convert single input to array format for BLE write
+  /// Format: ["IN1", func_code, type_code, channel]
+  /// This matches the BLE server's expected format for individual input writes
+  List<dynamic> toArray() {
+    return [
+      name,
+      InputConfigData._encodeFunctionCode(function),
+      InputConfigData._encodeTypeCode(type),
+      channel,
+    ];
+  }
+
+  /// Convert to bytes for BLE write operation (single input format)
+  List<int> toBytes() {
+    return utf8.encode(jsonEncode(toArray()));
+  }
+
   /// Get ADC number (1 or 2)
   int get adcNumber => channel < 4 ? 1 : 2;
 

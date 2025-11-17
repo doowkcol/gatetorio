@@ -575,7 +575,7 @@ class BleService extends ChangeNotifier {
     return null;
   }
 
-  /// Write input configuration to BLE device
+  /// Write input configuration to BLE device (entire config)
   Future<bool> writeInputConfig(InputConfigData config) async {
     debugPrint("=== writeInputConfig() called ===");
 
@@ -607,6 +607,56 @@ class BleService extends ChangeNotifier {
       debugPrint("ERROR: Failed to write input config: $e");
       debugPrint("Stack trace: $stackTrace");
       _lastError = "Failed to write input config: $e";
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Write a single input configuration to BLE device
+  /// Format: ["IN1", func_code, type_code, channel]
+  /// This matches the BLE server's expected format for individual input writes
+  Future<bool> writeSingleInput(InputConfig input) async {
+    debugPrint("=== writeSingleInput() called for ${input.name} ===");
+
+    // Handle demo mode
+    if (_isDemoMode) {
+      debugPrint("Demo mode: Updating local input config for ${input.name}");
+      if (_inputConfig != null) {
+        final updatedInputs = Map<String, InputConfig>.from(_inputConfig!.inputs);
+        updatedInputs[input.name] = input;
+        _inputConfig = InputConfigData(inputs: updatedInputs);
+        notifyListeners();
+      }
+      return true;
+    }
+
+    debugPrint("Checking if input config characteristic is available...");
+    if (_inputConfigChar == null) {
+      debugPrint("ERROR: Input config characteristic not available");
+      _lastError = "Input config characteristic not available";
+      notifyListeners();
+      return false;
+    }
+
+    try {
+      debugPrint("Writing single input: ${input.name} = ${input.toArray()}");
+      await _inputConfigChar!.write(input.toBytes(), withoutResponse: false);
+
+      // Update local cache
+      if (_inputConfig != null) {
+        final updatedInputs = Map<String, InputConfig>.from(_inputConfig!.inputs);
+        updatedInputs[input.name] = input;
+        _inputConfig = InputConfigData(inputs: updatedInputs);
+      }
+
+      _lastError = null;
+      notifyListeners();
+      debugPrint("Single input written successfully");
+      return true;
+    } catch (e, stackTrace) {
+      debugPrint("ERROR: Failed to write single input: $e");
+      debugPrint("Stack trace: $stackTrace");
+      _lastError = "Failed to write single input: $e";
       notifyListeners();
       return false;
     }
