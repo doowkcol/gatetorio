@@ -132,6 +132,12 @@ class InputManager:
         for input_name in self.input_config.keys():
             self.resistance_history[input_name] = deque(maxlen=10)
 
+        # Safety input deactivation tracking - requires 1 second of continuous
+        # inactive signal before deactivating (prevents cycling on sustained commands)
+        self.safety_deactivation_times = {}
+        for input_name in self.input_config.keys():
+            self.safety_deactivation_times[input_name] = None
+
         print(f"Input Manager initialized:")
         print(f"  Inputs configured: {len(self.input_config)}")
         print(f"  Sample rate: {self.sample_rate}s ({1.0/self.sample_rate:.1f}Hz)")
@@ -330,6 +336,10 @@ class InputManager:
             consecutive_inactive[input_name] = 0
             consecutive_active[input_name] += 1
 
+            # Clear safety deactivation timer since we're active again
+            if function in safety_functions:
+                self.safety_deactivation_times[input_name] = None
+
             if was_active:
                 # Already active, stay active
                 is_active = True
@@ -347,12 +357,39 @@ class InputManager:
             if not was_active:
                 # Already inactive, stay inactive
                 is_active = False
+                # Ensure deactivation timer is cleared when already inactive
+                if function in safety_functions:
+                    self.safety_deactivation_times[input_name] = None
             else:
                 # Was active, check if enough consecutive samples to deactivate
-                if consecutive_inactive[input_name] >= deactivate_samples:
-                    is_active = False  # Deactivate now
+                # SAFETY INPUTS: Require 1 second of continuous inactivity before deactivating
+                # This prevents cycling when both OPEN and SAFETY_STOP_OPENING are sustained
+                if function in safety_functions:
+                    # Start tracking deactivation time if not already tracking
+                    if self.safety_deactivation_times[input_name] is None:
+                        self.safety_deactivation_times[input_name] = now
+                        print(f"[SAFETY DEACTIVATION] {input_name:20s} - starting 1.0s hold-off timer")
+
+                    # Check if we've been inactive for 1+ second
+                    time_inactive = now - self.safety_deactivation_times[input_name]
+                    if time_inactive >= 1.0:
+                        # 1 second has passed - allow deactivation
+                        is_active = False
+                        self.safety_deactivation_times[input_name] = None  # Clear timer
+                        print(f"[SAFETY DEACTIVATION] {input_name:20s} - 1.0s elapsed, deactivating")
+                    else:
+                        # Still within 1 second - stay active
+                        is_active = True
+                        # Optional debug: show countdown (throttled to avoid spam)
+                        if not hasattr(self, '_last_safety_debug') or (now - self._last_safety_debug) > 0.2:
+                            print(f"[SAFETY DEACTIVATION] {input_name:20s} - holding for {1.0 - time_inactive:.2f}s more")
+                            self._last_safety_debug = now
                 else:
-                    is_active = True  # Still debouncing, stay active (latch-on)
+                    # Non-safety inputs: Use standard debouncing
+                    if consecutive_inactive[input_name] >= deactivate_samples:
+                        is_active = False  # Deactivate now
+                    else:
+                        is_active = True  # Still debouncing, stay active (latch-on)
 
         # Update shared memory
         self.shared[f'{input_name}_voltage'] = voltage
