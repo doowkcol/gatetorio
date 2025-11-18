@@ -75,9 +75,12 @@ class MotorManager:
         self.original_close_speed = self.close_speed
 
         # Fault detection thresholds
-        self.over_travel_threshold = 2.00  # 200% of expected position (allows full travel time at creep speed)
+        self.over_travel_threshold = 4.00  # 400% of expected position (allows finding limits from UNKNOWN at 0.3 speed)
         self.limit_release_check = 0.50    # Check at 50% travel that starting limit released
         self.fault_trigger_count = 5       # Degrade after this many consecutive MOVEMENTS with faults
+
+        # Limit hunt mode - reduced speed when position unknown
+        self.limit_hunt_speed = 0.3  # Speed to use when hunting for limits from UNKNOWN state
 
         # Track last movement to detect new movements
         self.last_movement_command = None
@@ -1167,6 +1170,28 @@ class MotorManager:
             if hasattr(self, '_m2_close_limit_logged'):
                 self._m2_close_limit_logged = False
 
+        # Check if we can exit UNKNOWN state - both motors must have found limits
+        if self.shared['state'] == 'UNKNOWN':
+            m1_known = self.shared.get('m1_position_known', False)
+            m2_known = self.shared.get('m2_position_known', False)
+
+            if m1_known and m2_known:
+                # Both motors have found limits - determine new state based on current positions
+                m1_open = self.shared.get('open_limit_m1_active', False)
+                m1_close = self.shared.get('close_limit_m1_active', False)
+                m2_open = self.shared.get('open_limit_m2_active', False)
+                m2_close = self.shared.get('close_limit_m2_active', False)
+
+                if m1_open and m2_open:
+                    print("[LIMIT HUNT] Both motors found OPEN limits - state now OPEN")
+                    self.shared['state'] = 'OPEN'
+                elif m1_close and m2_close:
+                    print("[LIMIT HUNT] Both motors found CLOSE limits - state now CLOSED")
+                    self.shared['state'] = 'CLOSED'
+                else:
+                    print(f"[LIMIT HUNT] Both motors synced but at different positions - state remains UNKNOWN")
+                    print(f"  M1: open={m1_open}, close={m1_close}  M2: open={m2_open}, close={m2_close}")
+
         # Start learning timers when movement begins
         if learning_mode:
             # Motor 1 learning
@@ -1513,6 +1538,13 @@ class MotorManager:
                         #     self._slowdown_debug_close = time()
                         speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True, 'CLOSE', self.motor1_run_time)
 
+            # Limit hunt mode: if state is UNKNOWN or either motor position not known, use reduced speed
+            # This allows motors to safely find limits when starting from unknown position
+            if (self.shared['state'] == 'UNKNOWN' or
+                not self.shared.get('m1_position_known', True) or
+                not self.shared.get('m2_position_known', True)):
+                speed = self.limit_hunt_speed
+
             self.shared['m1_speed'] = speed
 
             # Check if we should ignore position limits and keep running until limit switch
@@ -1595,9 +1627,9 @@ class MotorManager:
                     close_limit_m1 = self.shared.get('close_limit_m1_active', False)
 
                     # For closing, position goes from motor1_run_time down to 0 (and can go negative with limit switches)
-                    # Check for excessive over-travel (safety threshold at -50% of expected travel)
-                    # This prevents runaway if limit switch fails
-                    over_travel_threshold = -0.5 * self.motor1_run_time  # -50% of run time
+                    # Check for excessive over-travel (safety threshold at -100% of expected travel)
+                    # This prevents runaway if limit switch fails (allows finding limits from UNKNOWN)
+                    over_travel_threshold = -1.0 * self.motor1_run_time  # -100% of run time
                     if self.shared['m1_position'] < over_travel_threshold:
                         self._record_fault(1, "OVER_TRAVEL", f"CLOSING - position {self.shared['m1_position']:.2f}s below {over_travel_threshold:.2f}s (excessive overtravel)")
                         self.motor1.stop()
@@ -1693,6 +1725,13 @@ class MotorManager:
                         remaining_distance = self.shared['m2_position']
                         speed = self._apply_gradual_slowdown(speed, remaining_distance, max_speed, True, 'CLOSE', self.motor2_run_time)
 
+            # Limit hunt mode: if state is UNKNOWN or either motor position not known, use reduced speed
+            # This allows motors to safely find limits when starting from unknown position
+            if (self.shared['state'] == 'UNKNOWN' or
+                not self.shared.get('m1_position_known', True) or
+                not self.shared.get('m2_position_known', True)):
+                speed = self.limit_hunt_speed
+
             self.shared['m2_speed'] = speed
 
             if self.shared['movement_command'] == 'OPEN':
@@ -1742,9 +1781,9 @@ class MotorManager:
                     close_limit_m2 = self.shared.get('close_limit_m2_active', False)
 
                     # For closing, position goes from motor2_run_time down to 0 (and can go negative with limit switches)
-                    # Check for excessive over-travel (safety threshold at -50% of expected travel)
-                    # This prevents runaway if limit switch fails
-                    over_travel_threshold = -0.5 * self.motor2_run_time  # -50% of run time
+                    # Check for excessive over-travel (safety threshold at -100% of expected travel)
+                    # This prevents runaway if limit switch fails (allows finding limits from UNKNOWN)
+                    over_travel_threshold = -1.0 * self.motor2_run_time  # -100% of run time
                     if self.shared['m2_position'] < over_travel_threshold:
                         self._record_fault(2, "OVER_TRAVEL", f"CLOSING - position {self.shared['m2_position']:.2f}s below {over_travel_threshold:.2f}s (excessive overtravel)")
                         self.motor2.stop()
