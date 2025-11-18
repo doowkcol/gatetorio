@@ -1882,12 +1882,17 @@ class MotorManager:
         # Calculate slowdown distance based on direction and percentage of motor runtime
         # The percentage represents how much of the total travel distance should be slowdown zone
         # Example: 10% of 10 second run = 1 second slowdown zone at the end
+        # CAP the slowdown zone to prevent excessive slowdown when percentage is changed after learning
+        MAX_SLOWDOWN_DISTANCE = 2.0  # Maximum 2 seconds of slowdown zone
+
         if direction == 'OPEN':
             percent = self.opening_slowdown_percent if self.opening_slowdown_percent else 2.0
             slowdown_distance = motor_run_time * (percent / 100.0)
+            slowdown_distance = min(slowdown_distance, MAX_SLOWDOWN_DISTANCE)
         else:  # CLOSE
             percent = self.closing_slowdown_percent if self.closing_slowdown_percent else 10.0
             slowdown_distance = motor_run_time * (percent / 100.0)
+            slowdown_distance = min(slowdown_distance, MAX_SLOWDOWN_DISTANCE)
 
         # Prevent zero or negative slowdown distance
         if slowdown_distance <= 0:
