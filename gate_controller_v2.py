@@ -161,8 +161,30 @@ class GateController:
         print(f"  Input Manager PID: {self.input_process.pid}")
         print(f"  Auto-close: {'ENABLED' if self.auto_close_enabled else 'DISABLED'} ({self.auto_close_time}s)")
 
-        # Wait briefly for input manager to read limit switches, then detect initial position
-        sleep(0.5)
+        # Wait for input manager to read limit switches, then detect initial position
+        # Give input manager time to initialize and read first cycle of limit switches
+        max_wait = 2.0  # Maximum 2 seconds
+        check_interval = 0.1
+        elapsed = 0.0
+
+        print("[STARTUP] Waiting for input manager to read limit switches...")
+        while elapsed < max_wait:
+            sleep(check_interval)
+            elapsed += check_interval
+
+            # Check if any limit switch has been read (not all False anymore)
+            m1_open = self.shared.get('open_limit_m1_active', False)
+            m2_open = self.shared.get('open_limit_m2_active', False)
+            m1_close = self.shared.get('close_limit_m1_active', False)
+            m2_close = self.shared.get('close_limit_m2_active', False)
+
+            if m1_open or m2_open or m1_close or m2_close:
+                print(f"[STARTUP] Limit switches initialized after {elapsed:.1f}s")
+                break
+
+        if elapsed >= max_wait:
+            print(f"[STARTUP] Timeout waiting for limit switches - proceeding with detection anyway")
+
         self._detect_initial_position()
     
     def reload_config(self, config_file='/home/doowkcol/Gatetorio_Code/gate_config.json'):
