@@ -511,19 +511,49 @@ class GateController:
                 
                 if self.shared['state'] == 'CLOSING_TO_PARTIAL_1':
                     # Only complete when BOTH M1 at partial AND M2 fully closed
-                    if (self.shared['m1_position'] <= (self.partial_1_position + POSITION_TOLERANCE) and 
-                        self.shared['m2_position'] <= POSITION_TOLERANCE):
+                    # M2 should use limit switch if enabled (closes to 0 = close limit)
+                    m1_at_target = self.shared['m1_position'] <= (self.partial_1_position + POSITION_TOLERANCE)
+
+                    if self.motor2_use_limit_switches:
+                        # M2 uses limit switches - wait for close limit to trigger
+                        m2_at_target = self.shared.get('close_limit_m2_active', False)
+                    else:
+                        # M2 uses position-based control
+                        m2_at_target = self.shared['m2_position'] <= POSITION_TOLERANCE
+
+                    if m1_at_target and m2_at_target:
                         self._complete_partial_1()
                 elif self.shared['state'] == 'CLOSING_TO_PARTIAL_2':
                     # Only complete when BOTH M1 at partial AND M2 fully closed
-                    if (self.shared['m1_position'] <= (self.partial_2_position + POSITION_TOLERANCE) and 
-                        self.shared['m2_position'] <= POSITION_TOLERANCE):
+                    # M2 should use limit switch if enabled (closes to 0 = close limit)
+                    m1_at_target = self.shared['m1_position'] <= (self.partial_2_position + POSITION_TOLERANCE)
+
+                    if self.motor2_use_limit_switches:
+                        # M2 uses limit switches - wait for close limit to trigger
+                        m2_at_target = self.shared.get('close_limit_m2_active', False)
+                    else:
+                        # M2 uses position-based control
+                        m2_at_target = self.shared['m2_position'] <= POSITION_TOLERANCE
+
+                    if m1_at_target and m2_at_target:
                         self._complete_partial_2()
                 elif self.shared['partial_2_active'] and self.shared['m1_position'] <= (self.partial_2_position + POSITION_TOLERANCE) and self.shared['returning_from_full_open']:
-                    if self.shared['m2_position'] <= POSITION_TOLERANCE:
+                    # Sustained PO2 - check M2 completion based on limit switch availability
+                    if self.motor2_use_limit_switches:
+                        m2_done = self.shared.get('close_limit_m2_active', False)
+                    else:
+                        m2_done = self.shared['m2_position'] <= POSITION_TOLERANCE
+
+                    if m2_done:
                         self._complete_partial_2()
                 elif self.shared['partial_1_active'] and self.shared['m1_position'] <= (self.partial_1_position + POSITION_TOLERANCE) and self.shared['returning_from_full_open']:
-                    if self.shared['m2_position'] <= POSITION_TOLERANCE:
+                    # Sustained PO1 - check M2 completion based on limit switch availability
+                    if self.motor2_use_limit_switches:
+                        m2_done = self.shared.get('close_limit_m2_active', False)
+                    else:
+                        m2_done = self.shared['m2_position'] <= POSITION_TOLERANCE
+
+                    if m2_done:
                         self._complete_partial_1()
                 else:
                     # Check for full close - use limit switches if enabled, otherwise use position
