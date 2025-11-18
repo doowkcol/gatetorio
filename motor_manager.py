@@ -1264,7 +1264,7 @@ class MotorManager:
                     # Using 0.005s as the loop interval (200Hz)
                     # Speed already includes all multipliers and slowdown from _update_motor_speeds
                     # Allow position to exceed target when limit switches enabled (no clamping to target_position)
-                    if self.motor1_use_limit_switches and self.shared['state'] == 'OPENING':
+                    if self.motor1_use_limit_switches:
                         # With limit switches: allow position to go beyond target until limit hit
                         self.shared['m1_position'] = self.shared['m1_position'] + (self.loop_delta * speed)
                     else:
@@ -1349,7 +1349,7 @@ class MotorManager:
                     # Use actual loop delta instead of assumed 0.005 to handle variable loop timing
                     # Speed already includes all multipliers and slowdown from _update_motor_speeds
                     # Allow position to go negative when limit switches enabled (no clamping to target_position)
-                    if self.motor1_use_limit_switches and self.shared['state'] == 'CLOSING':
+                    if self.motor1_use_limit_switches:
                         # With limit switches: allow position to go negative until limit hit
                         self.shared['m1_position'] = self.shared['m1_position'] - (self.loop_delta * speed)
                     else:
