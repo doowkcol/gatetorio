@@ -319,6 +319,22 @@ class InputManager:
                     self._last_blocked_close = now
                 new_states['cmd_close'] = False  # Block it
 
+        # Conflicting command resolution: open + close = stop
+        if new_states.get('cmd_open', False) and new_states.get('cmd_close', False):
+            if not hasattr(self, '_last_blocked_open_close') or (now - self._last_blocked_open_close) > 0.5:
+                print(f"[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop")
+                self._last_blocked_open_close = now
+            new_states['cmd_open'] = False
+            new_states['cmd_close'] = False
+            new_states['cmd_stop'] = True
+
+        # Conflicting command resolution: partial_1 + partial_2 = partial_2 (partial_2 wins)
+        if new_states.get('partial_1', False) and new_states.get('partial_2', False):
+            if not hasattr(self, '_last_blocked_partial') or (now - self._last_blocked_partial) > 0.5:
+                print(f"[INPUT BLOCKED] partial_1 + partial_2 conflict → partial_2 takes priority")
+                self._last_blocked_partial = now
+            new_states['partial_1'] = False  # Block partial_1, keep partial_2
+
         # PHASE 3: Update shared memory with conflict-resolved states
         for input_name, input_cfg in self.input_config.items():
             function = input_cfg.get('function')
