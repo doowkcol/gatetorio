@@ -372,6 +372,10 @@ class InputConfigChar(localGATT.Characteristic):
 
             print(f"[BLE] Updated input {input_name}: func={function_name}, type={type_name}, chan={channel}")
 
+            # Trigger hot reload in input manager
+            self.ble_server.controller.shared['input_config_reload_flag'] = True
+            print(f"[BLE] Triggered input config hot reload")
+
         except Exception as e:
             print(f"[BLE] Error writing input config: {e}")
             import traceback
