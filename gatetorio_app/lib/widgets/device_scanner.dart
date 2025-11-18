@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/ble_service.dart';
+import '../services/device_history_service.dart';
 import '../models/ble_device_info.dart';
 
 class DeviceScanner extends StatelessWidget {
@@ -162,6 +163,16 @@ class DeviceScanner extends StatelessWidget {
     // Close dialog
     if (context.mounted) {
       Navigator.of(context).pop();
+
+      // If connection successful, save to known devices
+      if (success) {
+        final historyService = Provider.of<DeviceHistoryService>(context, listen: false);
+        await historyService.addOrUpdateDevice(
+          deviceId: device.deviceId,
+          manufacturerName: device.deviceName,
+          lastKnownRssi: device.rssi.toString(),
+        );
+      }
 
       // Show result
       ScaffoldMessenger.of(context).showSnackBar(

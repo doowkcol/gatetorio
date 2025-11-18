@@ -3,14 +3,23 @@ import 'package:provider/provider.dart';
 import 'services/ble_service.dart';
 import 'services/fleet_service.dart';
 import 'services/log_service.dart';
+import 'services/device_history_service.dart';
 import 'screens/home_screen.dart';
 
-void main() {
-  runApp(const GateterioApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize device history service
+  final deviceHistoryService = DeviceHistoryService();
+  await deviceHistoryService.initialize();
+
+  runApp(GateterioApp(deviceHistoryService: deviceHistoryService));
 }
 
 class GateterioApp extends StatelessWidget {
-  const GateterioApp({super.key});
+  final DeviceHistoryService deviceHistoryService;
+
+  const GateterioApp({super.key, required this.deviceHistoryService});
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +28,7 @@ class GateterioApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => BleService()),
         ChangeNotifierProvider(create: (_) => FleetService()),
         ChangeNotifierProvider(create: (_) => LogService()),
+        ChangeNotifierProvider.value(value: deviceHistoryService),
       ],
       child: MaterialApp(
         title: 'Gatetorio Controller',

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/ble_service.dart';
-import '../services/fleet_service.dart';
+import '../services/device_history_service.dart';
 import '../widgets/device_scanner.dart';
 import '../widgets/gate_controller.dart';
 import '../widgets/connection_status.dart';
 import 'settings_screen.dart';
 import 'input_status_screen.dart';
-import 'fleet_management_screen.dart';
+import 'known_devices_screen.dart';
 import 'logs_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -54,32 +54,32 @@ class HomeScreen extends StatelessWidget {
               );
             },
           ),
-          // Fleet Management - always visible
-          Consumer<FleetService>(
-            builder: (context, fleetService, child) {
+          // Known Devices - always visible
+          Consumer<DeviceHistoryService>(
+            builder: (context, historyService, child) {
               return Stack(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.dashboard),
-                    tooltip: 'Fleet Management',
+                    icon: const Icon(Icons.devices),
+                    tooltip: 'Known Devices',
                     onPressed: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const FleetManagementScreen(),
+                          builder: (context) => const KnownDevicesScreen(),
                         ),
                       );
                     },
                   ),
-                  // Offline device badge
-                  if (fleetService.offlineDevices > 0)
+                  // Device count badge
+                  if (historyService.knownDevices.isNotEmpty)
                     Positioned(
                       right: 8,
                       top: 8,
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: const BoxDecoration(
-                          color: Color(0xFFFF6B6B),
+                          color: Color(0xFF2196F3),
                           shape: BoxShape.circle,
                         ),
                         constraints: const BoxConstraints(
@@ -87,7 +87,7 @@ class HomeScreen extends StatelessWidget {
                           minHeight: 16,
                         ),
                         child: Text(
-                          fleetService.offlineDevices.toString(),
+                          historyService.knownDevices.length.toString(),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
