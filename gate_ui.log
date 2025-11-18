@@ -1,71 +1,28 @@
 ==========================================
 Gatetorio Gate Controller UI
 ==========================================
-Starting at: Tue 18 Nov 07:15:58 GMT 2025
+Starting at: Tue 18 Nov 20:01:45 GMT 2025
 
-Process Process-3:
-Traceback (most recent call last):
-  File "/usr/lib/python3.13/multiprocessing/process.py", line 313, in _bootstrap
-    self.run()
-    ~~~~~~~~^^
-  File "/usr/lib/python3.13/multiprocessing/process.py", line 108, in run
-    self._target(*self._args, **self._kwargs)
-    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/doowkcol/Gatetorio_Code/input_manager.py", line 677, in input_manager_process
-    manager.run()
-    ~~~~~~~~~~~^^
-  File "/home/doowkcol/Gatetorio_Code/input_manager.py", line 266, in run
-    self._sample_all_inputs(consecutive_active, consecutive_inactive)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/doowkcol/Gatetorio_Code/input_manager.py", line 297, in _sample_all_inputs
-    is_active = self._determine_input_state(input_name, input_cfg, consecutive_active,
-                                            consecutive_inactive, now)
-  File "/home/doowkcol/Gatetorio_Code/input_manager.py", line 385, in _determine_input_state
-    value = self.analog_inputs[channel].value
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/adafruit_ads1x15/analog_in.py", line 56, in value
-    return self._ads.read(pin)
-           ~~~~~~~~~~~~~~^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/adafruit_ads1x15/ads1x15.py", line 330, in read
-    return self._read(pin)
-           ~~~~~~~~~~^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/adafruit_ads1x15/ads1x15.py", line 369, in _read
-    return self._conversion_value(self.get_last_result(False))
-                                  ~~~~~~~~~~~~~~~~~~~~^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/adafruit_ads1x15/ads1x15.py", line 384, in get_last_result
-    return self._read_register(_ADS1X15_POINTER_CONVERSION, fast)
-           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/adafruit_ads1x15/ads1x15.py", line 402, in _read_register
-    i2c.write_then_readinto(bytearray([reg]), self.buf, in_end=2)
-    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.13/dist-packages/adafruit_bus_device/i2c_device.py", line 135, in write_then_readinto
-    self.i2c.writeto_then_readfrom(
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-        self.device_address,
-        ^^^^^^^^^^^^^^^^^^^^
-    ...<5 lines>...
-        in_end=in_end,
-        ^^^^^^^^^^^^^^
-    )
-    ^
-  File "/usr/local/lib/python3.13/dist-packages/busio.py", line 240, in writeto_then_readfrom
-    return self._i2c.writeto_then_readfrom(
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
-        address,
-        ^^^^^^^^
-    ...<6 lines>...
-        stop=stop,
-        ^^^^^^^^^^
-    )
-    ^
-  File "/usr/local/lib/python3.13/dist-packages/adafruit_blinka/microcontroller/generic_linux/i2c.py", line 98, in writeto_then_readfrom
-    readin = self._i2c_bus.read_i2c_block_data(
-        address, buffer_out[out_start:out_end], in_end - in_start
-    )
-  File "/usr/local/lib/python3.13/dist-packages/Adafruit_PureIO/smbus.py", line 264, in read_i2c_block_data
-    ioctl(self._device.fileno(), I2C_RDWR, request)
-    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-OSError: [Errno 121] Remote I/O error
+Motor Manager initialized
+Motor Manager process started
+[FAULT] M2 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 1)
+[CLOSE DELAY] M1 starting immediately - M2 already at close position (-0.00s)
+[FAULT] M1 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 1)
+[FAULT] M2 fault counter cleared (was 1)
+[LIMIT SWITCH] M2 CLOSE limit reached - position was -0.40s (-5.1%), setting to 0.0s (0%)
+[LIMIT HUNT] M2 synced to CLOSE limit
+[LIMIT SWITCH] M1 CLOSE limit reached - position was -5.01s (-65.2%), setting to 0.0s (0%)
+[LIMIT HUNT] M1 synced to CLOSE limit
+[FAULT] M1 fault counter cleared (was 1)
+[LIMIT SWITCH] M2 CLOSE limit reached - position was 0.00s (0.0%), setting to 0.0s (0%)
+[FAULT] M1 LIMIT_MISSING: OPENING - open limit not activated at 7.68s (consecutive MOVEMENTS: 1)
+[LIMIT SWITCH] M1 OPEN limit reached - position was 8.16s (106.4%), setting to 7.68s (100%)
+[FAULT] M1 fault counter cleared (was 1)
+[FAULT] M2 LIMIT_MISSING: OPENING - open limit not activated at 7.93s (consecutive MOVEMENTS: 1)
+[FAULT] M2 fault counter cleared (was 1)
+[LIMIT SWITCH] M2 OPEN limit reached - position was 8.30s (104.6%), setting to 7.93s (100%)
+[FAULT] M2 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 1)
+Motor Manager process stopped
 Input Manager: ADC1 initialized at address 0x48 (ADDR->GND)
 Input Manager: ADC2 initialized at address 0x49 (ADDR->VDD)
 Input Manager: 2 ADC(s) initialized successfully (8 channels available)
@@ -89,32 +46,40 @@ CONFIGURED INPUTS (8 total):
   IN8                  Ch= 7 Type=NO  Func=None                 [ENABLED]
 ================================================================================
 
-[INPUT RAW] IN1                  func=close_limit_m1       raw=ACTIVE was=inactive V=0.00
-[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
 [INPUT RAW] IN4                  func=close_limit_m2       raw=ACTIVE was=inactive V=0.00
 [INPUT DEBOUNCED] IN4                  func=close_limit_m2       → ACTIVE
+[INPUT RAW] IN1                  func=close_limit_m1       raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
 [INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
-[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.30
+[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
 [INPUT DEBOUNCED] IN1                  func=close_limit_m1       → inactive
-Motor Manager initialized
-Motor Manager process started
-[LIMIT SWITCH] M2 CLOSE limit reached - position was 0.00s (0.0%), setting to 0.0s (0%)
-[LIMIT SWITCH] M2 CLOSE limit reached - position was 0.00s (0.0%), setting to 0.0s (0%)
-[CLOSE DELAY] M1 starting immediately - M2 already at close position (-0.00s)
-[LIMIT SWITCH] M2 CLOSE limit reached - position was 0.00s (0.0%), setting to 0.0s (0%)
-[CLOSE DELAY] M1 starting immediately - M2 already at close position (-0.00s)
-[FAULT] M2 LIMIT_STUCK: OPENING - open limit still active at 4.28s (50% = 4.28s) (consecutive MOVEMENTS: 1)
-[FAULT] M1 LIMIT_MISSING: OPENING - open limit not activated at 7.84s (consecutive MOVEMENTS: 1)
-[LIMIT SWITCH] M2 CLOSE limit reached - position was 12.65s (147.8%), setting to 0.0s (0%)
-Motor Manager process stopped
+[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
+[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
+[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → inactive
+[INPUT RAW] IN2                  func=open_limit_m1        raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → ACTIVE
+[INPUT RAW] IN3                  func=open_limit_m2        raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → ACTIVE
+[INPUT RAW] IN3                  func=open_limit_m2        raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN3                  func=open_limit_m2        raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → inactive
+[INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → inactive
+Input Manager: Shutting down
 Gate Controller V2 (Step 3 - Three Processes) initialized
-  M1 travel time: 7.835115489037847s, M2 travel time: 8.557032567378949s
+  M1 travel time: 7.675265819177197s, M2 travel time: 7.931619444434647s
   M2 enabled: True
-  Motor Manager PID: 3493
-  Input Manager PID: 3494
+  Motor Manager PID: 3770
+  Input Manager PID: 3771
   Auto-close: ENABLED (5.0s)
-[STARTUP] Detected gate at CLOSED position (both motors at close limits)
+[STARTUP] Position UNKNOWN - motors between limits
+  M1: open=False, close=False → NEEDS SYNC
+  M2: open=False, close=False → NEEDS SYNC
+  Commands will operate at 30% speed until both motors synced to limits
+  Normal operation: OPEN/CLOSE work normally, just slower for safety
 Window created
+Starting auto-close timer from UNKNOWN state
 Status label created
 Open button created
 All UI elements created
@@ -138,39 +103,33 @@ Creating display for IN8...
 Total input displays created: 8
 Window created
 Starting mainloop
-PARTIAL 1 activated!
-Opening to PARTIAL_1 (50%) - M1 position START=0.00s TARGET=3.92s
-PARTIAL 1 deactivated
-PARTIAL 1 activated!
-M1 at PARTIAL_1 (50%), M2 CLOSED
-PARTIAL 1 deactivated
-Starting PO1 auto-close timer (5.0s)
-Partial 1 auto-close triggered - sending momentary CLOSE pulse
-Partial 1 auto-close pulse received - closing from PARTIAL_1
+Auto-close triggered (from full OPEN) - sending momentary CLOSE pulse
+Auto-close pulse from UNKNOWN - closing to locate limits
 
->>> CLOSE command - M1:3.9s M2:0.0s
-CLOSING photocell activated (blocked)!
-CLOSING PHOTOCELL triggered during CLOSING - reopening to PARTIAL_1
-Opening to PARTIAL_1 (50%) - M1 position START=1.01s TARGET=3.92s
-CLOSING photocell deactivated (clear)
+>>> CLOSE command - M1:0.0s M2:0.0s
+[COMPLETION] CLOSE complete! M1: limit=True, M2: limit=True
+[_complete_close] BEFORE: state=CLOSING, M1=0.00, M2=0.00
+[_complete_close] AFTER: state=CLOSED, movement_command=None
+Gates CLOSED
+PARTIAL 1 activated!
+Opening to PARTIAL_1 (50%) - M1 position START=0.00s TARGET=3.84s
 M1 at PARTIAL_1 (50%), M2 CLOSED
-Partial 1 auto-close triggered - sending momentary CLOSE pulse
-Partial 1 auto-close pulse received - closing from PARTIAL_1
-
->>> CLOSE command - M1:3.9s M2:0.0s
 OPEN button activated!
-[COMMANDS ACTIVE] cmd_open | state=CLOSING
-OPEN command while closing - reversing (priority override)
+[COMMANDS ACTIVE] cmd_open | state=PARTIAL_1
 
->>> [_execute_open CALLED] M1:2.0s M2:-0.0s
-    Current state: CLOSING, safety_reversing: False
+>>> [_execute_open CALLED] M1:3.8s M2:0.0s
+    Current state: PARTIAL_1, safety_reversing: False
     Flags: cmd_open=True, stop_opening_active=False
+[COMMANDS ACTIVE] cmd_open | state=OPENING
 OPEN button deactivated
-STOP button activated!
-[COMMANDS ACTIVE] cmd_stop | state=OPENING
-
->>> STOP command - M1:12.9s M2:12.6s
-STOP button deactivated
+[COMPLETION] OPEN complete! M1: limit=True, M2: limit=True
+[_complete_open] BEFORE: state=OPENING, M1=7.68, M2=8.30
+[_complete_open] AFTER: state=OPEN, movement_command=None
+Gates OPEN
+Auto-close triggered (from full OPEN) - sending momentary CLOSE pulse
+Auto-close pulse - PO1 sustained, moving to PARTIAL_1
+Closing from OPEN to PARTIAL_1 (50%) - M1 position START=7.68s TARGET=3.84s
+M1 at PARTIAL_1 (50%), M2 CLOSED
 Exit button pressed - shutting down all processes
 Shutting down gate controller...
 Gate controller shutdown complete
