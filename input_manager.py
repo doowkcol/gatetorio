@@ -514,6 +514,9 @@ class InputManager:
         """Trigger gate controller command function
 
         Maps input function names to shared memory command flags
+
+        CONFLICT BLOCKING: If a safety edge is active, block conflicting command inputs
+        from being set. This prevents cycling when both buttons are pressed simultaneously.
         """
         # Map function names to shared dict flags
         command_map = {
@@ -536,6 +539,31 @@ class InputManager:
             'open_limit_m2': 'open_limit_m2_active',
             'close_limit_m2': 'close_limit_m2_active'
         }
+
+        # CONFLICT BLOCKING: Safety edges block conflicting commands
+        # If safety_stop_opening is active, block all opening commands
+        # If safety_stop_closing is active, block all closing commands
+        original_active = active
+        blocked = False
+
+        if active:  # Only check blocking when trying to activate
+            if function in ['cmd_open', 'timed_open', 'partial_1', 'partial_2']:
+                # Opening commands blocked by safety_stop_opening
+                if self.shared.get('safety_stop_opening_active', False):
+                    active = False
+                    blocked = True
+                    if not hasattr(self, '_last_blocked_open') or (time.time() - self._last_blocked_open) > 0.5:
+                        print(f"[INPUT BLOCKED] {function:20s} blocked by active safety_stop_opening")
+                        self._last_blocked_open = time.time()
+
+            elif function in ['cmd_close']:
+                # Closing commands blocked by safety_stop_closing
+                if self.shared.get('safety_stop_closing_active', False):
+                    active = False
+                    blocked = True
+                    if not hasattr(self, '_last_blocked_close') or (time.time() - self._last_blocked_close) > 0.5:
+                        print(f"[INPUT BLOCKED] {function:20s} blocked by active safety_stop_closing")
+                        self._last_blocked_close = time.time()
 
         # Update shared memory flag
         flag_name = command_map.get(function)
