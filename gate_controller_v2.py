@@ -8,11 +8,22 @@ from time import time, sleep
 import json
 import threading
 import multiprocessing
+import os
 from motor_manager import motor_manager_process
 from input_manager import input_manager_process  # Safe now - no GPIO claim at import
 
 class GateController:
-    def __init__(self, config_file='/home/doowkcol/Gatetorio_Code/gate_config.json'):
+    def __init__(self, config_file=None):
+        # Default to gate_config.json in the same directory as this script
+        if config_file is None:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            config_file = os.path.join(script_dir, 'gate_config.json')
+
+        # Store config file path for reload
+        self.config_file = config_file
+
+        print(f"Loading configuration from: {config_file}")
+
         # Load config
         with open(config_file, 'r') as f:
             config = json.load(f)
@@ -187,12 +198,16 @@ class GateController:
 
         self._detect_initial_position()
     
-    def reload_config(self, config_file='/home/doowkcol/Gatetorio_Code/gate_config.json'):
+    def reload_config(self, config_file=None):
         """Reload configuration from file - updates runtime parameters
 
         Note: UI should stop gate before calling this to avoid mid-movement issues
         """
-        print("Reloading configuration...")
+        # Use stored config file path if not specified
+        if config_file is None:
+            config_file = self.config_file
+
+        print(f"Reloading configuration from {config_file}...")
 
         try:
             with open(config_file, 'r') as f:
