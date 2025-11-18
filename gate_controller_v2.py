@@ -835,15 +835,25 @@ class GateController:
         # PARTIAL 1 AUTO-CLOSE PULSE - Process momentary pulse from PO1 timer
         if self.shared.get('partial_1_auto_close_pulse', False):
             if self.shared['state'] == 'PARTIAL_1':
-                print("Partial 1 auto-close pulse received - closing from PARTIAL_1")
-                self._execute_close()
+                # Check if PO2 is sustained - if so, move to PO2, otherwise close fully
+                if self.shared['partial_2_active']:
+                    print("Partial 1 auto-close pulse received - PO2 sustained, moving to PARTIAL_2")
+                    self._move_to_partial_2()
+                else:
+                    print("Partial 1 auto-close pulse received - closing from PARTIAL_1")
+                    self._execute_close()
             return
         
         # PARTIAL 2 AUTO-CLOSE PULSE - Process momentary pulse from PO2 timer
         if self.shared.get('partial_2_auto_close_pulse', False):
             if self.shared['state'] == 'PARTIAL_2':
-                print("Partial 2 auto-close pulse received - closing from PARTIAL_2")
-                self._execute_close()
+                # Check if PO1 is sustained - if so, move to PO1, otherwise close fully
+                if self.shared['partial_1_active']:
+                    print("Partial 2 auto-close pulse received - PO1 sustained, moving to PARTIAL_1")
+                    self._move_to_partial_1()
+                else:
+                    print("Partial 2 auto-close pulse received - closing from PARTIAL_2")
+                    self._execute_close()
             return
         
         # TIMED OPEN CLOSE PULSE - Process momentary pulse from timed open release
@@ -1161,8 +1171,9 @@ class GateController:
                 self._move_to_partial_2()
         
         # If at PO2 and PO2 released but PO1 still active, move to PO1
-        if self.shared['state'] == 'PARTIAL_2' and not self.shared['partial_2_active'] and self.shared['partial_1_active']:
-            print("PO2 released with PO1 active - moving to PO1")
+        # BUT: only if auto-close disabled (otherwise let timer handle it)
+        if self.shared['state'] == 'PARTIAL_2' and not self.shared['partial_2_active'] and self.shared['partial_1_active'] and not self.auto_close_enabled:
+            print("PO2 released with PO1 active - moving to PO1 (auto-close disabled)")
             self._move_to_partial_1()
         
         # Retry sustained commands if safety edges cleared
@@ -1323,8 +1334,9 @@ class GateController:
                 self._move_to_partial_2()
         
         # If at PO2 and PO2 released but PO1 still active, move to PO1
-        if self.shared['state'] == 'PARTIAL_2' and not self.shared['partial_2_active'] and self.shared['partial_1_active']:
-            print("PO2 released with PO1 active - moving to PO1")
+        # BUT: only if auto-close disabled (otherwise let timer handle it)
+        if self.shared['state'] == 'PARTIAL_2' and not self.shared['partial_2_active'] and self.shared['partial_1_active'] and not self.auto_close_enabled:
+            print("PO2 released with PO1 active - moving to PO1 (auto-close disabled)")
             self._move_to_partial_1()
         
         # Retry sustained commands if safety edges cleared
