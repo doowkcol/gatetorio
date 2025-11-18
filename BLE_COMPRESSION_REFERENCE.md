@@ -214,6 +214,56 @@ Or with data:
 
 ---
 
+## Share Key Characteristic (0x4004)
+
+**UUID**: `00004004-0000-1000-8000-00805f9b34fb`
+
+### READ Format
+Generate a new one-time use share key for the connected device:
+```json
+{
+  "share_key": "A7B3C9D2",
+  "valid_until": "one-time use"
+}
+```
+
+- User reads this characteristic to get a shareable key
+- Key is 8 characters (alphanumeric, uppercase)
+- Key is valid for one-time use only
+- User can share this key with another person to grant them access
+
+### WRITE Format
+Redeem a share key to join the whitelist:
+```json
+{
+  "share_key": "A7B3C9D2"
+}
+```
+
+When a valid, unused share key is written:
+- Device is added to the whitelist
+- Key is marked as used (cannot be reused)
+- Device gains permanent access to the gate controller
+
+**Use Case**: User A connects during pairing window, gets whitelisted. User A reads share key and sends "A7B3C9D2" to User B. User B writes this key to join whitelist without needing pairing window.
+
+---
+
+## Stealth Mode Security
+
+**Pairing Window**: 30 seconds after unexpected boot (power loss)
+- During window: All devices can connect and are added to whitelist
+- After window: Only whitelisted devices can connect
+- Advertisement stops after 30s (becomes invisible)
+
+**Expected Boot** (reboot command via app): No pairing window, enters stealth mode immediately
+
+**Whitelist**: Stored in `/home/doowkcol/Gatetorio_Code/ble_whitelist.json`
+
+**Share Keys**: Stored in `/home/doowkcol/Gatetorio_Code/ble_share_keys.json`
+
+---
+
 ## Summary
 
 | Characteristic | UUID   | Access | Size    | Format |
@@ -224,5 +274,6 @@ Or with data:
 | Config Data   | 0x2001 | R/W    | 71 bytes | 26-element array |
 | Input Config  | 0x2003 | R/W    | 113 bytes (read) | Array of arrays (read), single array (write) |
 | Input States  | 0x3001 | Read   | ~93 bytes | JSON object (mixed types) |
+| Share Key     | 0x4004 | R/W    | ~50 bytes | JSON object |
 
 All characteristics use **JSON encoding** and **UTF-8** text transmission.

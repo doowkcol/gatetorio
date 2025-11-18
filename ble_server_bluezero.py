@@ -94,6 +94,7 @@ CHAR_LOGS = BASE_UUID.format(0x3003)
 CHAR_PAIRING_CONTROL = BASE_UUID.format(0x4001)
 CHAR_WHITELIST = BASE_UUID.format(0x4002)
 CHAR_ENGINEER_MODE = BASE_UUID.format(0x4003)
+CHAR_SHARE_KEY = BASE_UUID.format(0x4004)
 
 # Input function codes for BLE compression
 INPUT_FUNCTION_CODES = {
@@ -115,6 +116,7 @@ INPUT_FUNCTION_CODES = {
 CONFIG_DIR = pathlib.Path("/home/doowkcol/Gatetorio_Code")
 BLE_CONFIG_FILE = CONFIG_DIR / "ble_config.json"
 WHITELIST_FILE = CONFIG_DIR / "ble_whitelist.json"
+SHARE_KEYS_FILE = CONFIG_DIR / "ble_share_keys.json"
 REBOOT_FLAG_FILE = CONFIG_DIR / ".ble_reboot_flag"
 
 # Pairing window duration (seconds)
@@ -156,6 +158,10 @@ class GatetorioBLEServer:
         self.whitelist: Set[str] = set()
         self.pairing_window_active = False
 
+        # Share key management (one-time use keys for granting access)
+        self.share_keys: Dict[str, Dict] = {}  # key -> {created_by, created_at, device_id}
+        self.current_user_share_key: Optional[str] = None  # Current user's active share key
+
         # Hardware and software info
         self.hardware_id = self._get_hardware_id()
         self.software_version = "1.0.0"
@@ -172,6 +178,7 @@ class GatetorioBLEServer:
         # Load configuration
         self._load_config()
         self._load_whitelist()
+        self._load_share_keys()
 
         print(f"[BLE] Initialized - Hardware ID: {self.hardware_id}")
         print(f"[BLE] User ID: {self.config.user_id}")
@@ -251,6 +258,108 @@ class GatetorioBLEServer:
             print(f"[BLE] Saved whitelist ({len(self.whitelist)} devices)")
         except Exception as e:
             print(f"[BLE] Error saving whitelist: {e}")
+
+    def _load_share_keys(self):
+        """Load active share keys from file"""
+        if SHARE_KEYS_FILE.exists():
+            try:
+                with open(SHARE_KEYS_FILE, 'r') as f:
+                    data = json.load(f)
+                    self.share_keys = data.get('keys', {})
+                    print(f"[BLE] Loaded {len(self.share_keys)} active share keys")
+            except Exception as e:
+                print(f"[BLE] Error loading share keys: {e}")
+
+    def _save_share_keys(self):
+        """Save active share keys to file"""
+        try:
+            CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+            with open(SHARE_KEYS_FILE, 'w') as f:
+                json.dump({'keys': self.share_keys}, f, indent=2)
+            print(f"[BLE] Saved share keys ({len(self.share_keys)} active)")
+        except Exception as e:
+            print(f"[BLE] Error saving share keys: {e}")
+
+    def generate_share_key(self, device_id: str) -> str:
+        """
+        Generate a new one-time use share key for current user
+        Args:
+            device_id: MAC address of device creating the key
+        Returns:
+            8-character alphanumeric share key
+        """
+        import secrets
+        import string
+
+        # Generate cryptographically secure 8-character key
+        alphabet = string.ascii_uppercase + string.digits
+        share_key = ''.join(secrets.choice(alphabet) for _ in range(8))
+
+        # Store key with metadata
+        self.share_keys[share_key] = {
+            'created_by': device_id,
+            'created_at': time.time(),
+            'used': False
+        }
+
+        # Save to file
+        self._save_share_keys()
+
+        print(f"[BLE] Generated share key: {share_key} for device {device_id}")
+        return share_key
+
+    def redeem_share_key(self, share_key: str, device_id: str) -> bool:
+        """
+        Redeem a share key and add device to whitelist
+        Args:
+            share_key: The share key to redeem
+            device_id: MAC address of device redeeming the key
+        Returns:
+            True if successful, False if invalid/used key
+        """
+        if share_key not in self.share_keys:
+            print(f"[BLE] Invalid share key: {share_key}")
+            return False
+
+        key_data = self.share_keys[share_key]
+
+        if key_data.get('used', False):
+            print(f"[BLE] Share key already used: {share_key}")
+            return False
+
+        # Mark as used
+        key_data['used'] = True
+        key_data['redeemed_by'] = device_id
+        key_data['redeemed_at'] = time.time()
+
+        # Add device to whitelist
+        self.whitelist.add(device_id)
+
+        # Save both
+        self._save_share_keys()
+        self._save_whitelist()
+
+        print(f"[BLE] Share key {share_key} redeemed by {device_id} - added to whitelist")
+        return True
+
+    def add_device_to_whitelist(self, device_id: str):
+        """Add a device to the whitelist (used during pairing window)"""
+        self.whitelist.add(device_id)
+        self._save_whitelist()
+        print(f"[BLE] Added device to whitelist: {device_id}")
+
+    def is_device_allowed(self, device_id: str) -> bool:
+        """Check if a device is allowed to connect"""
+        # During pairing window, all devices allowed
+        if self.pairing_window_active:
+            return True
+
+        # Otherwise, check whitelist
+        if self.config.whitelist_enabled:
+            return device_id in self.whitelist
+
+        # If whitelist disabled, allow all
+        return True
 
     # ========================================================================
     # PAIRING WINDOW

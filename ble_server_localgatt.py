@@ -14,9 +14,10 @@ from bluezero import adapter, localGATT, GATT, advertisement, async_tools
 # Import the main BLE server to reuse config and command handling
 from ble_server_bluezero import (
     GatetorioBLEServer,
-    SERVICE_GATE_CONTROL, SERVICE_CONFIGURATION, SERVICE_DIAGNOSTICS,
+    SERVICE_GATE_CONTROL, SERVICE_CONFIGURATION, SERVICE_DIAGNOSTICS, SERVICE_SECURITY,
     CHAR_COMMAND_TX, CHAR_COMMAND_RESPONSE, CHAR_STATUS,
     CHAR_CONFIG_DATA, CHAR_INPUT_CONFIG, CHAR_INPUT_STATES,
+    CHAR_SHARE_KEY,
     STATUS_UPDATE_INTERVAL,
     INPUT_FUNCTION_CODES
 )
@@ -433,6 +434,91 @@ class InputStatesChar(localGATT.Characteristic):
             return list(b'{"error":"not available"}')
 
 
+class SecurityService(localGATT.Service):
+    """Security service with share key management"""
+
+    def __init__(self, service_id, ble_server):
+        self.ble_server = ble_server
+        self.service_id = service_id  # Store for characteristics
+        super().__init__(service_id, SERVICE_SECURITY, True)  # PRIMARY
+
+
+class ShareKeyChar(localGATT.Characteristic):
+    """Share Key characteristic (read: get new key, write: redeem key)"""
+
+    def __init__(self, index, service, ble_server):
+        self.ble_server = ble_server
+        self.connected_device_id = None  # Will be set by connection handler
+        super().__init__(
+            service.service_id,  # service_id (int)
+            index,               # characteristic_id (int)
+            CHAR_SHARE_KEY,      # uuid (str)
+            [],
+            False,
+            ['read', 'write']
+        )
+
+    def ReadValue(self, options):
+        """Generate and return a new share key for the connected device"""
+        try:
+            print("[BLE] Share Key READ - generating new key")
+
+            # Get device address from connection (from BlueZ dbus path)
+            # For now, use a placeholder - this will need device tracking
+            device_id = getattr(self, 'device_id', 'UNKNOWN')
+
+            # Generate new share key
+            share_key = self.ble_server.generate_share_key(device_id)
+
+            # Store for this user
+            self.ble_server.current_user_share_key = share_key
+
+            # Return as JSON
+            response = json.dumps({
+                "share_key": share_key,
+                "valid_until": "one-time use"
+            }, separators=(',', ':')).encode('utf-8')
+
+            print(f"[BLE] Generated share key: {share_key}")
+            return list(response)
+
+        except Exception as e:
+            print(f"[BLE] Error generating share key: {e}")
+            import traceback
+            traceback.print_exc()
+            return list(b'{"error":"failed to generate"}')
+
+    def WriteValue(self, value, options):
+        """Redeem a share key and add device to whitelist"""
+        try:
+            # Decode incoming share key
+            data = bytes(value).decode('utf-8')
+            print(f"[BLE] Share Key WRITE: {data}")
+
+            req = json.loads(data)
+            share_key = req.get('share_key', '').strip()
+
+            if not share_key:
+                print("[BLE] ERROR: No share key provided")
+                return
+
+            # Get device address
+            device_id = getattr(self, 'device_id', 'UNKNOWN')
+
+            # Redeem the share key
+            success = self.ble_server.redeem_share_key(share_key, device_id)
+
+            if success:
+                print(f"[BLE] Share key {share_key} redeemed successfully!")
+            else:
+                print(f"[BLE] Failed to redeem share key {share_key}")
+
+        except Exception as e:
+            print(f"[BLE] Error redeeming share key: {e}")
+            import traceback
+            traceback.print_exc()
+
+
 def start_localgatt_server(ble_server: GatetorioBLEServer):
     """
     Start BLE server using pure localGATT approach
@@ -486,31 +572,76 @@ def start_localgatt_server(ble_server: GatetorioBLEServer):
         app.add_managed_object(diag_service)
         app.add_managed_object(input_states_char)
 
+        # Add Security service and characteristics
+        print("[BLE] Adding Security service (PRIMARY)...")
+        security_service = SecurityService(4, ble_server)
+        share_key_char = ShareKeyChar(1, security_service, ble_server)
+
+        app.add_managed_object(security_service)
+        app.add_managed_object(share_key_char)
+
         # Register GATT application
         print("[BLE] Registering GATT application with BlueZ...")
         gatt_mgr = GATT.GattManager(dongle_addr)
         gatt_mgr.register_application(app, {})
         print("[BLE] ✓ GATT application registered")
 
-        # Create advertisement with ONLY Gate Control UUID
+        # Create advertisement (only used during pairing window)
         device_name = f"Gatetorio-{ble_server.hardware_id[-4:]}"
-        print(f"[BLE] Creating advertisement: {device_name}")
-        print(f"[BLE] Advertising ONLY: {SERVICE_GATE_CONTROL}")
-        print("[BLE] Note: Config/Diagnostics are PRIMARY (discoverable after connection)")
-
         advert = advertisement.Advertisement(1, 'peripheral')
         advert.local_name = device_name
         advert.service_UUIDs = [SERVICE_GATE_CONTROL]  # ONLY one UUID
         advert.appearance = 0x0000
-
-        # Register advertisement
-        print("[BLE] Registering advertisement...")
         ad_mgr = advertisement.AdvertisingManager(dongle_addr)
-        ad_mgr.register_advertisement(advert, {})
-        print("[BLE] ✓ Advertisement registered successfully!")
+
+        # Check if unexpected boot (stealth mode logic)
+        is_unexpected_boot = ble_server._check_reboot_flag()
+
+        if is_unexpected_boot and ble_server.config.stealth_mode:
+            # Unexpected boot: Open 30s pairing window
+            print()
+            print("[BLE] ⚠️  UNEXPECTED BOOT DETECTED ⚠️")
+            print(f"[BLE] Opening 30-second pairing window...")
+            print(f"[BLE] Advertising as: {device_name}")
+            print(f"[BLE] Service UUID: {SERVICE_GATE_CONTROL}")
+
+            # Start pairing window
+            ble_server.start_pairing_window(30)
+
+            # Start advertising
+            ad_mgr.register_advertisement(advert, {})
+            print("[BLE] ✓ Advertisement started")
+
+            # Schedule advertisement stop after 30s
+            def stop_advertising():
+                try:
+                    print()
+                    print("[BLE] ⏰ 30-second pairing window expired")
+                    print("[BLE] Stopping advertisement - entering STEALTH MODE")
+                    ad_mgr.unregister_advertisement(advert)
+                    print("[BLE] ✓ Advertisement stopped")
+                    print("[BLE] Now accepting connections from whitelisted devices only")
+                    print(f"[BLE] Whitelisted devices: {len(ble_server.whitelist)}")
+                except Exception as e:
+                    print(f"[BLE] Error stopping advertisement: {e}")
+
+            import threading
+            timer = threading.Timer(30, stop_advertising)
+            timer.daemon = True
+            timer.start()
+
+        else:
+            # Expected boot: Stealth mode (no advertising)
+            print()
+            print("[BLE] 🔒 STEALTH MODE ACTIVE 🔒")
+            print("[BLE] Not advertising - invisible to unknown devices")
+            print(f"[BLE] Accepting connections from {len(ble_server.whitelist)} whitelisted devices")
+            if len(ble_server.whitelist) == 0:
+                print("[BLE] ⚠️  WARNING: No devices in whitelist!")
+
         print()
         print("[BLE] ✓✓✓ BLE SERVER READY ✓✓✓")
-        print("[BLE] Ready for connections!")
+        print("[BLE] GATT services active and ready for connections")
         print("[BLE] Press Ctrl+C to stop")
 
         # Start mainloop
