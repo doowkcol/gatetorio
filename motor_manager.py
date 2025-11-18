@@ -1017,85 +1017,109 @@ class MotorManager:
 
         # Check Motor 1 OPEN limit switch
         if self.motor1_use_limit_switches and self.shared.get('open_limit_m1_active', False):
-            # ALWAYS reset position when limit is active - limit switch is absolute authority
-            # Stop motor and set to full open position
-            position_percent = (self.shared['m1_position'] / self.motor1_run_time * 100.0) if self.motor1_run_time > 0 else 0.0
+            # Reset position UNLESS we're moving away from this limit (starting from open position)
+            # If closing from open, don't fight the movement - let motor leave the limit
+            movement_cmd = self.shared.get('movement_command')
+            if movement_cmd == 'CLOSE':
+                # Moving away from open limit (starting to close) - don't reset position
+                # Let motor move off the limit switch naturally
+                pass
+            else:
+                # Either opening (arrived at limit) or stopped/None (over-travel) - reset position
+                position_percent = (self.shared['m1_position'] / self.motor1_run_time * 100.0) if self.motor1_run_time > 0 else 0.0
 
-            # Only print if position wasn't already at the limit (avoid spam)
-            if abs(self.shared['m1_position'] - self.motor1_run_time) > 0.01:
-                print(f"[LIMIT SWITCH] M1 OPEN limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to {self.motor1_run_time:.2f}s (100%)")
+                # Only print if position wasn't already at the limit (avoid spam)
+                if abs(self.shared['m1_position'] - self.motor1_run_time) > 0.01:
+                    print(f"[LIMIT SWITCH] M1 OPEN limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to {self.motor1_run_time:.2f}s (100%)")
 
-            self.motor1.stop()
-            self.shared['m1_position'] = self.motor1_run_time
-            self.shared['m1_percent'] = 100.0  # At open limit = 100%
-            self.shared['m1_speed'] = 0.0
+                self.motor1.stop()
+                self.shared['m1_position'] = self.motor1_run_time
+                self.shared['m1_percent'] = 100.0  # At open limit = 100%
+                self.shared['m1_speed'] = 0.0
 
-            # Mark M1 position as known - synced to limit
-            if not self.shared.get('m1_position_known', True):
-                print("[LIMIT HUNT] M1 synced to OPEN limit")
-                self.shared['m1_position_known'] = True
+                # Mark M1 position as known - synced to limit
+                if not self.shared.get('m1_position_known', True):
+                    print("[LIMIT HUNT] M1 synced to OPEN limit")
+                    self.shared['m1_position_known'] = True
 
-            # Handle learning mode recording
-            if learning_mode and self.shared['movement_command'] == 'OPEN' and self.shared.get('learning_m1_start_time'):
-                learned_time = now - self.shared['learning_m1_start_time']
-                self.shared['learning_m1_open_time'] = learned_time
-                print(f"[LEARNING] M1 open time recorded: {learned_time:.2f}s")
-                self.shared['learning_m1_start_time'] = None
+                # Handle learning mode recording
+                if learning_mode and movement_cmd == 'OPEN' and self.shared.get('learning_m1_start_time'):
+                    learned_time = now - self.shared['learning_m1_start_time']
+                    self.shared['learning_m1_open_time'] = learned_time
+                    print(f"[LEARNING] M1 open time recorded: {learned_time:.2f}s")
+                    self.shared['learning_m1_start_time'] = None
 
         # Check Motor 1 CLOSE limit switch
         if self.motor1_use_limit_switches and self.shared.get('close_limit_m1_active', False):
-            # ALWAYS reset position when limit is active - limit switch is absolute authority
-            # Stop motor and set to fully closed position
-            position_percent = (self.shared['m1_position'] / self.motor1_run_time * 100.0) if self.motor1_run_time > 0 else 0.0
+            # Reset position UNLESS we're moving away from this limit (starting from closed position)
+            # If opening from closed, don't fight the movement - let motor leave the limit
+            movement_cmd = self.shared.get('movement_command')
+            if movement_cmd == 'OPEN':
+                # Moving away from close limit (starting to open) - don't reset position
+                # Let motor move off the limit switch naturally
+                pass
+            else:
+                # Either closing (arrived at limit) or stopped/None (over-travel) - reset position
+                position_percent = (self.shared['m1_position'] / self.motor1_run_time * 100.0) if self.motor1_run_time > 0 else 0.0
 
-            # Only print if position wasn't already at the limit (avoid spam)
-            if abs(self.shared['m1_position'] - 0.0) > 0.01:
-                print(f"[LIMIT SWITCH] M1 CLOSE limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to 0.0s (0%)")
+                # Only print if position wasn't already at the limit (avoid spam)
+                if abs(self.shared['m1_position'] - 0.0) > 0.01:
+                    print(f"[LIMIT SWITCH] M1 CLOSE limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to 0.0s (0%)")
 
-            self.motor1.stop()
-            self.shared['m1_position'] = 0.0
-            self.shared['m1_percent'] = 0.0  # At close limit = 0%
-            self.shared['m1_speed'] = 0.0
+                self.motor1.stop()
+                self.shared['m1_position'] = 0.0
+                self.shared['m1_percent'] = 0.0  # At close limit = 0%
+                self.shared['m1_speed'] = 0.0
 
-            # Mark M1 position as known - synced to limit
-            if not self.shared.get('m1_position_known', True):
-                print("[LIMIT HUNT] M1 synced to CLOSE limit")
-                self.shared['m1_position_known'] = True
+                # Mark M1 position as known - synced to limit
+                if not self.shared.get('m1_position_known', True):
+                    print("[LIMIT HUNT] M1 synced to CLOSE limit")
+                    self.shared['m1_position_known'] = True
 
-            # Handle learning mode recording
-            if learning_mode and self.shared['movement_command'] == 'CLOSE' and self.shared.get('learning_m1_start_time'):
-                learned_time = now - self.shared['learning_m1_start_time']
-                self.shared['learning_m1_close_time'] = learned_time
-                print(f"[LEARNING] M1 close time recorded: {learned_time:.2f}s")
-                self.shared['learning_m1_start_time'] = None
+                # Handle learning mode recording
+                if learning_mode and movement_cmd == 'CLOSE' and self.shared.get('learning_m1_start_time'):
+                    learned_time = now - self.shared['learning_m1_start_time']
+                    self.shared['learning_m1_close_time'] = learned_time
+                    print(f"[LEARNING] M1 close time recorded: {learned_time:.2f}s")
+                    self.shared['learning_m1_start_time'] = None
 
         # Check Motor 2 OPEN limit switch
         if self.motor2_use_limit_switches and self.shared.get('open_limit_m2_active', False):
-            # ALWAYS reset position when limit is active - limit switch is absolute authority
-            # Only print once when limit is first reached (avoid spam)
-            if not hasattr(self, '_m2_open_limit_logged') or not self._m2_open_limit_logged:
-                position_percent = (self.shared['m2_position'] / self.motor2_run_time * 100.0) if self.motor2_run_time > 0 else 0.0
-                print(f"[LIMIT SWITCH] M2 OPEN limit reached - position was {self.shared['m2_position']:.2f}s ({position_percent:.1f}%), setting to {self.motor2_run_time:.2f}s (100%)")
+            # Reset position UNLESS we're moving away from this limit (starting from open position)
+            # If closing from open, don't fight the movement - let motor leave the limit
+            movement_cmd = self.shared.get('movement_command')
+            if movement_cmd == 'CLOSE':
+                # Moving away from open limit (starting to close) - don't reset position
+                # Let motor move off the limit switch naturally
+                # Reset log flag when starting to move away
+                if hasattr(self, '_m2_open_limit_logged'):
+                    self._m2_open_limit_logged = False
+            else:
+                # Either opening (arrived at limit) or stopped/None (over-travel) - reset position
+                # Only print once when limit is first reached (avoid spam)
+                if not hasattr(self, '_m2_open_limit_logged') or not self._m2_open_limit_logged:
+                    position_percent = (self.shared['m2_position'] / self.motor2_run_time * 100.0) if self.motor2_run_time > 0 else 0.0
+                    print(f"[LIMIT SWITCH] M2 OPEN limit reached - position was {self.shared['m2_position']:.2f}s ({position_percent:.1f}%), setting to {self.motor2_run_time:.2f}s (100%)")
 
-                # Mark M2 position as known - synced to limit
-                if not self.shared.get('m2_position_known', True):
-                    print("[LIMIT HUNT] M2 synced to OPEN limit")
-                    self.shared['m2_position_known'] = True
+                    # Mark M2 position as known - synced to limit
+                    if not self.shared.get('m2_position_known', True):
+                        print("[LIMIT HUNT] M2 synced to OPEN limit")
+                        self.shared['m2_position_known'] = True
 
-                self._m2_open_limit_logged = True
+                    self._m2_open_limit_logged = True
 
-            # Always stop and sync position
-            self.motor2.stop()
-            self.shared['m2_position'] = self.motor2_run_time
-            self.shared['m2_percent'] = 100.0  # At open limit = 100%
-            self.shared['m2_speed'] = 0.0
+                # Always stop and sync position
+                self.motor2.stop()
+                self.shared['m2_position'] = self.motor2_run_time
+                self.shared['m2_percent'] = 100.0  # At open limit = 100%
+                self.shared['m2_speed'] = 0.0
 
-            # Handle learning mode recording
-            if learning_mode and self.shared['movement_command'] == 'OPEN' and self.shared.get('learning_m2_start_time'):
-                learned_time = now - self.shared['learning_m2_start_time']
-                self.shared['learning_m2_open_time'] = learned_time
-                print(f"[LEARNING] M2 open time recorded: {learned_time:.2f}s")
-                self.shared['learning_m2_start_time'] = None
+                # Handle learning mode recording
+                if learning_mode and movement_cmd == 'OPEN' and self.shared.get('learning_m2_start_time'):
+                    learned_time = now - self.shared['learning_m2_start_time']
+                    self.shared['learning_m2_open_time'] = learned_time
+                    print(f"[LEARNING] M2 open time recorded: {learned_time:.2f}s")
+                    self.shared['learning_m2_start_time'] = None
         else:
             # Reset flag when limit is not active
             if hasattr(self, '_m2_open_limit_logged'):
@@ -1103,31 +1127,41 @@ class MotorManager:
 
         # Check Motor 2 CLOSE limit switch
         if self.motor2_use_limit_switches and self.shared.get('close_limit_m2_active', False):
-            # ALWAYS reset position when limit is active - limit switch is absolute authority
-            # Only print once when limit is first reached (avoid spam)
-            if not hasattr(self, '_m2_close_limit_logged') or not self._m2_close_limit_logged:
-                position_percent = (self.shared['m2_position'] / self.motor2_run_time * 100.0) if self.motor2_run_time > 0 else 0.0
-                print(f"[LIMIT SWITCH] M2 CLOSE limit reached - position was {self.shared['m2_position']:.2f}s ({position_percent:.1f}%), setting to 0.0s (0%)")
+            # Reset position UNLESS we're moving away from this limit (starting from closed position)
+            # If opening from closed, don't fight the movement - let motor leave the limit
+            movement_cmd = self.shared.get('movement_command')
+            if movement_cmd == 'OPEN':
+                # Moving away from close limit (starting to open) - don't reset position
+                # Let motor move off the limit switch naturally
+                # Reset log flag when starting to move away
+                if hasattr(self, '_m2_close_limit_logged'):
+                    self._m2_close_limit_logged = False
+            else:
+                # Either closing (arrived at limit) or stopped/None (over-travel) - reset position
+                # Only print once when limit is first reached (avoid spam)
+                if not hasattr(self, '_m2_close_limit_logged') or not self._m2_close_limit_logged:
+                    position_percent = (self.shared['m2_position'] / self.motor2_run_time * 100.0) if self.motor2_run_time > 0 else 0.0
+                    print(f"[LIMIT SWITCH] M2 CLOSE limit reached - position was {self.shared['m2_position']:.2f}s ({position_percent:.1f}%), setting to 0.0s (0%)")
 
-                # Mark M2 position as known - synced to limit
-                if not self.shared.get('m2_position_known', True):
-                    print("[LIMIT HUNT] M2 synced to CLOSE limit")
-                    self.shared['m2_position_known'] = True
+                    # Mark M2 position as known - synced to limit
+                    if not self.shared.get('m2_position_known', True):
+                        print("[LIMIT HUNT] M2 synced to CLOSE limit")
+                        self.shared['m2_position_known'] = True
 
-                self._m2_close_limit_logged = True
+                    self._m2_close_limit_logged = True
 
-            # Always stop and sync position
-            self.motor2.stop()
-            self.shared['m2_position'] = 0.0
-            self.shared['m2_percent'] = 0.0  # At close limit = 0%
-            self.shared['m2_speed'] = 0.0
+                # Always stop and sync position
+                self.motor2.stop()
+                self.shared['m2_position'] = 0.0
+                self.shared['m2_percent'] = 0.0  # At close limit = 0%
+                self.shared['m2_speed'] = 0.0
 
-            # Handle learning mode recording
-            if learning_mode and self.shared['movement_command'] == 'CLOSE' and self.shared.get('learning_m2_start_time'):
-                learned_time = now - self.shared['learning_m2_start_time']
-                self.shared['learning_m2_close_time'] = learned_time
-                print(f"[LEARNING] M2 close time recorded: {learned_time:.2f}s")
-                self.shared['learning_m2_start_time'] = None
+                # Handle learning mode recording
+                if learning_mode and movement_cmd == 'CLOSE' and self.shared.get('learning_m2_start_time'):
+                    learned_time = now - self.shared['learning_m2_start_time']
+                    self.shared['learning_m2_close_time'] = learned_time
+                    print(f"[LEARNING] M2 close time recorded: {learned_time:.2f}s")
+                    self.shared['learning_m2_start_time'] = None
         else:
             # Reset flag when limit is not active
             if hasattr(self, '_m2_close_limit_logged'):
