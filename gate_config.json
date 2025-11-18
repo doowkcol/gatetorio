@@ -1,5 +1,5 @@
 {
-  "run_time": 12.0,
+  "run_time": 8.95,
   "pause_time": 5.0,
   "motor1_open_delay": 2.0,
   "motor2_close_delay": 5.0,
@@ -14,15 +14,15 @@
   "learning_mode_enabled": false,
   "motor1_use_limit_switches": true,
   "motor2_use_limit_switches": true,
-  "limit_switches_enabled": true,
-  "opening_slowdown_percent": 20.0,
+  "limit_switches_enabled": false,
+  "opening_slowdown_percent": 6.699999999999999,
   "closing_slowdown_percent": 20.0,
   "learning_speed": 0.3,
   "open_speed": 1.0,
   "close_speed": 1.0,
   "partial_1_auto_close_time": 5.0,
   "partial_2_auto_close_time": 5.0,
-  "motor1_run_time": 7.675265819177197,
-  "motor2_run_time": 7.931619444434647,
+  "motor1_run_time": 8.95,
+  "motor2_run_time": 7.98,
   "motor2_enabled": true
 }
