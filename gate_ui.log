@@ -1,11 +1,8 @@
 ==========================================
 Gatetorio Gate Controller UI
 ==========================================
-Starting at: Tue 18 Nov 00:03:46 GMT 2025
+Starting at: Tue 18 Nov 00:44:33 GMT 2025
 
-Motor Manager initialized
-Motor Manager process started
-Motor Manager process stopped
 Input Manager: ADC1 initialized at address 0x48 (ADDR->GND)
 Input Manager: ADC2 initialized at address 0x49 (ADDR->VDD)
 Input Manager: 2 ADC(s) initialized successfully (8 channels available)
@@ -23,8 +20,8 @@ CONFIGURED INPUTS (8 total):
   IN2                  Ch= 1 Type=NO  Func=open_limit_m1        [ENABLED]
   IN3                  Ch= 2 Type=NO  Func=open_limit_m2        [ENABLED]
   IN4                  Ch= 3 Type=NC  Func=close_limit_m2       [ENABLED]
-  IN5                  Ch= 4 Type=NO  Func=cmd_open             [ENABLED]
-  IN6                  Ch= 5 Type=8K2 Func=safety_stop_opening  [ENABLED]
+  IN5                  Ch= 4 Type=NO  Func=cmd_close            [ENABLED]
+  IN6                  Ch= 5 Type=8K2 Func=cmd_open             [ENABLED]
   IN7                  Ch= 6 Type=NO  Func=None                 [ENABLED]
   IN8                  Ch= 7 Type=NO  Func=None                 [ENABLED]
 ================================================================================
@@ -33,44 +30,408 @@ CONFIGURED INPUTS (8 total):
 [INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
 [INPUT RAW] IN4                  func=close_limit_m2       raw=ACTIVE was=inactive V=0.00
 [INPUT DEBOUNCED] IN4                  func=close_limit_m2       → ACTIVE
-[INPUT RAW] IN5                  func=cmd_open             raw=ACTIVE was=inactive V=3.31
-[INPUT DEBOUNCED] IN5                  func=cmd_open             → ACTIVE
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=-0.00
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
 [INPUT] cmd_open             → ACTIVE
 [INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
 [INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
 [INPUT DEBOUNCED] IN1                  func=close_limit_m1       → inactive
-[INPUT RAW] IN6                  func=safety_stop_opening  raw=ACTIVE was=inactive V=-0.00
-[INPUT DEBOUNCED] IN6                  func=safety_stop_opening  → ACTIVE
-[INPUT] safety_stop_opening  → ACTIVE
-[INPUT RAW] IN5                  func=cmd_open             raw=inactive was=ACTIVE V=0.00
-[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
-[SAFETY DEACTIVATION] IN6                  - starting 1.0s hold-off timer
-[SAFETY DEACTIVATION] IN6                  - holding for 1.00s more
-[INPUT RAW] IN5                  func=cmd_open             raw=inactive was=ACTIVE V=0.00
-[INPUT DEBOUNCED] IN5                  func=cmd_open             → inactive
-[INPUT] cmd_open             → inactive
-[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
-[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
-[SAFETY DEACTIVATION] IN6                  - holding for 0.68s more
-[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
-[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
-[SAFETY DEACTIVATION] IN6                  - holding for 0.37s more
-[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
 [INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
-[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
-[SAFETY DEACTIVATION] IN6                  - holding for 0.05s more
 [INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
 [INPUT DEBOUNCED] IN4                  func=close_limit_m2       → inactive
-[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
-[SAFETY DEACTIVATION] IN6                  - 1.0s elapsed, deactivating
-[INPUT DEBOUNCED] IN6                  func=safety_stop_opening  → inactive
-[INPUT] safety_stop_opening  → inactive
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT] cmd_open             → inactive
+[INPUT RAW] IN2                  func=open_limit_m1        raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → ACTIVE
+[INPUT RAW] IN3                  func=open_limit_m2        raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → ACTIVE
+[INPUT RAW] IN3                  func=open_limit_m2        raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN3                  func=open_limit_m2        raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → inactive
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
+[INPUT] cmd_open             → ACTIVE
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT] cmd_open             → inactive
+[INPUT RAW] IN5                  func=cmd_close            raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → ACTIVE
+[INPUT] cmd_close            → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=-0.00
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → inactive
+[INPUT] cmd_close            → inactive
+[INPUT RAW] IN5                  func=cmd_close            raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → ACTIVE
+[INPUT] cmd_close            → ACTIVE
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=-0.00
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT] cmd_close            → inactive
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → inactive
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → inactive
+[INPUT] cmd_open             → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → ACTIVE
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT] cmd_open             → inactive
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT] cmd_close            → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → inactive
+[INPUT] cmd_close            → inactive
+[INPUT RAW] IN4                  func=close_limit_m2       raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → ACTIVE
+[INPUT] cmd_close            → ACTIVE
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=-0.00
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT] cmd_close            → inactive
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT] cmd_close            → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=-0.00
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → inactive
+[INPUT] cmd_close            → inactive
+[INPUT RAW] IN5                  func=cmd_close            raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → ACTIVE
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT] cmd_close            → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → inactive
+[INPUT] cmd_close            → inactive
+[INPUT RAW] IN5                  func=cmd_close            raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → ACTIVE
+[INPUT] cmd_close            → ACTIVE
+[INPUT RAW] IN1                  func=close_limit_m1       raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=-0.00
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → inactive
+[INPUT] cmd_close            → inactive
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
+[INPUT] cmd_open             → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=ACTIVE was=inactive V=3.30
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → ACTIVE
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT] cmd_open             → inactive
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
+[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
+[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → inactive
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → inactive
+[INPUT] cmd_open             → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → ACTIVE
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT] cmd_open             → inactive
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
+[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
+[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → inactive
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT] cmd_close            → ACTIVE
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=-0.00
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT] cmd_close            → inactive
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → inactive
+[INPUT] cmd_open             → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → ACTIVE
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT] cmd_open             → inactive
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT] cmd_close            → ACTIVE
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=-0.00
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT] cmd_close            → inactive
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → inactive
+[INPUT] cmd_open             → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → ACTIVE
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT] cmd_open             → inactive
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT] cmd_close            → ACTIVE
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
+[INPUT] cmd_close            → inactive
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN4                  func=close_limit_m2       raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=-0.00
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → inactive
+[INPUT] cmd_open             → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → ACTIVE
+[INPUT] cmd_open             → inactive
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT] cmd_close            → ACTIVE
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=0.11
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT] cmd_close            → inactive
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → inactiveMotor Manager initialized
+Motor Manager process started
+[FAULT] M1 LIMIT_MISSING: OPENING - open limit not activated at 7.84s (consecutive MOVEMENTS: 1)
+[FAULT] M2 LIMIT_MISSING: OPENING - open limit not activated at 8.56s (consecutive MOVEMENTS: 1)
+[LIMIT SWITCH] M1 OPEN limit reached - position was 8.50s (108.5%), setting to 7.84s (100%)
+[FAULT] M1 fault counter cleared (was 1)
+[LIMIT SWITCH] M2 OPEN limit reached - position was 8.93s (104.4%), setting to 8.56s (100%)
+[FAULT] M2 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 2)
+[FAULT] M2 fault counter cleared (was 2)
+[LIMIT SWITCH] M2 CLOSE limit reached - position was -0.20s (-2.3%), setting to 0.0s (0%)
+[FAULT] M1 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 1)
+[LIMIT SWITCH] M1 CLOSE limit reached - position was -0.37s (-4.7%), setting to 0.0s (0%)
+[FAULT] M1 fault counter cleared (was 1)
+[FAULT] M1 LIMIT_MISSING: OPENING - open limit not activated at 7.84s (consecutive MOVEMENTS: 1)
+[LIMIT SWITCH] M2 CLOSE limit reached - position was 0.12s (1.4%), setting to 0.0s (0%)
+[FAULT] M1 LIMIT_MISSING: OPENING - open limit not activated at 7.92s (consecutive MOVEMENTS: 2)
+[FAULT] M1 LIMIT_MISSING: OPENING - open limit not activated at 7.93s (consecutive MOVEMENTS: 3)
+[LIMIT SWITCH] M1 OPEN limit reached - position was 8.56s (109.2%), setting to 7.84s (100%)
+[FAULT] M1 fault counter cleared (was 3)
+[FAULT] M2 LIMIT_MISSING: OPENING - open limit not activated at 8.56s (consecutive MOVEMENTS: 1)
+[LIMIT SWITCH] M2 OPEN limit reached - position was 8.92s (104.2%), setting to 8.56s (100%)
+[FAULT] M2 fault counter cleared (was 1)
+[FAULT] M2 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 1)
+[LIMIT SWITCH] M2 CLOSE limit reached - position was -0.21s (-2.5%), setting to 0.0s (0%)
+[FAULT] M2 fault counter cleared (was 1)
+[FAULT] M1 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 1)
+[LIMIT SWITCH] M1 CLOSE limit reached - position was -0.39s (-4.9%), setting to 0.0s (0%)
+[FAULT] M1 fault counter cleared (was 1)
+[FAULT] M1 LIMIT_MISSING: OPENING - open limit not activated at 7.84s (consecutive MOVEMENTS: 1)
+[LIMIT SWITCH] M2 OPEN limit reached - position was 8.35s (97.6%), setting to 8.56s (100%)
+Motor Manager process stopped
+
+[INPUT] cmd_open             → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → ACTIVE
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT] cmd_open             → inactive
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → inactive
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT] cmd_open             → ACTIVE
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT] cmd_open             → inactive
+[INPUT RAW] IN2                  func=open_limit_m1        raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → ACTIVE
+[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
+[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
+[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → inactive
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=-0.00
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
+[INPUT] cmd_open             → ACTIVE
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT] cmd_open             → inactive
+[INPUT RAW] IN3                  func=open_limit_m2        raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → ACTIVE
+[INPUT] cmd_close            → ACTIVE
+[INPUT RAW] IN3                  func=open_limit_m2        raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN3                  func=open_limit_m2        raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → inactive
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → inactive
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=-0.00
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
+[INPUT] cmd_close            → inactive
+[INPUT] cmd_open             → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → ACTIVE
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT] cmd_open             → inactive
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT] cmd_close            → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → inactive
+[INPUT] cmd_close            → inactive
+[INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → inactive
+[INPUT RAW] IN4                  func=close_limit_m2       raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → ACTIVE
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → inactive
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=0.77
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
+[INPUT] cmd_open             → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → ACTIVE
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT] cmd_open             → inactive
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.82
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT] cmd_close            → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → inactive
+[INPUT] cmd_close            → inactive
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
+[INPUT] cmd_open             → ACTIVE
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN5                  func=cmd_close            raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → ACTIVE
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT] cmd_close            → ACTIVE
+[INPUT] cmd_open             → inactive
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=-0.00
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT] cmd_close            → inactive
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT] cmd_close            → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=-0.00
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT] cmd_close            → inactive
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT] cmd_close            → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=-0.00
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT] cmd_close            → inactive
+[INPUT BLOCKED] cmd_open + cmd_close conflict → activating cmd_stop
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT] cmd_close            → ACTIVE
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT RAW] IN5                  func=cmd_close            raw=inactive was=ACTIVE V=0.00
+[INPUT DEBOUNCED] IN5                  func=cmd_close            → inactive
+[INPUT] cmd_close            → inactive
+[INPUT RAW] IN1                  func=close_limit_m1       raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
+[INPUT RAW] IN6                  func=cmd_open             raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → ACTIVE
+[INPUT] cmd_open             → ACTIVE
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=cmd_open             raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=cmd_open             → inactive
+[INPUT] cmd_open             → inactive
+[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
+[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
+[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → inactive
+[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
+[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
+[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → inactive
+[INPUT RAW] IN3                  func=open_limit_m2        raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → ACTIVE
+[INPUT RAW] IN2                  func=open_limit_m1        raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → ACTIVE
 Input Manager: Shutting down
 Gate Controller V2 (Step 3 - Three Processes) initialized
   M1 travel time: 7.835115489037847s, M2 travel time: 8.557032567378949s
   M2 enabled: True
-  Motor Manager PID: 5108
-  Input Manager PID: 5109
+  Motor Manager PID: 6049
+  Input Manager PID: 6050
   Auto-close: ENABLED (5.0s)
 [STARTUP] Detected gate at CLOSED position (both motors at close limits)
 Window created
@@ -102,108 +463,148 @@ Starting mainloop
 >>> [_execute_open CALLED] M1:0.0s M2:0.0s
     Current state: CLOSED, safety_reversing: False
     Flags: cmd_open=True, stop_opening_active=False
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=OPENING
-[SAFETY CRITICAL] STOP OPENING triggered during OPENING
-  photocell_closing_active=False
-  cmd_close_active=False
-STOP OPENING triggered during OPENING - 1.5s full reverse then STOP
-[COMMANDS ACTIVE] safety_stop_opening | state=REVERSING_FROM_OPEN
-[SAFETY BLOCK] Safety edge acting as STOP - blocking all commands
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-Safety reversal complete - STOPPING
-  Marked STOP OPENING as reversed (edge still active: False)
+[COMPLETION] OPEN complete! M1: limit=True, M2: limit=True
+[_complete_open] BEFORE: state=OPENING, M1=7.84, M2=8.56
+[_complete_open] AFTER: state=OPEN, movement_command=None
+Gates OPEN
+Auto-close triggered (from full OPEN) - sending momentary CLOSE pulse
+Auto-close pulse - no PO sustained, closing fully
 
->>> STOP command - M1:4.9s M2:2.9s
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening_reversed | state=STOPPED
-[SAFETY CLEAR] STOP OPENING reversed flag cleared - edge inactive AND open commands released
-[COMMANDS ACTIVE] safety_stop_opening | state=STOPPED
-[COMMANDS ACTIVE] cmd_open | state=STOPPED
+>>> CLOSE command - M1:7.8s M2:8.6s
+[COMMANDS ACTIVE] cmd_open | state=CLOSING
+OPEN command while closing - reversing (priority override)
 
->>> [_execute_open CALLED] M1:4.9s M2:2.9s
-    Current state: STOPPED, safety_reversing: False
+>>> [_execute_open CALLED] M1:7.8s M2:4.1s
+    Current state: CLOSING, safety_reversing: False
     Flags: cmd_open=True, stop_opening_active=False
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=OPENING
-[SAFETY CRITICAL] STOP OPENING triggered during OPENING
-  photocell_closing_active=False
-  cmd_close_active=False
-STOP OPENING triggered during OPENING - 1.5s full reverse then STOP
-[SAFETY BLOCK] Safety edge acting as STOP - blocking all commands
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-Safety reversal complete - STOPPING
-  Marked STOP OPENING as reversed (edge still active: False)
+[COMMANDS ACTIVE] cmd_close | state=OPENING
+CLOSE command while opening - reversing
 
->>> STOP command - M1:4.9s M2:2.9s
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening_reversed | state=STOPPED
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening, safety_stop_opening_reversed | state=STOPPED
-[COMMANDS ACTIVE] safety_stop_opening_reversed | state=STOPPED
-[SAFETY CLEAR] STOP OPENING reversed flag cleared - edge inactive AND open commands released
-[COMMANDS ACTIVE] cmd_open | state=STOPPED
+>>> CLOSE command - M1:7.8s M2:6.2s
+[COMMANDS ACTIVE] cmd_close | state=CLOSING
+[COMMANDS ACTIVE] cmd_open | state=CLOSING
+OPEN command while closing - reversing (priority override)
 
->>> [_execute_open CALLED] M1:4.9s M2:2.9s
-    Current state: STOPPED, safety_reversing: False
+>>> [_execute_open CALLED] M1:5.5s M2:0.1s
+    Current state: CLOSING, safety_reversing: False
     Flags: cmd_open=True, stop_opening_active=False
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=OPENING
-[SAFETY CRITICAL] STOP OPENING triggered during OPENING
-  photocell_closing_active=False
-  cmd_close_active=False
-STOP OPENING triggered during OPENING - 1.5s full reverse then STOP
-[COMMANDS ACTIVE] safety_stop_opening | state=REVERSING_FROM_OPEN
-[SAFETY BLOCK] Safety edge acting as STOP - blocking all commands
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] safety_stop_opening | state=REVERSING_FROM_OPEN
-Safety reversal complete - STOPPING
-  Marked STOP OPENING as reversed (edge still active: False)
+CLOSE command while opening - reversing
 
->>> STOP command - M1:4.9s M2:2.9s
-[COMMANDS ACTIVE] safety_stop_opening_reversed | state=STOPPED
-[SAFETY CLEAR] STOP OPENING reversed flag cleared - edge inactive AND open commands released
-[COMMANDS ACTIVE] safety_stop_opening | state=STOPPED
+>>> CLOSE command - M1:7.5s M2:0.2s
+[COMMANDS ACTIVE] cmd_close | state=CLOSING
+[COMMANDS ACTIVE] cmd_close | state=CLOSING
+[COMMANDS ACTIVE] cmd_close | state=CLOSING
+[COMMANDS ACTIVE] cmd_close | state=CLOSING
+[COMMANDS ACTIVE] cmd_close | state=CLOSING
+[COMPLETION] CLOSE complete! M1: limit=True, M2: limit=True
+[_complete_close] BEFORE: state=CLOSING, M1=0.00, M2=0.00
+[_complete_close] AFTER: state=CLOSED, movement_command=None
+Gates CLOSED
+[COMMANDS ACTIVE] cmd_open | state=CLOSED
+
+>>> [_execute_open CALLED] M1:0.0s M2:0.0s
+    Current state: CLOSED, safety_reversing: False
+    Flags: cmd_open=True, stop_opening_active=False
+[COMMANDS ACTIVE] cmd_open | state=OPENING
+[COMMANDS ACTIVE] cmd_close | state=OPENING
+CLOSE command while opening - reversing
+
+>>> CLOSE command - M1:4.4s M2:2.4s
+OPEN command while closing - reversing (priority override)
+
+>>> [_execute_open CALLED] M1:4.4s M2:0.6s
+    Current state: CLOSING, safety_reversing: False
+    Flags: cmd_open=True, stop_opening_active=False
+[COMMANDS ACTIVE] cmd_open | state=OPENING
+[COMMANDS ACTIVE] cmd_close | state=OPENING
+CLOSE command while opening - reversing
+
+>>> CLOSE command - M1:6.6s M2:0.8s
+[COMMANDS ACTIVE] cmd_open | state=CLOSING
+OPEN command while closing - reversing (priority override)
+
+>>> [_execute_open CALLED] M1:6.6s M2:0.3s
+    Current state: CLOSING, safety_reversing: False
+    Flags: cmd_open=True, stop_opening_active=False
+[COMMANDS ACTIVE] cmd_close | state=OPENING
+CLOSE command while opening - reversing
+
+>>> CLOSE command - M1:7.8s M2:0.3s
+[COMMANDS ACTIVE] cmd_open | state=CLOSING
+OPEN command while closing - reversing (priority override)
+
+>>> [_execute_open CALLED] M1:7.8s M2:0.1s
+    Current state: CLOSING, safety_reversing: False
+    Flags: cmd_open=True, stop_opening_active=False
+[COMMANDS ACTIVE] cmd_close | state=OPENING
+CLOSE command while opening - reversing
+
+>>> CLOSE command - M1:7.9s M2:0.1s
+[COMMANDS ACTIVE] cmd_open | state=CLOSING
+OPEN command while closing - reversing (priority override)
+
+>>> [_execute_open CALLED] M1:7.9s M2:-0.0s
+    Current state: CLOSING, safety_reversing: False
+    Flags: cmd_open=True, stop_opening_active=False
+[COMMANDS ACTIVE] cmd_open | state=OPENING
+[COMMANDS ACTIVE] cmd_open | state=OPENING
+[COMPLETION] OPEN complete! M1: limit=True, M2: limit=True
+[_complete_open] BEFORE: state=OPENING, M1=7.84, M2=8.56
+[_complete_open] AFTER: state=OPEN, movement_command=None
+Gates OPEN
+[COMMANDS ACTIVE] cmd_close | state=OPEN
+
+>>> CLOSE command - M1:7.8s M2:8.6s
+[COMMANDS ACTIVE] cmd_open | state=CLOSING
+OPEN command while closing - reversing (priority override)
+
+>>> [_execute_open CALLED] M1:7.8s M2:6.6s
+    Current state: CLOSING, safety_reversing: False
+    Flags: cmd_open=True, stop_opening_active=False
+[COMMANDS ACTIVE] cmd_close | state=OPENING
+CLOSE command while opening - reversing
+
+>>> CLOSE command - M1:7.8s M2:6.6s
+[COMMANDS ACTIVE] cmd_open | state=CLOSING
+OPEN command while closing - reversing (priority override)
+
+>>> [_execute_open CALLED] M1:0.2s M2:-0.0s
+    Current state: CLOSING, safety_reversing: False
+    Flags: cmd_open=True, stop_opening_active=False
+CLOSE command while opening - reversing
+
+>>> CLOSE command - M1:3.1s M2:0.9s
+[COMMANDS ACTIVE] cmd_close | state=CLOSING
+[COMMANDS ACTIVE] cmd_open | state=CLOSING
+OPEN command while closing - reversing (priority override)
+
+>>> [_execute_open CALLED] M1:2.2s M2:0.0s
+    Current state: CLOSING, safety_reversing: False
+    Flags: cmd_open=True, stop_opening_active=False
+[COMMANDS ACTIVE] cmd_close | state=OPENING
+CLOSE command while opening - reversing
+
+>>> CLOSE command - M1:2.4s M2:0.0s
+[COMMANDS ACTIVE] cmd_close | state=CLOSING
+[COMMANDS ACTIVE] cmd_close | state=CLOSING
+[COMMANDS ACTIVE] cmd_close | state=CLOSING
+[COMPLETION] CLOSE complete! M1: limit=True, M2: limit=True
+[_complete_close] BEFORE: state=CLOSING, M1=-0.00, M2=-0.00
+[_complete_close] AFTER: state=CLOSED, movement_command=None
+Gates CLOSED
+[COMMANDS ACTIVE] cmd_open | state=CLOSED
+
+>>> [_execute_open CALLED] M1:0.0s M2:0.0s
+    Current state: CLOSED, safety_reversing: False
+    Flags: cmd_open=True, stop_opening_active=False
+[COMPLETION] OPEN complete! M1: limit=True, M2: limit=True
+[_complete_open] BEFORE: state=OPENING, M1=8.62, M2=8.56
+[_complete_open] AFTER: state=OPEN, movement_command=None
+Gates OPEN
+Auto-close triggered (from full OPEN) - sending momentary CLOSE pulse
+Auto-close pulse - no PO sustained, closing fully
+
+>>> CLOSE command - M1:7.8s M2:8.6s
 Exit button pressed - shutting down all processes
 Shutting down gate controller...
 Gate controller shutdown complete
