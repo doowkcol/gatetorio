@@ -1473,8 +1473,11 @@ class MotorManager:
 
             # Check if we should ignore position limits for speed calculation
             # When using limit switches, we don't decelerate based on position
-            ignore_position_limits = (self.shared.get('learning_mode_enabled', False) and
-                                     self.motor1_use_limit_switches) or self.motor1_use_limit_switches
+            # EXCEPT when moving to partial positions - those need position-based deceleration
+            moving_to_partial = self.shared['state'] in ['OPENING_TO_PARTIAL_1', 'OPENING_TO_PARTIAL_2',
+                                                          'CLOSING_TO_PARTIAL_1', 'CLOSING_TO_PARTIAL_2']
+            ignore_position_limits = ((self.shared.get('learning_mode_enabled', False) and
+                                      self.motor1_use_limit_switches) or self.motor1_use_limit_switches) and not moving_to_partial
 
             if ignore_position_limits:
                 # When ignoring position limits, only ramp up based on time, no deceleration
@@ -1483,7 +1486,7 @@ class MotorManager:
                 speed = self._calculate_ramp_speed(elapsed, remaining, ramp_time)
                 speed = max(0.0, min(1.0, speed))
             else:
-                # Normal position-based speed calculation
+                # Normal position-based speed calculation (includes partials)
                 if self.shared['state'] == 'OPENING_TO_PARTIAL_1':
                     remaining = self.partial_1_position - self.shared['m1_position']
                 elif self.shared['state'] == 'OPENING_TO_PARTIAL_2':
