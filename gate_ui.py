@@ -1361,7 +1361,10 @@ class GateUI:
                 json.dump(updated_config, f, indent=2)
             
             print("Command assignments saved!")
-            
+
+            # Trigger immediate reload of both configs
+            self.controller.reload_config()
+
             # Show confirmation
             self.show_command_save_confirmation()
             
@@ -1372,7 +1375,7 @@ class GateUI:
         """Show a temporary 'Saved!' message"""
         confirm = tk.Label(
             self.command_editor_frame,
-            text="SAVED!\nRestart gate controller to apply changes",
+            text="SAVED!\nChanges applied!",
             font=('Arial', 16, 'bold'),
             bg='green',
             fg='white'
