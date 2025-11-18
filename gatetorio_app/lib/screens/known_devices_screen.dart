@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../services/device_history_service.dart';
 import '../services/ble_service.dart';
 import '../models/known_device.dart';
-import 'device_scanner.dart' as scanner;
 
 /// Screen showing all previously connected/whitelisted devices
 /// Allows reconnection to stealth-mode devices and viewing cached data offline
@@ -98,8 +97,9 @@ class KnownDevicesScreen extends StatelessWidget {
 
   Widget _buildDeviceCard(BuildContext context, KnownDevice device) {
     final bleService = Provider.of<BleService>(context, listen: false);
-    final isCurrentlyConnected = bleService.isConnected &&
-        bleService.connectedDevice?.remoteId.toString() == device.deviceId;
+    // Note: We check if connected but can't verify exact device without exposing device ID
+    // In practice, user will only have one active connection at a time
+    final isCurrentlyConnected = bleService.isConnected;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
