@@ -244,7 +244,42 @@ class GateUI:
             bd=3
         )
         self.stop_opening_btn.pack(side='left', expand=True, fill='both', padx=5)
-        
+
+        # Limit switch indicators
+        limit_frame = tk.Frame(self.main_frame, bg='#1a1a1a', relief='ridge', bd=2)
+        limit_frame.pack(fill='x', padx=20, pady=10)
+
+        tk.Label(limit_frame, text="LIMIT SWITCHES", font=('Arial', 10, 'bold'),
+                 bg='#1a1a1a', fg='white').pack(pady=2)
+
+        limit_indicators_frame = tk.Frame(limit_frame, bg='#1a1a1a')
+        limit_indicators_frame.pack(pady=5)
+
+        # Create 4 limit switch indicators
+        self.main_limit_indicators = {}
+        limit_configs = [
+            ('M1 Open', 'open_limit_m1_active'),
+            ('M1 Close', 'close_limit_m1_active'),
+            ('M2 Open', 'open_limit_m2_active'),
+            ('M2 Close', 'close_limit_m2_active')
+        ]
+
+        for i, (label_text, key) in enumerate(limit_configs):
+            indicator_frame = tk.Frame(limit_indicators_frame, bg='#1a1a1a')
+            indicator_frame.pack(side='left', padx=10)
+
+            tk.Label(indicator_frame, text=label_text, font=('Arial', 9),
+                     bg='#1a1a1a', fg='white').pack()
+
+            indicator = tk.Label(indicator_frame, text="●", font=('Arial', 16),
+                                bg='#1a1a1a', fg='gray')
+            indicator.pack()
+
+            self.main_limit_indicators[key] = indicator
+
+        tk.Label(limit_frame, text="(Green = active, Gray = inactive)",
+                 font=('Arial', 8), bg='#1a1a1a', fg='gray').pack(pady=(0, 5))
+
         # Deadman control frame
         deadman_frame = tk.Frame(self.main_frame, bg='black')
         deadman_frame.pack(fill='x', padx=20, pady=5)
@@ -2212,9 +2247,18 @@ class GateUI:
             self.start_auto_learn_btn.config(state='normal')
             self.stop_auto_learn_btn.config(state='disabled')
 
-        # Update limit switch indicators
+        # Update limit switch indicators (engineer mode)
         if hasattr(self, 'limit_indicators'):
             for key, indicator in self.limit_indicators.items():
+                is_active = self.controller.shared.get(key, False)
+                if is_active:
+                    indicator.config(fg='lime')  # Green when active
+                else:
+                    indicator.config(fg='gray')  # Gray when inactive
+
+        # Update limit switch indicators (main page)
+        if hasattr(self, 'main_limit_indicators'):
+            for key, indicator in self.main_limit_indicators.items():
                 is_active = self.controller.shared.get(key, False)
                 if is_active:
                     indicator.config(fg='lime')  # Green when active
