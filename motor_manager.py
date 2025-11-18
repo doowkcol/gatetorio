@@ -1462,12 +1462,36 @@ class MotorManager:
         if self.shared['safety_reversing']:
             if self.shared['state'] == 'REVERSING_FROM_CLOSE':
                 # Was closing, now reverse (open direction)
+                # Check if we've hit the open limit - if so, STOP reversal immediately
+                if (self.motor1_use_limit_switches and self.shared.get('open_limit_m1_active', False)) or \
+                   (self.motor2_use_limit_switches and self.shared.get('open_limit_m2_active', False)):
+                    print("[SAFETY REVERSE ABORT] Hit OPEN limit during reversal - stopping immediately")
+                    self.motor1.stop()
+                    self.motor2.stop()
+                    self.shared['m1_speed'] = 0.0
+                    self.shared['m2_speed'] = 0.0
+                    self.shared['safety_reversing'] = False
+                    self.shared['execute_safety_reverse'] = False
+                    return
+
                 self.motor1.forward(1.0)
                 self.motor2.forward(1.0)
                 self.shared['m1_speed'] = 1.0  # Full speed (0-1.0 scale)
                 self.shared['m2_speed'] = 1.0
             elif self.shared['state'] == 'REVERSING_FROM_OPEN':
                 # Was opening, now reverse (close direction)
+                # Check if we've hit the close limit - if so, STOP reversal immediately
+                if (self.motor1_use_limit_switches and self.shared.get('close_limit_m1_active', False)) or \
+                   (self.motor2_use_limit_switches and self.shared.get('close_limit_m2_active', False)):
+                    print("[SAFETY REVERSE ABORT] Hit CLOSE limit during reversal - stopping immediately")
+                    self.motor1.stop()
+                    self.motor2.stop()
+                    self.shared['m1_speed'] = 0.0
+                    self.shared['m2_speed'] = 0.0
+                    self.shared['safety_reversing'] = False
+                    self.shared['execute_safety_reverse'] = False
+                    return
+
                 self.motor1.backward(1.0)
                 self.motor2.backward(1.0)
                 self.shared['m1_speed'] = 1.0  # Full speed (0-1.0 scale)
