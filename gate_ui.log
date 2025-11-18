@@ -1,5 +1,72 @@
 ==========================================
 Gatetorio Gate Controller UI
 ==========================================
-Starting at: Tue 18 Nov 22:04:22 GMT 2025
+Starting at: Tue 18 Nov 22:54:33 GMT 2025
 
+Motor Manager initialized
+Motor Manager process started
+Motor Manager process stopped
+Input Manager: ADC1 initialized at address 0x48 (ADDR->GND)
+Input Manager: ADC2 initialized at address 0x49 (ADDR->VDD)
+Input Manager: 2 ADC(s) initialized successfully (8 channels available)
+Input Manager initialized:
+  Inputs configured: 8
+  Sample rate: 0.01s (100.0Hz)
+  ADC available: True
+  Channels available: 8
+Input Manager: Starting main loop
+
+================================================================================
+CONFIGURED INPUTS (8 total):
+================================================================================
+  IN1                  Ch= 0 Type=NC  Func=close_limit_m1       [ENABLED]
+  IN2                  Ch= 1 Type=NO  Func=open_limit_m1        [ENABLED]
+  IN3                  Ch= 2 Type=NO  Func=open_limit_m2        [ENABLED]
+  IN4                  Ch= 3 Type=NC  Func=close_limit_m2       [ENABLED]
+  IN5                  Ch= 4 Type=NO  Func=cmd_close            [ENABLED]
+  IN6                  Ch= 5 Type=8K2 Func=cmd_open             [ENABLED]
+  IN7                  Ch= 6 Type=NO  Func=None                 [ENABLED]
+  IN8                  Ch= 7 Type=NO  Func=None                 [ENABLED]
+================================================================================
+
+[INPUT RAW] IN2                  func=open_limit_m1        raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → ACTIVE
+[INPUT RAW] IN3                  func=open_limit_m2        raw=ACTIVE was=inactive V=3.31
+[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → ACTIVE
+Input Manager: Shutting down
+Gate Controller V2 (Step 3 - Three Processes) initialized
+  M1 travel time: 8.95s, M2 travel time: 7.98s
+  M2 enabled: True
+  Motor Manager PID: 2581
+  Input Manager PID: 2582
+  Auto-close: ENABLED (5.0s)
+[STARTUP] Waiting for input manager to read limit switches...
+[STARTUP] Limit switches initialized after 0.3s
+Window created
+Status label created
+Open button created
+All UI elements created
+Building input displays for 8 inputs: ['IN1', 'IN2', 'IN3', 'IN4', 'IN5', 'IN6', 'IN7', 'IN8']
+Creating display for IN1...
+  ✓ Display created for IN1
+Creating display for IN2...
+  ✓ Display created for IN2
+Creating display for IN3...
+  ✓ Display created for IN3
+Creating display for IN4...
+  ✓ Display created for IN4
+Creating display for IN5...
+  ✓ Display created for IN5
+Creating display for IN6...
+  ✓ Display created for IN6
+Creating display for IN7...
+  ✓ Display created for IN7
+Creating display for IN8...
+  ✓ Display created for IN8
+Total input displays created: 8
+Window created
+Starting mainloop
+Exit button pressed - shutting down all processes
+Shutting down gate controller...
+Gate controller shutdown complete
+Exiting Python process
