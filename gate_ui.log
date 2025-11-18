@@ -1,13 +1,10 @@
 ==========================================
 Gatetorio Gate Controller UI
 ==========================================
-Starting at: Mon 17 Nov 23:57:07 GMT 2025
+Starting at: Tue 18 Nov 00:03:46 GMT 2025
 
 Motor Manager initialized
 Motor Manager process started
-[FAULT] M1 LIMIT_MISSING: OPENING - open limit not activated at 7.84s (consecutive MOVEMENTS: 1)
-[FAULT] M2 LIMIT_STUCK: OPENING - open limit still active at 4.96s (50% = 4.28s) (consecutive MOVEMENTS: 1)
-[FAULT] M1 LIMIT_MISSING: OPENING - open limit not activated at 8.89s (consecutive MOVEMENTS: 2)
 Motor Manager process stopped
 Input Manager: ADC1 initialized at address 0x48 (ADDR->GND)
 Input Manager: ADC2 initialized at address 0x49 (ADDR->VDD)
@@ -42,40 +39,9 @@ CONFIGURED INPUTS (8 total):
 [INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
 [INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
 [INPUT DEBOUNCED] IN1                  func=close_limit_m1       → inactive
-[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
-[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
-[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → inactive
-[INPUT RAW] IN6                  func=safety_stop_opening  raw=ACTIVE was=inactive V=0.00
-[INPUT DEBOUNCED] IN6                  func=safety_stop_opening  → ACTIVE
-[INPUT] safety_stop_opening  → ACTIVE
-[INPUT RAW] IN4                  func=close_limit_m2       raw=ACTIVE was=inactive V=0.00
-[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → ACTIVE
-[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
-[SAFETY DEACTIVATION] IN6                  - starting 1.0s hold-off timer
-[SAFETY DEACTIVATION] IN6                  - holding for 1.00s more
-[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
-[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
-[SAFETY DEACTIVATION] IN6                  - holding for 0.68s more
-[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
-[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
-[SAFETY DEACTIVATION] IN6                  - holding for 0.37s more
-[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
-[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
-[SAFETY DEACTIVATION] IN6                  - holding for 0.05s more
-[INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
-[SAFETY DEACTIVATION] IN6                  - 1.0s elapsed, deactivating
-[INPUT DEBOUNCED] IN6                  func=safety_stop_opening  → inactive
-[INPUT] safety_stop_opening  → inactive
-[INPUT RAW] IN5                  func=cmd_open             raw=inactive was=ACTIVE V=0.00
-[INPUT RAW] IN5                  func=cmd_open             raw=inactive was=ACTIVE V=0.00
-[INPUT DEBOUNCED] IN5                  func=cmd_open             → inactive
-[INPUT] cmd_open             → inactive
 [INPUT RAW] IN6                  func=safety_stop_opening  raw=ACTIVE was=inactive V=-0.00
 [INPUT DEBOUNCED] IN6                  func=safety_stop_opening  → ACTIVE
 [INPUT] safety_stop_opening  → ACTIVE
-[INPUT RAW] IN5                  func=cmd_open             raw=ACTIVE was=inactive V=3.31
-[INPUT DEBOUNCED] IN5                  func=cmd_open             → ACTIVE
-[INPUT] cmd_open             → ACTIVE
 [INPUT RAW] IN5                  func=cmd_open             raw=inactive was=ACTIVE V=0.00
 [INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
 [SAFETY DEACTIVATION] IN6                  - starting 1.0s hold-off timer
@@ -89,11 +55,12 @@ CONFIGURED INPUTS (8 total):
 [INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
 [INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
 [SAFETY DEACTIVATION] IN6                  - holding for 0.37s more
-[INPUT RAW] IN1                  func=close_limit_m1       raw=ACTIVE was=inactive V=0.00
-[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
 [INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
 [INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
 [SAFETY DEACTIVATION] IN6                  - holding for 0.05s more
+[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
+[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → inactive
 [INPUT RAW] IN6                  func=safety_stop_opening  raw=inactive was=ACTIVE V=1.12
 [SAFETY DEACTIVATION] IN6                  - 1.0s elapsed, deactivating
 [INPUT DEBOUNCED] IN6                  func=safety_stop_opening  → inactive
@@ -102,8 +69,8 @@ Input Manager: Shutting down
 Gate Controller V2 (Step 3 - Three Processes) initialized
   M1 travel time: 7.835115489037847s, M2 travel time: 8.557032567378949s
   M2 enabled: True
-  Motor Manager PID: 4893
-  Input Manager PID: 4894
+  Motor Manager PID: 5108
+  Input Manager PID: 5109
   Auto-close: ENABLED (5.0s)
 [STARTUP] Detected gate at CLOSED position (both motors at close limits)
 Window created
@@ -159,16 +126,16 @@ STOP OPENING triggered during OPENING - 1.5s full reverse then STOP
 [COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
 [COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
 [COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
 Safety reversal complete - STOPPING
-  Marked STOP OPENING as reversed (edge still active: True)
+  Marked STOP OPENING as reversed (edge still active: False)
 
->>> STOP command - M1:7.0s M2:5.0s
-[COMMANDS ACTIVE] safety_stop_opening_reversed | state=STOPPED
+>>> STOP command - M1:4.9s M2:2.9s
+[COMMANDS ACTIVE] cmd_open, safety_stop_opening_reversed | state=STOPPED
 [SAFETY CLEAR] STOP OPENING reversed flag cleared - edge inactive AND open commands released
+[COMMANDS ACTIVE] safety_stop_opening | state=STOPPED
 [COMMANDS ACTIVE] cmd_open | state=STOPPED
 
->>> [_execute_open CALLED] M1:7.0s M2:5.0s
+>>> [_execute_open CALLED] M1:4.9s M2:2.9s
     Current state: STOPPED, safety_reversing: False
     Flags: cmd_open=True, stop_opening_active=False
 [COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=OPENING
@@ -176,44 +143,9 @@ Safety reversal complete - STOPPING
   photocell_closing_active=False
   cmd_close_active=False
 STOP OPENING triggered during OPENING - 1.5s full reverse then STOP
-[COMMANDS ACTIVE] safety_stop_opening | state=REVERSING_FROM_OPEN
 [SAFETY BLOCK] Safety edge acting as STOP - blocking all commands
 [COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
 [COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-Safety reversal complete - STOPPING
-  Marked STOP OPENING as reversed (edge still active: True)
-
->>> STOP command - M1:7.0s M2:5.0s
-[COMMANDS ACTIVE] safety_stop_opening_reversed | state=STOPPED
-[SAFETY CLEAR] STOP OPENING reversed flag cleared - edge inactive AND open commands released
-[COMMANDS ACTIVE] cmd_open | state=STOPPED
-
->>> [_execute_open CALLED] M1:7.0s M2:5.0s
-    Current state: STOPPED, safety_reversing: False
-    Flags: cmd_open=True, stop_opening_active=False
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=OPENING
-[SAFETY CRITICAL] STOP OPENING triggered during OPENING
-  photocell_closing_active=False
-  cmd_close_active=False
-STOP OPENING triggered during OPENING - 1.5s full reverse then STOP
-[COMMANDS ACTIVE] safety_stop_opening | state=REVERSING_FROM_OPEN
-[SAFETY BLOCK] Safety edge acting as STOP - blocking all commands
 [COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
 [COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
 [COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
@@ -234,76 +166,14 @@ STOP OPENING triggered during OPENING - 1.5s full reverse then STOP
 Safety reversal complete - STOPPING
   Marked STOP OPENING as reversed (edge still active: False)
 
->>> STOP command - M1:7.0s M2:5.0s
+>>> STOP command - M1:4.9s M2:2.9s
 [COMMANDS ACTIVE] cmd_open, safety_stop_opening_reversed | state=STOPPED
-[COMMANDS ACTIVE] safety_stop_opening_reversed | state=STOPPED
-[SAFETY CLEAR] STOP OPENING reversed flag cleared - edge inactive AND open commands released
-[COMMANDS ACTIVE] safety_stop_opening | state=STOPPED
-[COMMANDS ACTIVE] cmd_open | state=STOPPED
-
->>> [_execute_open CALLED] M1:7.0s M2:5.0s
-    Current state: STOPPED, safety_reversing: False
-    Flags: cmd_open=True, stop_opening_active=False
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=OPENING
-[SAFETY CRITICAL] STOP OPENING triggered during OPENING
-  photocell_closing_active=False
-  cmd_close_active=False
-STOP OPENING triggered during OPENING - 1.5s full reverse then STOP
-[COMMANDS ACTIVE] safety_stop_opening | state=REVERSING_FROM_OPEN
-[SAFETY BLOCK] Safety edge acting as STOP - blocking all commands
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-Safety reversal complete - STOPPING
-  Marked STOP OPENING as reversed (edge still active: False)
-
->>> STOP command - M1:7.0s M2:5.0s
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening_reversed | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, safety_stop_opening, safety_stop_opening_reversed | state=STOPPED
 [COMMANDS ACTIVE] safety_stop_opening_reversed | state=STOPPED
 [SAFETY CLEAR] STOP OPENING reversed flag cleared - edge inactive AND open commands released
 [COMMANDS ACTIVE] cmd_open | state=STOPPED
 
->>> [_execute_open CALLED] M1:7.0s M2:5.0s
-    Current state: STOPPED, safety_reversing: False
-    Flags: cmd_open=True, stop_opening_active=False
-[COMMANDS ACTIVE] safety_stop_opening | state=OPENING
-[SAFETY CRITICAL] STOP OPENING triggered during OPENING
-  photocell_closing_active=False
-  cmd_close_active=False
-STOP OPENING triggered during OPENING - 1.5s full reverse then STOP
-[SAFETY BLOCK] Safety edge acting as STOP - blocking all commands
-[COMMANDS ACTIVE] safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-Safety reversal complete - STOPPING
-  Marked STOP OPENING as reversed (edge still active: False)
-
->>> STOP command - M1:8.9s M2:8.7s
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening_reversed | state=STOPPED
-[COMMANDS ACTIVE] safety_stop_opening_reversed | state=STOPPED
-[SAFETY CLEAR] STOP OPENING reversed flag cleared - edge inactive AND open commands released
-[COMMANDS ACTIVE] safety_stop_opening | state=STOPPED
-[COMMANDS ACTIVE] cmd_open | state=STOPPED
-
->>> [_execute_open CALLED] M1:8.9s M2:8.7s
+>>> [_execute_open CALLED] M1:4.9s M2:2.9s
     Current state: STOPPED, safety_reversing: False
     Flags: cmd_open=True, stop_opening_active=False
 [COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=OPENING
@@ -322,19 +192,17 @@ STOP OPENING triggered during OPENING - 1.5s full reverse then STOP
 [COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
 [COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
 [COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open, safety_stop_opening | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
+[COMMANDS ACTIVE] safety_stop_opening | state=REVERSING_FROM_OPEN
 [COMMANDS ACTIVE] safety_stop_opening | state=REVERSING_FROM_OPEN
 [COMMANDS ACTIVE] safety_stop_opening | state=REVERSING_FROM_OPEN
 [COMMANDS ACTIVE] safety_stop_opening | state=REVERSING_FROM_OPEN
 [COMMANDS ACTIVE] safety_stop_opening | state=REVERSING_FROM_OPEN
 Safety reversal complete - STOPPING
-  Marked STOP OPENING as reversed (edge still active: True)
+  Marked STOP OPENING as reversed (edge still active: False)
 
->>> STOP command - M1:8.9s M2:8.7s
+>>> STOP command - M1:4.9s M2:2.9s
 [COMMANDS ACTIVE] safety_stop_opening_reversed | state=STOPPED
 [SAFETY CLEAR] STOP OPENING reversed flag cleared - edge inactive AND open commands released
-[COMMANDS ACTIVE] safety_stop_opening | state=STOPPED
 [COMMANDS ACTIVE] safety_stop_opening | state=STOPPED
 Exit button pressed - shutting down all processes
 Shutting down gate controller...
