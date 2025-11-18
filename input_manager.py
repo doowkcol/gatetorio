@@ -160,7 +160,45 @@ class InputManager:
                 'CMD_STOP': {'channel': 2, 'type': 'NC', 'function': None},
                 'PHOTOCELL_CLOSE': {'channel': 3, 'type': 'NO', 'function': None}
             }
-    
+
+    def _reload_input_config(self):
+        """Reload input configuration from file - hot reload for quick testing"""
+        print("Reloading input configuration...")
+
+        try:
+            # Load new config
+            new_config = self._load_input_config()
+
+            # Update input_config
+            self.input_config = new_config
+
+            # Reinitialize shared memory for any new inputs
+            self._init_shared_inputs()
+
+            # Reset safety deactivation timers for new inputs
+            self.safety_deactivation_times = {}
+            for input_name in self.input_config.keys():
+                self.safety_deactivation_times[input_name] = None
+
+            # Reset resistance history for new inputs
+            self.resistance_history = {}
+            for input_name in self.input_config.keys():
+                self.resistance_history[input_name] = deque(maxlen=10)
+
+            print("================================================================================")
+            print(f"INPUT CONFIG RELOADED ({len(self.input_config)} inputs):")
+            print("================================================================================")
+            for input_name, cfg in self.input_config.items():
+                enabled_str = "[ENABLED]" if cfg.get('enabled', True) else "[DISABLED]"
+                func_str = cfg.get('function', 'None')
+                type_str = cfg.get('type', 'NO')
+                ch_str = cfg.get('channel', '?')
+                print(f"  {input_name:20s} Ch={ch_str:2} Type={type_str:3s} Func={func_str:25s} {enabled_str}")
+            print("================================================================================")
+
+        except Exception as e:
+            print(f"Error reloading input config: {e}")
+
     def _init_shared_inputs(self):
         """Initialize shared memory for all configured inputs"""
         for input_name, input_cfg in self.input_config.items():
@@ -212,6 +250,15 @@ class InputManager:
 
             # Update heartbeat
             self.shared['input_manager_heartbeat'] = now
+
+            # Check for input config reload signal
+            if self.shared.get('input_config_reload_flag', False):
+                self._reload_input_config()
+                self.shared['input_config_reload_flag'] = False
+                # Reset debouncing state after reload
+                for input_name in self.input_config.keys():
+                    consecutive_active[input_name] = 0
+                    consecutive_inactive[input_name] = 0
 
             # Sample all inputs at configured rate (default 0.005s = 200Hz for fast safety-critical response)
             # Much faster than previous 0.1s = 10Hz to prevent race conditions with controller

@@ -232,12 +232,14 @@ class GateController:
             self.shared['config_open_speed'] = self.open_speed
             self.shared['config_close_speed'] = self.close_speed
             self.shared['config_reload_flag'] = True  # Signal motor manager to reload
+            self.shared['input_config_reload_flag'] = True  # Signal input manager to reload
 
             print(f"  Config reloaded successfully")
             print(f"  M1 run time: {self.motor1_run_time}s, M2 run time: {self.motor2_run_time}s")
             print(f"  M2 enabled: {self.motor2_enabled}")
             print(f"  Auto-close: {'ENABLED' if self.auto_close_enabled else 'DISABLED'} ({self.auto_close_time}s)")
             print(f"  PO1: {self.partial_1_percent}%, PO2: {self.partial_2_percent}%")
+            print(f"  Input config reload signal sent to input manager")
 
             return True
             
