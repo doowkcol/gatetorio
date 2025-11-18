@@ -1366,9 +1366,26 @@ class MotorManager:
                     self.shared['m1_target'] = self.shared['m1_position']
 
         # Update percentages based on positions (for UI/BLE display)
-        # Calculate atomically with position updates to ensure consistency
-        self.shared['m1_percent'] = (self.shared['m1_position'] / self.motor1_run_time * 100.0) if self.motor1_run_time > 0 else 0.0
-        self.shared['m2_percent'] = (self.shared['m2_position'] / self.motor2_run_time * 100.0) if self.motor2_run_time > 0 else 0.0
+        # Allow over-range (>100% or <0%) during movement for fault detection
+        # Clamp to exact 0/100% when position is at exact limits
+
+        # M1 percentage
+        if self.shared['m1_position'] >= self.motor1_run_time:
+            self.shared['m1_percent'] = 100.0  # At or past open limit
+        elif self.shared['m1_position'] <= 0.0:
+            self.shared['m1_percent'] = 0.0  # At or past close limit
+        else:
+            # Between limits - calculate percentage (can show over-range during over-travel)
+            self.shared['m1_percent'] = (self.shared['m1_position'] / self.motor1_run_time * 100.0) if self.motor1_run_time > 0 else 0.0
+
+        # M2 percentage
+        if self.shared['m2_position'] >= self.motor2_run_time:
+            self.shared['m2_percent'] = 100.0  # At or past open limit
+        elif self.shared['m2_position'] <= 0.0:
+            self.shared['m2_percent'] = 0.0  # At or past close limit
+        else:
+            # Between limits - calculate percentage (can show over-range during over-travel)
+            self.shared['m2_percent'] = (self.shared['m2_position'] / self.motor2_run_time * 100.0) if self.motor2_run_time > 0 else 0.0
 
     def _update_motor_speeds(self, now):
         """Set motor speeds based on position and ramping"""
