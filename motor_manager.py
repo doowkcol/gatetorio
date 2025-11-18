@@ -1388,6 +1388,18 @@ class MotorManager:
                         not self.shared.get('returning_from_full_open', False)):
                     self.shared['m1_move_start'] = now
                     self.shared['m1_target'] = self.shared['m1_position']
+            elif not self.shared['m1_move_start']:
+                # M1 hasn't started yet - check if we can skip the delay
+                # If M2 is already at close position (< 0.1s), it doesn't need to move
+                # So M1 can start immediately without waiting for M2 delay
+                m2_at_close = self.shared['m2_position'] < 0.1
+                if m2_at_close:
+                    # M2 already closed, M1 can start immediately
+                    self.shared['m1_move_start'] = now
+                    self.shared['m1_target'] = self.shared['m1_position']
+                    if not hasattr(self, '_m1_skip_delay_logged') or (now - self._m1_skip_delay_logged) > 1.0:
+                        print(f"[CLOSE DELAY] M1 starting immediately - M2 already at close position ({self.shared['m2_position']:.2f}s)")
+                        self._m1_skip_delay_logged = now
 
         # Update percentages based on positions (for UI/BLE display)
         # Calculate directly from position - allows display of >100% or <0% during over-travel
