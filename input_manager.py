@@ -335,6 +335,29 @@ class InputManager:
                 self._last_blocked_partial = now
             new_states['partial_1'] = False  # Block partial_1, keep partial_2
 
+        # Conflicting command resolution: both safety edges active = stop
+        if new_states.get('safety_stop_opening', False) and new_states.get('safety_stop_closing', False):
+            if not hasattr(self, '_last_blocked_both_safety') or (now - self._last_blocked_both_safety) > 0.5:
+                print(f"[INPUT BLOCKED] safety_stop_opening + safety_stop_closing conflict → activating cmd_stop")
+                self._last_blocked_both_safety = now
+            new_states['safety_stop_opening'] = False
+            new_states['safety_stop_closing'] = False
+            new_states['cmd_stop'] = True
+
+        # Conflicting command resolution: cmd_stop + anything (except safety limits) = stop
+        if new_states.get('cmd_stop', False):
+            # Block all movement commands when stop is active (safety limits can remain)
+            blocked_commands = []
+            for cmd in ['cmd_open', 'cmd_close', 'timed_open', 'partial_1', 'partial_2']:
+                if new_states.get(cmd, False):
+                    new_states[cmd] = False
+                    blocked_commands.append(cmd)
+
+            if blocked_commands:
+                if not hasattr(self, '_last_blocked_by_stop') or (now - self._last_blocked_by_stop) > 0.5:
+                    print(f"[INPUT BLOCKED] {', '.join(blocked_commands)} blocked by active cmd_stop")
+                    self._last_blocked_by_stop = now
+
         # PHASE 3: Update shared memory with conflict-resolved states
         for input_name, input_cfg in self.input_config.items():
             function = input_cfg.get('function')
