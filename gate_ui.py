@@ -500,13 +500,13 @@ class GateUI:
                           font=('Arial', 9), bg='black', fg='gray')
         ls_desc.pack(padx=20, pady=2)
 
-        self.m1_ls_var = tk.BooleanVar(value=False)
+        self.m1_ls_var = tk.BooleanVar(value=self.controller.motor1_use_limit_switches)
         m1_ls_check = tk.Checkbutton(scrollable_frame, text="Motor 1 use limit switches",
                                      variable=self.m1_ls_var, bg='black', fg='white',
                                      selectcolor='black', font=('Arial', 11))
         m1_ls_check.pack(anchor='w', padx=30, pady=3)
 
-        self.m2_ls_var = tk.BooleanVar(value=False)
+        self.m2_ls_var = tk.BooleanVar(value=self.controller.motor2_use_limit_switches)
         m2_ls_check = tk.Checkbutton(scrollable_frame, text="Motor 2 use limit switches",
                                      variable=self.m2_ls_var, bg='black', fg='white',
                                      selectcolor='black', font=('Arial', 11))
@@ -1483,12 +1483,12 @@ class GateUI:
         tk.Label(ls_config_frame, text="Limit Switch Configuration", font=('Arial', 12, 'bold'),
                  bg='#222222', fg='cyan').pack(pady=5)
 
-        self.m1_ls_var = tk.BooleanVar(value=False)
+        self.m1_ls_var = tk.BooleanVar(value=self.controller.motor1_use_limit_switches)
         tk.Checkbutton(ls_config_frame, text="Motor 1 use limit switches",
                        variable=self.m1_ls_var, bg='#222222', fg='white',
                        selectcolor='#222222').pack(anchor='w', padx=20)
 
-        self.m2_ls_var = tk.BooleanVar(value=False)
+        self.m2_ls_var = tk.BooleanVar(value=self.controller.motor2_use_limit_switches)
         tk.Checkbutton(ls_config_frame, text="Motor 2 use limit switches",
                        variable=self.m2_ls_var, bg='#222222', fg='white',
                        selectcolor='#222222').pack(anchor='w', padx=20, pady=5)
