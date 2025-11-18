@@ -370,6 +370,7 @@ class GateController:
         """Detect initial gate position based on limit switch states at startup
         Tracks each motor independently - UNKNOWN means motors between limits"""
         if not self.limit_switches_enabled:
+            print("[STARTUP] Limit switches disabled - skipping position detection")
             return  # No limit switches, stick with default CLOSED state
 
         # Check limit switch states
@@ -377,6 +378,10 @@ class GateController:
         m2_open = self.shared.get('open_limit_m2_active', False)
         m1_close = self.shared.get('close_limit_m1_active', False)
         m2_close = self.shared.get('close_limit_m2_active', False)
+
+        print(f"[STARTUP] Reading limit switch states:")
+        print(f"  M1: open={m1_open}, close={m1_close}")
+        print(f"  M2: open={m2_open}, close={m2_close}")
 
         # Check each motor's position independently
         m1_known = m1_open or m1_close
