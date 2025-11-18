@@ -235,40 +235,60 @@ class InputManager:
         Requires multiple consecutive samples in the new state before changing.
         Safety inputs use more aggressive debouncing than command inputs.
 
-        TWO-PASS PROCESSING:
-        Pass 1: Process safety edges FIRST (safety_stop_opening, safety_stop_closing, photocells)
-        Pass 2: Process command inputs SECOND (cmd_open, cmd_close, etc.)
-        This ensures safety edge flags are updated BEFORE command blocking checks run.
+        THREE-PHASE PROCESSING:
+        Phase 1: Sample ALL inputs and determine their debounced states (collect in dict)
+        Phase 2: Apply conflict blocking (safety edges block conflicting commands)
+        Phase 3: Update shared memory flags with conflict-resolved states
+        This prevents flickering inputs from creating conflicting command states.
         """
         now = time.time()
 
-        # PASS 1: Process safety edges first to update their flags before blocking checks
-        safety_functions = ['safety_stop_opening', 'safety_stop_closing',
-                           'photocell_closing', 'photocell_opening']
+        # PHASE 1: Sample all inputs and collect their NEW states (don't set flags yet)
+        new_states = {}  # function -> is_active
 
         for input_name, input_cfg in self.input_config.items():
+            is_active = self._determine_input_state(input_name, input_cfg, consecutive_active,
+                                                    consecutive_inactive, now)
             function = input_cfg.get('function')
-            if function not in safety_functions:
-                continue  # Skip non-safety inputs in pass 1
+            if function:
+                new_states[function] = is_active
 
-            self._process_single_input(input_name, input_cfg, consecutive_active,
-                                      consecutive_inactive, now)
+        # PHASE 2: Apply conflict blocking BEFORE setting any flags
+        # If safety edges are active, block conflicting commands
+        if new_states.get('safety_stop_opening', False):
+            # Block all opening commands
+            for cmd in ['cmd_open', 'timed_open', 'partial_1', 'partial_2']:
+                if new_states.get(cmd, False):
+                    if not hasattr(self, '_last_blocked_open') or (now - self._last_blocked_open) > 0.5:
+                        print(f"[INPUT BLOCKED] {cmd:20s} blocked by active safety_stop_opening")
+                        self._last_blocked_open = now
+                    new_states[cmd] = False  # Block it
 
-        # PASS 2: Process all other inputs (commands, limits, deadman, etc.)
+        if new_states.get('safety_stop_closing', False):
+            # Block all closing commands
+            if new_states.get('cmd_close', False):
+                if not hasattr(self, '_last_blocked_close') or (now - self._last_blocked_close) > 0.5:
+                    print(f"[INPUT BLOCKED] cmd_close blocked by active safety_stop_closing")
+                    self._last_blocked_close = now
+                new_states['cmd_close'] = False  # Block it
+
+        # PHASE 3: Update shared memory with conflict-resolved states
         for input_name, input_cfg in self.input_config.items():
             function = input_cfg.get('function')
-            if function in safety_functions:
-                continue  # Skip safety inputs in pass 2 (already processed)
+            if function and function in new_states:
+                is_active = new_states[function]
+                self._trigger_command(function, is_active)
 
-            self._process_single_input(input_name, input_cfg, consecutive_active,
-                                      consecutive_inactive, now)
+    def _determine_input_state(self, input_name, input_cfg, consecutive_active,
+                                consecutive_inactive, now):
+        """Determine the debounced state of a single input WITHOUT setting shared memory
 
-    def _process_single_input(self, input_name, input_cfg, consecutive_active,
-                             consecutive_inactive, now):
-        """Process a single input - extracted from _sample_all_inputs for two-pass processing"""
+        Returns:
+            bool: True if input is active (after debouncing), False otherwise
+        """
         # Skip disabled inputs
         if not input_cfg.get('enabled', True):
-            return
+            return False
 
         channel = input_cfg['channel']
         input_type = input_cfg.get('type', 'NO')  # NO or NC or 8K2
@@ -391,9 +411,18 @@ class InputManager:
                     else:
                         is_active = True  # Still debouncing, stay active (latch-on)
 
-        # Update shared memory
+        # Update voltage/resistance in shared memory (diagnostics only, not used for decisions)
         self.shared[f'{input_name}_voltage'] = voltage
         self.shared[f'{input_name}_resistance'] = resistance
+
+        # Store resistance in history for trending
+        if resistance is not None:
+            self.resistance_history[input_name].append({
+                'timestamp': now,
+                'resistance': resistance
+            })
+
+        # Update shared memory state (will be overwritten by conflict-resolved value later)
         self.shared[f'{input_name}_state'] = is_active
 
         # Track state changes for logging/timestamps
@@ -403,12 +432,6 @@ class InputManager:
             if function:
                 print(f"[INPUT DEBOUNCED] {input_name:20s} func={function:20s} → {'ACTIVE' if is_active else 'inactive'}")
 
-        # ALWAYS trigger command function with current state (every cycle)
-        # This ensures sustained commands stay active even if something clears the flag
-        function = input_cfg.get('function')
-        if function:
-            self._trigger_command(function, is_active)
-
         # Update active duration
         if is_active:
             last_change = self.shared[f'{input_name}_last_change']
@@ -416,12 +439,8 @@ class InputManager:
         else:
             self.shared[f'{input_name}_active_duration'] = 0.0
 
-        # Store resistance in history for trending
-        if resistance is not None:
-            self.resistance_history[input_name].append({
-                'timestamp': now,
-                'resistance': resistance
-            })
+        # Return the debounced state (before conflict resolution)
+        return is_active
     
     def _calculate_resistance(self, voltage, pullup_ohms=10000, vcc=3.3):
         """Calculate resistance from voltage divider
@@ -514,9 +533,7 @@ class InputManager:
         """Trigger gate controller command function
 
         Maps input function names to shared memory command flags
-
-        CONFLICT BLOCKING: If a safety edge is active, block conflicting command inputs
-        from being set. This prevents cycling when both buttons are pressed simultaneously.
+        NOTE: Conflict blocking is now handled in _sample_all_inputs() Phase 2
         """
         # Map function names to shared dict flags
         command_map = {
@@ -540,32 +557,7 @@ class InputManager:
             'close_limit_m2': 'close_limit_m2_active'
         }
 
-        # CONFLICT BLOCKING: Safety edges block conflicting commands
-        # If safety_stop_opening is active, block all opening commands
-        # If safety_stop_closing is active, block all closing commands
-        original_active = active
-        blocked = False
-
-        if active:  # Only check blocking when trying to activate
-            if function in ['cmd_open', 'timed_open', 'partial_1', 'partial_2']:
-                # Opening commands blocked by safety_stop_opening
-                if self.shared.get('safety_stop_opening_active', False):
-                    active = False
-                    blocked = True
-                    if not hasattr(self, '_last_blocked_open') or (time.time() - self._last_blocked_open) > 0.5:
-                        print(f"[INPUT BLOCKED] {function:20s} blocked by active safety_stop_opening")
-                        self._last_blocked_open = time.time()
-
-            elif function in ['cmd_close']:
-                # Closing commands blocked by safety_stop_closing
-                if self.shared.get('safety_stop_closing_active', False):
-                    active = False
-                    blocked = True
-                    if not hasattr(self, '_last_blocked_close') or (time.time() - self._last_blocked_close) > 0.5:
-                        print(f"[INPUT BLOCKED] {function:20s} blocked by active safety_stop_closing")
-                        self._last_blocked_close = time.time()
-
-        # Update shared memory flag
+        # Update shared memory flag (already conflict-resolved in Phase 2)
         flag_name = command_map.get(function)
         if flag_name:
             # Track previous state to detect transitions
