@@ -1,10 +1,11 @@
 ==========================================
 Gatetorio Gate Controller UI
 ==========================================
-Starting at: Tue 18 Nov 22:54:33 GMT 2025
+Starting at: Tue 18 Nov 23:12:21 GMT 2025
 
 Motor Manager initialized
 Motor Manager process started
+[FAULT] M2 LIMIT_STUCK: CLOSING - clos limit still active at 7.98s (50% = 3.99s) (consecutive MOVEMENTS: 1)
 Motor Manager process stopped
 Input Manager: ADC1 initialized at address 0x48 (ADDR->GND)
 Input Manager: ADC2 initialized at address 0x49 (ADDR->VDD)
@@ -37,11 +38,12 @@ Input Manager: Shutting down
 Gate Controller V2 (Step 3 - Three Processes) initialized
   M1 travel time: 8.95s, M2 travel time: 7.98s
   M2 enabled: True
-  Motor Manager PID: 2581
-  Input Manager PID: 2582
+  Motor Manager PID: 3181
+  Input Manager PID: 3182
   Auto-close: ENABLED (5.0s)
 [STARTUP] Waiting for input manager to read limit switches...
-[STARTUP] Limit switches initialized after 0.3s
+[STARTUP] Limit switches initialized after 0.2s
+[STARTUP] Limit switches disabled - skipping position detection
 Window created
 Status label created
 Open button created
@@ -66,6 +68,156 @@ Creating display for IN8...
 Total input displays created: 8
 Window created
 Starting mainloop
+OPEN button activated!
+[COMMANDS ACTIVE] cmd_open | state=CLOSED
+
+>>> [_execute_open CALLED] M1:0.0s M2:0.0s
+    Current state: CLOSED, safety_reversing: False
+    Flags: cmd_open=True, stop_opening_active=False
+[COMMANDS ACTIVE] cmd_open | state=OPENING
+[COMMANDS ACTIVE] cmd_open | state=OPENING
+OPEN button deactivated
+STOP button activated!
+[COMMANDS ACTIVE] cmd_stop | state=OPENING
+
+>>> STOP command - M1:0.0s M2:0.0s
+STOP button deactivated
+CLOSE button activated!
+[COMMANDS ACTIVE] cmd_close | state=STOPPED
+
+>>> CLOSE command - M1:0.0s M2:0.0s
+[COMPLETION] Position reached - M1=0.00, M2=0.00
+[_complete_close] BEFORE: state=CLOSING, M1=0.00, M2=0.00
+[_complete_close] AFTER: state=CLOSED, movement_command=None
+Gates CLOSED
+[COMMANDS ACTIVE] cmd_close | state=CLOSED
+[COMMANDS ACTIVE] cmd_close | state=CLOSED
+[COMMANDS ACTIVE] cmd_close | state=CLOSED
+CLOSE button deactivated
+STOP CLOSING edge activated!
+[COMMANDS ACTIVE] safety_stop_closing | state=CLOSED
+STOP OPENING edge activated!
+[COMMANDS ACTIVE] safety_stop_opening, safety_stop_closing | state=CLOSED
+STOP OPENING edge deactivated
+[COMMANDS ACTIVE] safety_stop_closing | state=CLOSED
+STOP CLOSING edge deactivated
+OPEN button activated!
+[COMMANDS ACTIVE] cmd_open | state=CLOSED
+
+>>> [_execute_open CALLED] M1:0.0s M2:0.0s
+    Current state: CLOSED, safety_reversing: False
+    Flags: cmd_open=True, stop_opening_active=False
+[COMMANDS ACTIVE] cmd_open | state=OPENING
+[COMMANDS ACTIVE] cmd_open | state=OPENING
+OPEN button deactivated
+OPEN button activated!
+[COMMANDS ACTIVE] cmd_open | state=OPENING
+[COMMANDS ACTIVE] cmd_open | state=OPENING
+[COMMANDS ACTIVE] cmd_open | state=OPENING
+[COMMANDS ACTIVE] cmd_open | state=OPENING
+STOP button activated!
+[COMMANDS ACTIVE] cmd_stop | state=OPENING
+
+>>> STOP command - M1:0.0s M2:0.0s
+[COMMANDS ACTIVE] cmd_open, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_stop | state=STOPPED
+CLOSE button activated!
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_open, cmd_close, cmd_stop | state=STOPPED
+[COMMANDS ACTIVE] cmd_stop | state=STOPPED
 Exit button pressed - shutting down all processes
 Shutting down gate controller...
 Gate controller shutdown complete
