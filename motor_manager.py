@@ -1554,6 +1554,7 @@ class MotorManager:
                     else:
                         # Successfully hit limit
                         self.motor1.stop()
+                        self.shared['m1_speed'] = 0.0
                 else:
                     # Normal position-based stopping
                     # Use small tolerance to avoid floating point precision issues
@@ -1562,6 +1563,7 @@ class MotorManager:
                         self.motor1.forward(speed)
                     else:
                         self.motor1.stop()
+                        self.shared['m1_speed'] = 0.0
                         # Snap to exact target when stopped
                         # DISABLED - too much spam
                         # if abs(self.shared['m1_position'] - target_position) > 0.01:
@@ -1619,6 +1621,7 @@ class MotorManager:
                         # Successfully hit limit
                         self._clear_fault(1)
                         self.motor1.stop()
+                        self.shared['m1_speed'] = 0.0
                 else:
                     # Normal position-based stopping
                     # Use small tolerance to avoid floating point precision issues
@@ -1630,6 +1633,7 @@ class MotorManager:
                         #     print(f"[M1 MOTOR] Running: Pos {self.shared['m1_position']:.2f} > Target {target_position:.2f} (+{position_tolerance})")
                     else:
                         self.motor1.stop()
+                        self.shared['m1_speed'] = 0.0
                         # DISABLED - too much spam
                         # if self.shared['movement_command'] == 'CLOSE':
                         #     print(f"[M1 MOTOR] STOPPED: Pos {self.shared['m1_position']:.2f} <= Target {target_position:.2f} (+{position_tolerance})")
@@ -1715,6 +1719,7 @@ class MotorManager:
                     else:
                         # Successfully hit limit
                         self.motor2.stop()
+                        self.shared['m2_speed'] = 0.0
                 else:
                     # Normal position-based stopping (use M2's actual run time)
                     # Use small tolerance to avoid floating point precision issues
@@ -1723,6 +1728,7 @@ class MotorManager:
                         self.motor2.forward(speed)
                     else:
                         self.motor2.stop()
+                        self.shared['m2_speed'] = 0.0
                         # Snap to exact target when stopped
                         # DISABLED - too much spam
                         # if abs(self.shared['m2_position'] - self.motor2_run_time) > 0.01:
@@ -1762,6 +1768,7 @@ class MotorManager:
                         # Successfully hit limit
                         self._clear_fault(2)
                         self.motor2.stop()
+                        self.shared['m2_speed'] = 0.0
                 else:
                     # Normal position-based stopping
                     # Use small tolerance to avoid floating point precision issues
@@ -1770,6 +1777,7 @@ class MotorManager:
                         self.motor2.backward(speed)
                     else:
                         self.motor2.stop()
+                        self.shared['m2_speed'] = 0.0
                         # Snap to exact target when stopped
                         self.shared['m2_position'] = 0
         elif self.motor2_enabled:
