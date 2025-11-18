@@ -406,7 +406,9 @@ class MotorManager:
                 self.shared['auto_learn_status_msg'] = 'Opening M1 at 0.25 speed...'
                 self.shared['auto_learn_m1_start'] = now
                 self.shared['m1_position'] = 0.0
+                self.shared['m1_percent'] = 0.0
                 self.shared['m2_position'] = 0.0
+                self.shared['m2_percent'] = 0.0
 
         # State: INITIAL_CLOSE_M2 - Close M2 to get to starting position
         elif state == 'INITIAL_CLOSE_M2':
@@ -427,7 +429,9 @@ class MotorManager:
                 self.motor1.stop()
                 # Reset positions and start the normal sequence
                 self.shared['m1_position'] = 0.0
+                self.shared['m1_percent'] = 0.0
                 self.shared['m2_position'] = 0.0
+                self.shared['m2_percent'] = 0.0
                 self.shared['auto_learn_state'] = 'PAUSE_BEFORE_START'
                 self.shared['auto_learn_phase_start'] = now
 
@@ -983,7 +987,9 @@ class MotorManager:
             self.shared['auto_learn_state'] = 'IDLE'
             self.shared['auto_learn_status_msg'] = 'Complete! Save times and exit engineer mode.'
             self.shared['m1_position'] = 0.0
+            self.shared['m1_percent'] = 0.0
             self.shared['m2_position'] = 0.0
+            self.shared['m2_percent'] = 0.0
 
             # Remove temporary count/average variables to trigger re-initialization on next run
             if 'auto_learn_m1_open_count' in self.shared:
@@ -1030,6 +1036,7 @@ class MotorManager:
                     print(f"[LIMIT SWITCH] M1 OPEN limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to {self.motor1_run_time:.2f}s (100%)")
 
                 self.shared['m1_position'] = self.motor1_run_time
+                self.shared['m1_percent'] = 100.0  # At open limit = 100%
                 self.shared['m1_speed'] = 0.0
 
                 # Mark M1 position as known - synced to limit
@@ -1058,6 +1065,7 @@ class MotorManager:
                     print(f"[LIMIT SWITCH] M1 CLOSE limit reached - position was {self.shared['m1_position']:.2f}s ({position_percent:.1f}%), setting to 0.0s (0%)")
 
                 self.shared['m1_position'] = 0.0
+                self.shared['m1_percent'] = 0.0  # At close limit = 0%
                 self.shared['m1_speed'] = 0.0
 
                 # Mark M1 position as known - synced to limit
@@ -1093,6 +1101,7 @@ class MotorManager:
                 # Always stop and sync position (but only log once)
                 self.motor2.stop()
                 self.shared['m2_position'] = self.motor2_run_time
+                self.shared['m2_percent'] = 100.0  # At open limit = 100%
                 self.shared['m2_speed'] = 0.0
         else:
             # Reset flag when limit is not active
@@ -1127,6 +1136,7 @@ class MotorManager:
                 # Always stop and sync position (but only log once)
                 self.motor2.stop()
                 self.shared['m2_position'] = 0.0
+                self.shared['m2_percent'] = 0.0  # At close limit = 0%
                 self.shared['m2_speed'] = 0.0
         else:
             # Reset flag when limit is not active
@@ -1354,7 +1364,12 @@ class MotorManager:
                         not self.shared.get('returning_from_full_open', False)):
                     self.shared['m1_move_start'] = now
                     self.shared['m1_target'] = self.shared['m1_position']
-    
+
+        # Update percentages based on positions (for UI/BLE display)
+        # Calculate atomically with position updates to ensure consistency
+        self.shared['m1_percent'] = (self.shared['m1_position'] / self.motor1_run_time * 100.0) if self.motor1_run_time > 0 else 0.0
+        self.shared['m2_percent'] = (self.shared['m2_position'] / self.motor2_run_time * 100.0) if self.motor2_run_time > 0 else 0.0
+
     def _update_motor_speeds(self, now):
         """Set motor speeds based on position and ramping"""
         # Handle safety reversal - full speed reverse

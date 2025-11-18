@@ -254,6 +254,8 @@ class GateController:
         self.shared['m2_position_known'] = True  # False when M2 needs to find a limit (synced when hits any limit)
         self.shared['m1_position'] = 0.0
         self.shared['m2_position'] = 0.0
+        self.shared['m1_percent'] = 0.0  # Position as percentage (0-100%), calculated by motor manager
+        self.shared['m2_percent'] = 0.0  # Position as percentage (0-100%), calculated by motor manager
         self.shared['m1_speed'] = 0.0
         self.shared['m2_speed'] = 0.0
         self.shared['cmd_open_active'] = False
@@ -366,19 +368,25 @@ class GateController:
             # Both motors at open limits - fully open
             self.shared['state'] = 'OPEN'
             self.shared['m1_position'] = self.motor1_run_time
+            self.shared['m1_percent'] = 100.0
             self.shared['m2_position'] = self.motor2_run_time
+            self.shared['m2_percent'] = 100.0
             print("[STARTUP] Detected gate at OPEN position (both motors at open limits)")
         elif m1_close and m2_close:
             # Both motors at close limits - fully closed
             self.shared['state'] = 'CLOSED'
             self.shared['m1_position'] = 0.0
+            self.shared['m1_percent'] = 0.0
             self.shared['m2_position'] = 0.0
+            self.shared['m2_percent'] = 0.0
             print("[STARTUP] Detected gate at CLOSED position (both motors at close limits)")
         else:
             # Ambiguous position - motors somewhere between limits
             self.shared['state'] = 'UNKNOWN'
             self.shared['m1_position'] = 0.0  # Estimate, will sync on first limit
+            self.shared['m1_percent'] = 0.0
             self.shared['m2_position'] = 0.0  # Estimate, will sync on first limit
+            self.shared['m2_percent'] = 0.0
             print(f"[STARTUP] Position UNKNOWN - motors between limits")
             print(f"  M1: open={m1_open}, close={m1_close} → {'SYNCED' if m1_known else 'NEEDS SYNC'}")
             print(f"  M2: open={m2_open}, close={m2_close} → {'SYNCED' if m2_known else 'NEEDS SYNC'}")
@@ -2381,9 +2389,9 @@ class GateController:
 
     def get_status(self):
         """Get current status"""
-        # Calculate percentage for each motor based on its own run time
-        m1_percent = (self.shared['m1_position'] / self.motor1_run_time) * 100 if self.motor1_run_time > 0 else 0
-        m2_percent = (self.shared['m2_position'] / self.motor2_run_time) * 100 if self.motor2_run_time > 0 else 0
+        # Read percentages from shared memory (calculated by motor manager)
+        m1_percent = self.shared.get('m1_percent', 0.0)
+        m2_percent = self.shared.get('m2_percent', 0.0)
         avg_percent = (m1_percent + m2_percent) / 2
         avg_pos = (self.shared['m1_position'] + self.shared['m2_position']) / 2
 
