@@ -39,7 +39,7 @@
       "channel": 5,
       "enabled": true,
       "type": "8K2",
-      "function": "cmd_open",
+      "function": "partial_1",
       "description": "ADC2 Channel 1 - Unassigned",
       "tolerance_percent": 5.0,
       "learned_resistance": 5140.219074382063

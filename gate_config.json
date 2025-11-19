@@ -14,7 +14,7 @@
   "learning_mode_enabled": false,
   "motor1_use_limit_switches": true,
   "motor2_use_limit_switches": true,
-  "limit_switches_enabled": false,
+  "limit_switches_enabled": true,
   "opening_slowdown_percent": 6.699999999999999,
   "closing_slowdown_percent": 20.0,
   "learning_speed": 0.3,
