@@ -1,117 +1,27 @@
 ==========================================
 Gatetorio Gate Controller UI
 ==========================================
-Starting at: Wed 19 Nov 06:50:37 GMT 2025
+Starting at: Wed 19 Nov 07:26:48 GMT 2025
 
 Loading configuration from: /home/doowkcol/Gatetorio_Code/gate_config.json
-Motor Manager initialized
-Motor Manager process started
-[FAULT] M1 LIMIT_MISSING: OPENING - open limit not activated at 8.95s (consecutive MOVEMENTS: 1)
-[FAULT] M2 LIMIT_MISSING: OPENING - open limit not activated at 7.98s (consecutive MOVEMENTS: 1)
-[LIMIT SWITCH] M1 OPEN limit reached - position was 9.39s (105.0%), setting to 8.95s (100%)
-[FAULT] M1 fault counter cleared (was 1)
-[FAULT] M2 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 2)
-[LIMIT SWITCH] M2 CLOSE limit reached - position was -0.42s (-5.3%), setting to 0.0s (0%)
-[FAULT] M2 fault counter cleared (was 2)
-[FAULT] M1 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 1)
-[FAULT] M1 LIMIT_MISSING: OPENING - open limit not activated at 8.95s (consecutive MOVEMENTS: 2)
-[FAULT] M2 LIMIT_MISSING: OPENING - open limit not activated at 7.98s (consecutive MOVEMENTS: 1)
-[LIMIT SWITCH] M1 OPEN limit reached - position was 9.36s (104.6%), setting to 8.95s (100%)
-[FAULT] M1 fault counter cleared (was 2)
-[LIMIT SWITCH] M2 OPEN limit reached - position was 8.48s (106.3%), setting to 7.98s (100%)
-[FAULT] M2 fault counter cleared (was 1)
-[FAULT] M2 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 1)
-[LIMIT SWITCH] M2 CLOSE limit reached - position was -0.42s (-5.3%), setting to 0.0s (0%)
-[FAULT] M2 fault counter cleared (was 1)
-[FAULT] M1 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 1)
-[LIMIT SWITCH] M1 CLOSE limit reached - position was -0.10s (-1.2%), setting to 0.0s (0%)
-[LIMIT RECOVERY] M2 close limit - correcting position from 0.17s to 0.0s
-[SAFETY REVERSE ABORT] Hit CLOSE limit during reversal - stopping immediately
-Motor Manager process stopped
-Input Manager: ADC1 initialized at address 0x48 (ADDR->GND)
-Input Manager: ADC2 initialized at address 0x49 (ADDR->VDD)
-Input Manager: 2 ADC(s) initialized successfully (8 channels available)
-Input Manager initialized:
-  Inputs configured: 8
-  Sample rate: 0.01s (100.0Hz)
-  ADC available: True
-  Channels available: 8
-Input Manager: Starting main loop
-
-================================================================================
-CONFIGURED INPUTS (8 total):
-================================================================================
-  IN1                  Ch= 0 Type=NC  Func=close_limit_m1       [ENABLED]
-  IN2                  Ch= 1 Type=NO  Func=open_limit_m1        [ENABLED]
-  IN3                  Ch= 2 Type=NO  Func=open_limit_m2        [ENABLED]
-  IN4                  Ch= 3 Type=NC  Func=close_limit_m2       [ENABLED]
-  IN5                  Ch= 4 Type=NO  Func=cmd_close            [ENABLED]
-  IN6                  Ch= 5 Type=8K2 Func=partial_1            [ENABLED]
-  IN7                  Ch= 6 Type=NO  Func=None                 [ENABLED]
-  IN8                  Ch= 7 Type=NO  Func=None                 [ENABLED]
-================================================================================
-
-[INPUT RAW] IN1                  func=close_limit_m1       raw=ACTIVE was=inactive V=0.00
-[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
-[INPUT RAW] IN4                  func=close_limit_m2       raw=ACTIVE was=inactive V=0.00
-[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → ACTIVE
-[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
-[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
-[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → inactive
-[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
-[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
-[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → inactive
-[INPUT RAW] IN2                  func=open_limit_m1        raw=ACTIVE was=inactive V=3.31
-[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → ACTIVE
-[INPUT RAW] IN3                  func=open_limit_m2        raw=ACTIVE was=inactive V=3.31
-[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → ACTIVE
-[INPUT RAW] IN3                  func=open_limit_m2        raw=inactive was=ACTIVE V=0.00
-[INPUT RAW] IN3                  func=open_limit_m2        raw=inactive was=ACTIVE V=0.00
-[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → inactive
-[INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
-[INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
-[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → inactive
-[INPUT RAW] IN4                  func=close_limit_m2       raw=ACTIVE was=inactive V=0.00
-[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → ACTIVE
-[INPUT RAW] IN1                  func=close_limit_m1       raw=ACTIVE was=inactive V=0.00
-[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
-[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
-[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
-[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → inactive
-[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
-[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
-[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → inactive
-[INPUT RAW] IN2                  func=open_limit_m1        raw=ACTIVE was=inactive V=3.31
-[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → ACTIVE
-[INPUT RAW] IN3                  func=open_limit_m2        raw=ACTIVE was=inactive V=3.31
-[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → ACTIVE
-[INPUT RAW] IN3                  func=open_limit_m2        raw=inactive was=ACTIVE V=0.00
-[INPUT RAW] IN3                  func=open_limit_m2        raw=inactive was=ACTIVE V=0.00
-[INPUT DEBOUNCED] IN3                  func=open_limit_m2        → inactive
-[INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
-[INPUT RAW] IN2                  func=open_limit_m1        raw=inactive was=ACTIVE V=0.00
-[INPUT DEBOUNCED] IN2                  func=open_limit_m1        → inactive
-[INPUT RAW] IN4                  func=close_limit_m2       raw=ACTIVE was=inactive V=0.00
-[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → ACTIVE
-[INPUT RAW] IN1                  func=close_limit_m1       raw=ACTIVE was=inactive V=0.00
-[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
-[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
-[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
-[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → inactive
-Input Manager: Shutting down
 Gate Controller V2 (Step 3 - Three Processes) initialized
   M1 travel time: 8.95s, M2 travel time: 7.98s
   M2 enabled: True
-  Motor Manager PID: 1594
-  Input Manager PID: 1595
+  Motor Manager PID: 2389
+  Input Manager PID: 2390
   Auto-close: ENABLED (5.0s)
 [STARTUP] Waiting for input manager to read limit switches...
-[STARTUP] Limit switches initialized after 0.3s
+[STARTUP] Timeout waiting for limit switches - proceeding with detection anyway
 [STARTUP] Reading limit switch states:
-  M1: open=False, close=True
-  M2: open=False, close=True
-[STARTUP] Detected gate at CLOSED position (both motors at close limits)
+  M1: open=False, close=False
+  M2: open=False, close=False
+[STARTUP] Position UNKNOWN - motors between limits
+  M1: open=False, close=False → NEEDS SYNC
+  M2: open=False, close=False → NEEDS SYNC
+  Commands will operate at 30% speed until both motors synced to limits
+  Normal operation: OPEN/CLOSE work normally, just slower for safety
 Window created
+Starting auto-close timer from UNKNOWN state
 Status label created
 Open button created
 All UI elements created
@@ -135,6 +45,14 @@ Creating display for IN8...
 Total input displays created: 8
 Window created
 Starting mainloop
+Auto-close triggered (from full OPEN) - sending momentary CLOSE pulse
+Auto-close pulse from UNKNOWN - closing to locate limits
+
+>>> CLOSE command - M1:0.0s M2:0.0s
+[COMPLETION] CLOSE complete! M1: limit=True, M2: limit=True
+[_complete_close] BEFORE: state=CLOSING, M1=-5.20, M2=0.00
+[_complete_close] AFTER: state=CLOSED, movement_command=None
+Gates CLOSED
 OPEN button activated!
 [COMMANDS ACTIVE] cmd_open | state=CLOSED
 
@@ -142,145 +60,4 @@ OPEN button activated!
     Current state: CLOSED, safety_reversing: False
     Flags: cmd_open=True, stop_opening_active=False
 OPEN button deactivated
-[COMPLETION] OPEN complete! M1: limit=True, M2: limit=True
-[_complete_open] BEFORE: state=OPENING, M1=8.95, M2=8.55
-[_complete_open] AFTER: state=OPEN, movement_command=None
-Gates OPEN
-Auto-close triggered (from full OPEN) - sending momentary CLOSE pulse
-Auto-close pulse - no PO sustained, closing fully
-
->>> CLOSE command - M1:8.9s M2:8.0s
-[COMPLETION] CLOSE complete! M1: limit=True, M2: limit=True
-[_complete_close] BEFORE: state=CLOSING, M1=-0.11, M2=0.00
-[_complete_close] AFTER: state=CLOSED, movement_command=None
-Gates CLOSED
-OPEN button activated!
-
->>> [_execute_open CALLED] M1:0.0s M2:0.0s
-    Current state: CLOSED, safety_reversing: False
-    Flags: cmd_open=True, stop_opening_active=False
-[COMMANDS ACTIVE] cmd_open | state=OPENING
-OPENING photocell activated (blocked)!
-OPENING PHOTOCELL triggered - PAUSING OPENING
-OPENING photocell deactivated (clear)
-OPENING PHOTOCELL released - RESUMING OPENING
-OPEN button deactivated
-[COMPLETION] OPEN complete! M1: limit=True, M2: limit=True
-[_complete_open] BEFORE: state=OPENING, M1=8.95, M2=7.98
-[_complete_open] AFTER: state=OPEN, movement_command=None
-Gates OPEN
-Auto-close triggered (from full OPEN) - sending momentary CLOSE pulse
-Auto-close pulse - no PO sustained, closing fully
-
->>> CLOSE command - M1:8.9s M2:8.0s
-[COMPLETION] CLOSE complete! M1: limit=True, M2: limit=True
-[_complete_close] BEFORE: state=CLOSING, M1=0.00, M2=0.00
-[_complete_close] AFTER: state=CLOSED, movement_command=None
-Gates CLOSED
-STOP OPENING edge activated!
-[COMMANDS ACTIVE] safety_stop_opening | state=CLOSED
-STOP OPENING edge deactivated
-STOP CLOSING edge activated!
-[COMMANDS ACTIVE] safety_stop_closing | state=CLOSED
-OPEN button activated!
-[COMMANDS ACTIVE] cmd_open, safety_stop_closing | state=CLOSED
-
->>> [_execute_open CALLED] M1:0.0s M2:0.0s
-    Current state: CLOSED, safety_reversing: False
-    Flags: cmd_open=True, stop_opening_active=False
-OPEN button deactivated
-[COMMANDS ACTIVE] safety_stop_closing | state=OPENING
-STOP OPENING edge activated!
-[COMMANDS ACTIVE] safety_stop_opening, safety_stop_closing | state=OPENING
-[SAFETY CRITICAL] STOP OPENING triggered during OPENING
-  photocell_closing_active=False
-  cmd_close_active=False
-STOP OPENING triggered during OPENING - 1.5s full reverse then STOP
-STOP OPENING edge deactivated
-[COMMANDS ACTIVE] safety_stop_closing | state=REVERSING_FROM_OPEN
-STOP CLOSING edge deactivated
-OPEN button activated!
-[COMMANDS ACTIVE] cmd_open | state=REVERSING_FROM_OPEN
-OPEN button deactivated
-CLOSE button activated!
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-[COMMANDS ACTIVE] cmd_close | state=REVERSING_FROM_OPEN
-Exit button pressed - shutting down all processes
-Shutting down gate controller...
-Gate controller shutdown complete
-Exiting Python process
+Exception in thread Thread-2 (_control_loop):
