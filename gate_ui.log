@@ -1,14 +1,115 @@
 ==========================================
 Gatetorio Gate Controller UI
 ==========================================
-Starting at: Wed 19 Nov 07:26:48 GMT 2025
+Starting at: Wed 19 Nov 18:06:31 GMT 2025
 
 Loading configuration from: /home/doowkcol/Gatetorio_Code/gate_config.json
+Motor Manager initialized
+Motor Manager process started
+[FAULT] M2 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 1)
+[CLOSE DELAY] M1 starting immediately - M2 already at close position (-0.00s)
+[FAULT] M1 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 1)
+[LIMIT SWITCH] M2 CLOSE limit reached - position was -1.07s (-13.5%), setting to 0.0s (0%)
+[LIMIT HUNT] M2 synced to CLOSE limit
+[FAULT] M2 fault counter cleared (was 1)
+[LIMIT SWITCH] M2 CLOSE limit reached - position was 0.00s (0.0%), setting to 0.0s (0%)
+[CLOSE DELAY] M1 starting immediately - M2 already at close position (0.00s)
+[FAULT] M1 fault counter cleared (was 1)
+[CLOSE DELAY] M1 starting immediately - M2 already at close position (0.10s)
+[FAULT] M2 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 1)
+[LIMIT SWITCH] M2 CLOSE limit reached - position was -0.02s (-0.2%), setting to 0.0s (0%)
+[FAULT] M2 fault counter cleared (was 1)
+[FAULT] M1 LIMIT_MISSING: CLOSING - close limit not activated at position 0 (consecutive MOVEMENTS: 1)
+[LIMIT SWITCH] M1 CLOSE limit reached - position was 0.06s (0.6%), setting to 0.0s (0%)
+[LIMIT HUNT] M1 synced to CLOSE limit
+[FAULT] M1 fault counter cleared (was 1)
+[LIMIT SWITCH] M2 CLOSE limit reached - position was 0.00s (0.0%), setting to 0.0s (0%)
+[CLOSE DELAY] M1 starting immediately - M2 already at close position (0.00s)
+[LIMIT SWITCH] M1 CLOSE limit reached - position was 0.13s (1.5%), setting to 0.0s (0%)
+Motor Manager process stopped
+Input Manager: ADC1 initialized at address 0x48 (ADDR->GND)
+Input Manager: ADC2 initialized at address 0x49 (ADDR->VDD)
+Input Manager: 2 ADC(s) initialized successfully (8 channels available)
+Input Manager initialized:
+  Inputs configured: 8
+  Sample rate: 0.01s (100.0Hz)
+  ADC available: True
+  Channels available: 8
+Input Manager: Starting main loop
+
+================================================================================
+CONFIGURED INPUTS (8 total):
+================================================================================
+  IN1                  Ch= 0 Type=NC  Func=close_limit_m1       [ENABLED]
+  IN2                  Ch= 1 Type=NO  Func=open_limit_m1        [ENABLED]
+  IN3                  Ch= 2 Type=NO  Func=open_limit_m2        [ENABLED]
+  IN4                  Ch= 3 Type=NC  Func=close_limit_m2       [ENABLED]
+  IN5                  Ch= 4 Type=NO  Func=cmd_close            [ENABLED]
+  IN6                  Ch= 5 Type=8K2 Func=partial_1            [ENABLED]
+  IN7                  Ch= 6 Type=NO  Func=None                 [ENABLED]
+  IN8                  Ch= 7 Type=NO  Func=None                 [ENABLED]
+================================================================================
+
+[INPUT RAW] IN6                  func=partial_1            raw=ACTIVE was=inactive V=0.70
+[INPUT DEBOUNCED] IN6                  func=partial_1            → ACTIVE
+[INPUT] partial_1            → ACTIVE
+[INPUT RAW] IN6                  func=partial_1            raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=partial_1            raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=partial_1            → inactive
+[INPUT] partial_1            → inactive
+[INPUT RAW] IN6                  func=partial_1            raw=ACTIVE was=inactive V=-0.00
+[INPUT DEBOUNCED] IN6                  func=partial_1            → ACTIVE
+[INPUT] partial_1            → ACTIVE
+[INPUT RAW] IN6                  func=partial_1            raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=partial_1            raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=partial_1            raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=partial_1            raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=partial_1            → inactive
+[INPUT] partial_1            → inactive
+[INPUT RAW] IN4                  func=close_limit_m2       raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → ACTIVE
+[INPUT RAW] IN1                  func=close_limit_m1       raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
+[INPUT RAW] IN6                  func=partial_1            raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN6                  func=partial_1            → ACTIVE
+[INPUT] partial_1            → ACTIVE
+[INPUT RAW] IN6                  func=partial_1            raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=partial_1            raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=partial_1            → inactive
+[INPUT] partial_1            → inactive
+[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
+[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
+[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → inactive
+[INPUT RAW] IN1                  func=close_limit_m1       raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
+[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
+[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
+[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → inactive
+[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
+[INPUT RAW] IN4                  func=close_limit_m2       raw=inactive was=ACTIVE V=3.31
+[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → inactive
+[INPUT RAW] IN4                  func=close_limit_m2       raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN4                  func=close_limit_m2       → ACTIVE
+[INPUT RAW] IN1                  func=close_limit_m1       raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
+[INPUT RAW] IN6                  func=partial_1            raw=ACTIVE was=inactive V=-0.00
+[INPUT DEBOUNCED] IN6                  func=partial_1            → ACTIVE
+[INPUT] partial_1            → ACTIVE
+[INPUT RAW] IN6                  func=partial_1            raw=inactive was=ACTIVE V=1.12
+[INPUT RAW] IN6                  func=partial_1            raw=inactive was=ACTIVE V=1.12
+[INPUT DEBOUNCED] IN6                  func=partial_1            → inactive
+[INPUT] partial_1            → inactive
+[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
+[INPUT RAW] IN1                  func=close_limit_m1       raw=inactive was=ACTIVE V=3.31
+[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → inactive
+[INPUT RAW] IN1                  func=close_limit_m1       raw=ACTIVE was=inactive V=0.00
+[INPUT DEBOUNCED] IN1                  func=close_limit_m1       → ACTIVE
+Input Manager: Shutting down
 Gate Controller V2 (Step 3 - Three Processes) initialized
   M1 travel time: 8.95s, M2 travel time: 7.98s
   M2 enabled: True
-  Motor Manager PID: 2389
-  Input Manager PID: 2390
+  Motor Manager PID: 1579
+  Input Manager PID: 1580
   Auto-close: ENABLED (5.0s)
 [STARTUP] Waiting for input manager to read limit switches...
 [STARTUP] Timeout waiting for limit switches - proceeding with detection anyway
@@ -45,12 +146,66 @@ Creating display for IN8...
 Total input displays created: 8
 Window created
 Starting mainloop
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
+PARTIAL 1 blocked - gate in UNKNOWN state, must reach limits first
 Auto-close triggered (from full OPEN) - sending momentary CLOSE pulse
 Auto-close pulse from UNKNOWN - closing to locate limits
 
 >>> CLOSE command - M1:0.0s M2:0.0s
 [COMPLETION] CLOSE complete! M1: limit=True, M2: limit=True
-[_complete_close] BEFORE: state=CLOSING, M1=-5.20, M2=0.00
+[_complete_close] BEFORE: state=CLOSING, M1=-1.69, M2=0.00
+[_complete_close] AFTER: state=CLOSED, movement_command=None
+Gates CLOSED
+Opening to PARTIAL_1 (50%) - M1 position START=0.00s TARGET=4.47s
+M1 at PARTIAL_1 (50%), M2 CLOSED
+Partial 1 auto-close triggered - sending momentary CLOSE pulse
+Partial 1 auto-close pulse received - closing from PARTIAL_1
+
+>>> CLOSE command - M1:4.5s M2:0.0s
+[COMPLETION] CLOSE complete! M1: limit=True, M2: limit=True
+[_complete_close] BEFORE: state=CLOSING, M1=0.13, M2=0.00
 [_complete_close] AFTER: state=CLOSED, movement_command=None
 Gates CLOSED
 OPEN button activated!
@@ -60,4 +215,35 @@ OPEN button activated!
     Current state: CLOSED, safety_reversing: False
     Flags: cmd_open=True, stop_opening_active=False
 OPEN button deactivated
-Exception in thread Thread-2 (_control_loop):
+CLOSE button activated!
+[COMMANDS ACTIVE] cmd_close | state=OPENING
+CLOSE command while opening - reversing
+
+>>> CLOSE command - M1:2.0s M2:1.4s
+[COMMANDS ACTIVE] cmd_close | state=CLOSING
+[COMMANDS ACTIVE] cmd_close | state=CLOSING
+[COMMANDS ACTIVE] cmd_close | state=CLOSING
+[COMMANDS ACTIVE] cmd_close | state=CLOSING
+[COMMANDS ACTIVE] cmd_close | state=CLOSING
+[COMMANDS ACTIVE] cmd_close | state=CLOSING
+[COMMANDS ACTIVE] cmd_close | state=CLOSING
+[COMMANDS ACTIVE] cmd_close | state=CLOSING
+CLOSE button deactivated
+[COMPLETION] CLOSE complete! M1: limit=True, M2: limit=True
+[_complete_close] BEFORE: state=CLOSING, M1=0.00, M2=0.00
+[_complete_close] AFTER: state=CLOSED, movement_command=None
+Gates CLOSED
+Opening to PARTIAL_1 (50%) - M1 position START=0.00s TARGET=4.47s
+M1 at PARTIAL_1 (50%), M2 CLOSED
+Partial 1 auto-close triggered - sending momentary CLOSE pulse
+Partial 1 auto-close pulse received - closing from PARTIAL_1
+
+>>> CLOSE command - M1:4.5s M2:0.0s
+[COMPLETION] CLOSE complete! M1: limit=True, M2: limit=True
+[_complete_close] BEFORE: state=CLOSING, M1=0.00, M2=0.00
+[_complete_close] AFTER: state=CLOSED, movement_command=None
+Gates CLOSED
+Exit button pressed - shutting down all processes
+Shutting down gate controller...
+Gate controller shutdown complete
+Exiting Python process
